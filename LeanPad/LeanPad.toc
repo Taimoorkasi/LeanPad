@@ -7,3 +7,5 @@
 ## Category: Action Bars
 
 Core.lua
+Setup.lua
+Settings.lua

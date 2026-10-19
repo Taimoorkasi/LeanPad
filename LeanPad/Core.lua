@@ -1,10 +1,6 @@
 local addonName, ns = ...
 
-local loader = CreateFrame("Frame")
-loader:RegisterEvent("ADDON_LOADED")
-loader:SetScript("OnEvent", function(self, _, name)
-	if name ~= addonName then return end
-	self:UnregisterEvent("ADDON_LOADED")
+EventUtil.ContinueOnAddOnLoaded(addonName, function()
 	LeanPadDB = LeanPadDB or {}
 	ns.db = LeanPadDB
 end)
@@ -17,6 +13,6 @@ SlashCmdList.LEANPAD = function(msg)
 			get(addonName, M.SessionAverageTime), get(addonName, M.RecentAverageTime),
 			get(addonName, M.EncounterAverageTime), get(addonName, M.PeakTime)))
 	else
-		print("LeanPad: /lp perf")
+		Settings.OpenToCategory(ns.category:GetID())
 	end
 end
