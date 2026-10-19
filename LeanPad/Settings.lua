@@ -47,7 +47,15 @@ EventUtil.ContinueOnAddOnLoaded(addonName, function()
 	local showCrossbar = Settings.RegisterProxySetting(category, "LEANPAD_SHOW_CROSSBAR", Settings.VarType.Boolean, "Show crossbar", true,
 		function() return ns.db.crossbar ~= false end, ns.SetCrossbarShown)
 	Settings.CreateCheckbox(category, showCrossbar,
-		"Show the actions on the held layer, with cooldowns and charges, in a controller-shaped bar.")
+		"Show your controller actions, with cooldowns and charges, in controller-shaped clusters.")
+	local style = Settings.RegisterProxySetting(category, "LEANPAD_CROSSBAR_STYLE", Settings.VarType.String, "Crossbar layers", "active",
+		function() return ns.db.crossbarStyle or "active" end, ns.SetCrossbarStyle)
+	Settings.CreateDropdown(category, style, function()
+		local container = Settings.CreateControlTextContainer()
+		container:Add("active", "Held layer only")
+		container:Add("all", "All layers")
+		return container:GetData()
+	end, "Held layer only shows one set that switches as you hold modifiers. All layers shows every modifier layer at once, the held one full size, like WoW: Forever.")
 
 	header("Gamepad")
 	Settings.SetupCVarCheckbox(category, "GamePadEnable", "Enable gamepad")

@@ -8,7 +8,7 @@ local realPrint = print
 -- specs; lowercase data fields read as nil, as on real frames.
 local NO_OP_METHODS = {
 	"SetSize", "SetHighlightTexture", "RegisterForClicks", "SetJustifyH", "SetTitle", "SetToplevel",
-	"SetClampedToScreen", "SetMovable", "EnableMouse", "RegisterForDrag", "SetThickness", "AddMaskTexture",
+	"SetClampedToScreen", "SetMovable", "EnableMouse", "RegisterForDrag", "SetThickness", "AddMaskTexture", "SetBlendMode",
 	"SetStartPoint", "SetEndPoint", "StartMoving", "StopMovingOrSizing", "SetAllPoints", "SetDrawSwipe",
 }
 
@@ -39,6 +39,7 @@ function Widget:SetTexture(texture) self.texture, self.color = texture, nil end
 function Widget:SetColorTexture(...) self.texture, self.color = nil, { ... } end
 function Widget:SetAtlas(atlas) self.atlas = atlas end
 function Widget:SetScale(scale) self.scale = scale end
+function Widget:SetAlpha(alpha) self.alpha = alpha end
 function Widget:SetSwipeTexture(texture) self.swipeTexture = texture end
 function Widget:SetUseCircularEdge(circular) self.circularEdge = circular end
 function Widget:Clear() self.duration = nil end
@@ -96,7 +97,7 @@ function M.reset()
 	M.state = w
 
 	LeanPadDB = nil
-	LeanPadControllerFrame = nil
+	LeanPadControllerFrame, LeanPadCrossbar = nil, nil
 	SLASH_LEANPAD1 = nil
 	SlashCmdList = {}
 	StaticPopupDialogs = {}
@@ -209,6 +210,9 @@ function M.reset()
 		OpenToCategory = function(id) table.insert(w.opened, id) end,
 		RegisterProxySetting = function(_, variable, variableType, label, default, getValue, setValue)
 			return { variable = variable, type = variableType, label = label, default = default, getValue = getValue, setValue = setValue }
+		end,
+		CreateDropdown = function(_, setting, options, tooltip)
+			table.insert(w.controls, { kind = "dropdown", variable = setting.variable, setting = setting, options = options, tooltip = tooltip })
 		end,
 		CreateCheckbox = function(_, setting, tooltip)
 			table.insert(w.controls, { kind = "checkbox", variable = setting.variable, setting = setting, tooltip = tooltip })

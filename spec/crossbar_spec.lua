@@ -3,12 +3,22 @@ local wow = require("spec.wow")
 describe("Crossbar", function()
 	local ns, w, bar
 
-	-- Crossbar buttons in creation order; ns.CROSSBAR keys are iterated with pairs, so find them by position.
-	local function buttonFor(key)
-		local point = ns.CROSSBAR[key]
+	-- Cluster frames in creation order, which is ns.Layers() order.
+	local function clusters()
+		local found = {}
 		for _, widget in ipairs(w.widgets) do
-			local p = rawget(widget, "point")
-			if rawget(widget, "Face") and p and p[4] == point[1] and p[5] == point[2] then return widget end
+			if rawget(widget, "buttons") then table.insert(found, widget) end
+		end
+		return found
+	end
+
+	local function buttonFor(key, index)
+		return clusters()[index or 1].buttons[key]
+	end
+
+	local function label(index)
+		for _, widget in ipairs(w.widgets) do
+			if widget.kind == "FontString" and widget.parent == clusters()[index] then return widget:GetText() end
 		end
 	end
 
@@ -37,10 +47,23 @@ describe("Crossbar", function()
 			end
 		end)
 
-		it("fits every button inside the bar", function()
+		it("fits every button inside its cluster", function()
 			for key, point in pairs(ns.CROSSBAR) do
-				assert.is_true(math.abs(point[1]) + ns.CROSSBAR_BUTTON_SIZE / 2 <= 220, key)
-				assert.is_true(math.abs(point[2]) + ns.CROSSBAR_BUTTON_SIZE / 2 <= 90, key)
+				assert.is_true(math.abs(point[1]) + ns.CROSSBAR_BUTTON_SIZE / 2 <= 230, key)
+				assert.is_true(math.abs(point[2]) + ns.CROSSBAR_BUTTON_SIZE / 2 <= 110, key)
+			end
+		end)
+
+		it("keeps clusters apart even when one is held at full size", function()
+			local half = { 230, 110 }
+			for a, pa in ipairs(ns.CROSSBAR_CLUSTERS) do
+				for b, pb in ipairs(ns.CROSSBAR_CLUSTERS) do
+					if a ~= b then
+						local apart = math.abs(pa[1] - pb[1]) >= half[1] * (1 + ns.CROSSBAR_IDLE_SCALE)
+							or math.abs(pa[2] - pb[2]) >= half[2] * (1 + ns.CROSSBAR_IDLE_SCALE)
+						assert.is_true(apart, a .. " overlaps " .. b)
+					end
+				end
 			end
 		end)
 	end)
@@ -50,7 +73,7 @@ describe("Crossbar", function()
 			wow.fire("PLAYER_ENTERING_WORLD")
 			bar = LeanPadCrossbar
 			assert.is_true(bar:IsShown())
-			assert.same({ "BOTTOM", UIParent, "BOTTOM", 0, 220 }, bar.point)
+			assert.same({ "BOTTOM", UIParent, "BOTTOM", 0, 60 }, bar.point)
 			assert.is_true(bar.events.MODIFIER_STATE_CHANGED)
 			assert.is_true(bar.events.ACTIONBAR_UPDATE_COOLDOWN)
 			assert.is_true(bar.events.ACTIONBAR_PAGE_CHANGED)
@@ -71,34 +94,37 @@ describe("Crossbar", function()
 			bar = LeanPadCrossbar
 		end)
 
-		it("are round: circle-masked icon, round cooldown sweeps and a ring", function()
+		it("are round: circle-masked icon and rim, round cooldown sweeps", function()
 			local button = buttonFor("PAD3")
-			local mask
+			local masks = 0
 			for _, widget in ipairs(w.widgets) do
-				if widget.kind == "MaskTexture" and widget.parent == button.Face then mask = widget end
+				if widget.kind == "MaskTexture" and widget.parent == button.Face then
+					assert.equal("Interface\\CharacterFrame\\TempPortraitAlphaMask", widget.texture)
+					masks = masks + 1
+				end
 			end
-			assert.equal("Interface\\CharacterFrame\\TempPortraitAlphaMask", mask.texture)
+			assert.equal(2, masks) -- icon and rim
 			assert.equal("Interface\\CharacterFrame\\TempPortraitAlphaMask", button.Cooldown.swipeTexture)
 			assert.is_true(button.Cooldown.circularEdge)
 			assert.is_true(button.ChargeCooldown.circularEdge)
-			assert.equal("talents-node-circle-gray", button.Ring.atlas)
+			assert.same({ 0.05, 0.05, 0.05, 0.9 }, button.Rim.color)
 		end)
 
-		it("show buttons that fire a bar action on any layer, plus the layer modifiers, and hide the rest", function()
+		it("show buttons that fire a bar action on any layer and hide the rest, modifiers included", function()
 			local shown = {}
 			for key in pairs(ns.CROSSBAR) do
 				if buttonFor(key):IsShown() then table.insert(shown, key) end
 			end
 			table.sort(shown)
-			-- PAD3 on Base, PAD1 and PADDUP on LT; LT and RT switch layers. The fake has two Blizzard bar buttons.
-			assert.same({ "PAD1", "PAD3", "PADDUP", "PADLTRIGGER", "PADRTRIGGER" }, shown)
+			-- PAD3 on Base, PAD1 and PADDUP on LT. The fake has two Blizzard bar buttons.
+			assert.same({ "PAD1", "PAD3", "PADDUP" }, shown)
 		end)
 
-		it("show a button with nothing on the held layer as a dark disc", function()
+		it("show a button with nothing on the held layer as a faint empty slot", function()
 			local jump = buttonFor("PAD1") -- Jump on Base, a bar action on LT
 			assert.is_true(jump:IsShown())
+			assert.equal(ns.CROSSBAR_EMPTY_ALPHA, jump.alpha)
 			assert.is_nil(jump.Icon.texture)
-			assert.same({ 0, 0, 0, 0.6 }, jump.Icon.color)
 			assert.is_nil(jump.slot)
 		end)
 
@@ -111,6 +137,7 @@ describe("Crossbar", function()
 
 		it("show the held layer's bar actions with icon, cooldowns and count", function()
 			local button = buttonFor("PAD3")
+			assert.equal(1, button.alpha)
 			assert.equal(135808, button.Icon.texture)
 			assert.equal("cooldown:61", button.Cooldown.duration)
 			assert.equal("charge:61", button.ChargeCooldown.duration)
@@ -138,29 +165,17 @@ describe("Crossbar", function()
 			_G.GetBindingText = getText
 		end)
 
-		it("switch to the layer of the held modifiers and light up the held modifier", function()
-			assert.is_nil(buttonFor("PAD1").slot)
-			w.held.shift = true
-			bar:Fire("OnEvent", "MODIFIER_STATE_CHANGED")
-			assert.equal(61, buttonFor("PAD1").slot)
-			assert.equal("talents-node-circle-yellow", buttonFor("PADLTRIGGER").Ring.atlas)
-			assert.equal(ns.CROSSBAR_PRESSED_SCALE, buttonFor("PADLTRIGGER").Face.scale)
-			assert.equal("talents-node-circle-gray", buttonFor("PADRTRIGGER").Ring.atlas)
-			w.held.shift = nil
-			bar:Fire("OnEvent", "MODIFIER_STATE_CHANGED")
-			assert.is_nil(buttonFor("PAD1").slot)
-			assert.equal(1, buttonFor("PADLTRIGGER").Face.scale)
-		end)
-
-		it("press in and light up while Blizzard's button is pushed", function()
+		it("press in, flash and turn the rim gold while Blizzard's button is pushed", function()
 			local button = buttonFor("PAD3")
 			MultiBarBottomLeftButton1:SetButtonState("PUSHED")
 			assert.equal(ns.CROSSBAR_PRESSED_SCALE, button.Face.scale)
-			assert.equal("talents-node-circle-yellow", button.Ring.atlas)
-			assert.equal(1, buttonFor("PAD4").Face.scale)
+			assert.is_true(button.Flash:IsShown())
+			assert.same({ 1, 0.82, 0, 1 }, button.Rim.color)
+			assert.is_false(buttonFor("PAD1").Flash:IsShown())
 			MultiBarBottomLeftButton1:SetButtonState("NORMAL")
 			assert.equal(1, button.Face.scale)
-			assert.equal("talents-node-circle-gray", button.Ring.atlas)
+			assert.is_false(button.Flash:IsShown())
+			assert.same({ 0.05, 0.05, 0.05, 0.9 }, button.Rim.color)
 		end)
 
 		it("hook each Blizzard button once, however often the bar refreshes", function()
@@ -248,36 +263,138 @@ describe("Crossbar", function()
 			C_ActionBar.HasAction = hasAction
 		end)
 
-		it("keep ring, glyph and count above both cooldown frames", function()
+		it("keep flash, glyph and count above both cooldown frames", function()
 			local button = buttonFor("PAD3")
-			assert.equal(button.ChargeCooldown:GetFrameLevel() + 1, button.Ring.parent.level)
-			assert.equal(button.Ring.parent, button.Glyph.parent)
-			assert.equal(button.Ring.parent, button.Count.parent)
+			assert.equal(button.ChargeCooldown:GetFrameLevel() + 1, button.Flash.parent.level)
+			assert.equal(button.Flash.parent, button.Glyph.parent)
+			assert.equal(button.Flash.parent, button.Count.parent)
 		end)
 	end)
 
-	describe("setting", function()
-		local setting
+	describe("held layer only (default)", function()
 		before_each(function()
+			wow.fire("PLAYER_ENTERING_WORLD")
+			bar = LeanPadCrossbar
+		end)
+
+		it("shows one full-size cluster with no label on Base", function()
+			local all = clusters()
+			assert.is_true(all[1]:IsShown())
+			for index = 2, #all do assert.is_false(all[index]:IsShown()) end
+			assert.equal(1, all[1].scale)
+			assert.equal(1, all[1].alpha)
+			assert.equal("", label(1))
+		end)
+
+		it("switches to the held layer and labels it with its modifier", function()
+			assert.is_nil(buttonFor("PAD1").slot)
+			w.held.shift = true
+			bar:Fire("OnEvent", "MODIFIER_STATE_CHANGED")
+			assert.equal(61, buttonFor("PAD1").slot)
+			assert.equal("text:PADLTRIGGER", label(1))
+			w.held.shift = nil
+			bar:Fire("OnEvent", "MODIFIER_STATE_CHANGED")
+			assert.is_nil(buttonFor("PAD1").slot)
+		end)
+
+		it("still shows a held modifier combination that has no layer of its own", function()
+			w.held.alt = true -- Alt isn't emulated by the preset
+			bar:Fire("OnEvent", "MODIFIER_STATE_CHANGED")
+			assert.equal("Base", label(1))
+		end)
+	end)
+
+	describe("all layers", function()
+		before_each(function()
+			ns.db.crossbarStyle = "all"
+			wow.fire("PLAYER_ENTERING_WORLD")
+			bar = LeanPadCrossbar
+		end)
+
+		it("shows a labelled cluster per layer, Base full size, the rest dimmed", function()
+			local all = clusters()
+			assert.equal(4, #all)
+			for _, cluster in ipairs(all) do assert.is_true(cluster:IsShown()) end
+			assert.equal(1, all[1].scale)
+			assert.equal(ns.CROSSBAR_IDLE_SCALE, all[2].scale)
+			assert.equal(ns.CROSSBAR_IDLE_ALPHA, all[2].alpha)
+			assert.equal("", label(1))
+			assert.equal("text:PADLTRIGGER", label(2))
+			assert.equal("text:PADRTRIGGER", label(3))
+			assert.equal("text:PADLTRIGGER + text:PADRTRIGGER", label(4))
+			assert.equal(61, buttonFor("PAD1", 2).slot)
+		end)
+
+		it("keeps each cluster centred on its slot whatever its scale", function()
+			local all = clusters()
+			local slot = ns.CROSSBAR_CLUSTERS[2]
+			assert.same({ "CENTER", bar, "CENTER", slot[1] / ns.CROSSBAR_IDLE_SCALE, slot[2] / ns.CROSSBAR_IDLE_SCALE }, all[2].point)
+		end)
+
+		it("brings the held layer to full size and dims Base", function()
+			w.held.shift = true
+			bar:Fire("OnEvent", "MODIFIER_STATE_CHANGED")
+			local all = clusters()
+			assert.equal(1, all[2].scale)
+			assert.equal(ns.CROSSBAR_IDLE_SCALE, all[1].scale)
+		end)
+
+		it("hides clusters for layers that don't exist", function()
+			w.cvars.GamePadEmulateCtrl = "none"
+			bar:Fire("OnEvent", "CVAR_UPDATE")
+			local all = clusters()
+			assert.is_true(all[2]:IsShown())
+			assert.is_false(all[3]:IsShown())
+			assert.is_false(all[4]:IsShown())
+		end)
+	end)
+
+	describe("settings", function()
+		local function setting(variable)
 			for _, control in ipairs(w.controls) do
-				if control.variable == "LEANPAD_SHOW_CROSSBAR" then setting = control.setting end
+				if control.variable == variable then return control.setting, control end
 			end
+		end
+
+		it("Show crossbar is a checkbox, on by default", function()
+			local show = setting("LEANPAD_SHOW_CROSSBAR")
+			assert.equal("boolean", show.type)
+			assert.is_true(show.default)
+			assert.is_true(show.getValue())
 		end)
 
-		it("is a checkbox, on by default", function()
-			assert.equal("boolean", setting.type)
-			assert.is_true(setting.default)
-			assert.is_true(setting.getValue())
-		end)
-
-		it("hides and shows the bar and remembers the choice", function()
-			setting.setValue(false)
+		it("Show crossbar hides and shows the bar and remembers the choice", function()
+			local show = setting("LEANPAD_SHOW_CROSSBAR")
+			show.setValue(false)
 			assert.is_false(ns.db.crossbar)
-			assert.is_false(setting.getValue())
+			assert.is_false(show.getValue())
 			assert.is_false(LeanPadCrossbar:IsShown())
 			assert.same({}, LeanPadCrossbar.events)
-			setting.setValue(true)
+			show.setValue(true)
 			assert.is_true(LeanPadCrossbar:IsShown())
+		end)
+
+		it("Crossbar layers picks held layer only or all layers, held layer only by default", function()
+			local style, control = setting("LEANPAD_CROSSBAR_STYLE")
+			assert.equal("string", style.type)
+			assert.equal("active", style.default)
+			assert.equal("active", style.getValue())
+			assert.same({ { value = "active", label = "Held layer only" }, { value = "all", label = "All layers" } }, control.options())
+		end)
+
+		it("Crossbar layers redraws the shown bar straight away", function()
+			wow.fire("PLAYER_ENTERING_WORLD")
+			local style = setting("LEANPAD_CROSSBAR_STYLE")
+			style.setValue("all")
+			assert.equal("all", ns.db.crossbarStyle)
+			assert.equal("all", style.getValue())
+			assert.is_true(clusters()[4]:IsShown())
+		end)
+
+		it("Crossbar layers is remembered while the bar is hidden", function()
+			setting("LEANPAD_CROSSBAR_STYLE").setValue("all")
+			assert.equal("all", ns.db.crossbarStyle)
+			assert.is_nil(LeanPadCrossbar)
 		end)
 	end)
 end)
