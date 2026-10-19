@@ -83,8 +83,38 @@ function ns.Restore()
 	print("LeanPad: previous controller settings and bindings restored.")
 end
 
+-- True when any chord the preset would write is already bound, i.e. the player has a layout of their own.
+function ns.HasPadLayout()
+	for key in pairs(ns.BINDINGS) do
+		if GetBindingAction(key) ~= "" then return true end
+	end
+	return false
+end
+
+function ns.KeepLayout()
+	SetCVar("GamePadEnable", "1")
+	print("LeanPad: gamepad on, your layout is unchanged. /lp shows it.")
+end
+
+-- Never offers to overwrite an existing layout without asking; keeping it is the default.
+function ns.ShowSetup()
+	StaticPopup_Show(ns.HasPadLayout() and "LEANPAD_SETUP_EXISTING" or "LEANPAD_SETUP")
+end
+
+StaticPopupDialogs.LEANPAD_SETUP_EXISTING = {
+	text = "LeanPad found a controller layout already bound.\n\nKeep it, and LeanPad only makes sure the gamepad is on. Or switch to LeanPad's layout; yours is saved so you can restore it with /lp restore.",
+	button1 = "Keep my layout",
+	button2 = CANCEL,
+	button3 = "Use LeanPad layout",
+	OnAccept = function() ns.OutOfCombat(ns.KeepLayout) end,
+	OnAlt = function() ns.OutOfCombat(ns.Apply) end,
+	timeout = 0,
+	whileDead = true,
+	hideOnEscape = true,
+}
+
 StaticPopupDialogs.LEANPAD_SETUP = {
-	text = "Set up LeanPad?\n\nThis turns on the gamepad, makes LT and RT act as Shift and Ctrl, and binds your controller to Action Bars 1-4. Your current settings are saved so you can restore them from the LeanPad settings.",
+	text = "Set up LeanPad?\n\nThis turns on the gamepad, makes LT and RT act as Shift and Ctrl, and binds your controller to Action Bars 1-4. Your current settings are saved so you can restore them with /lp restore.",
 	button1 = ACCEPT,
 	button2 = CANCEL,
 	OnAccept = function() ns.OutOfCombat(ns.Apply) end,
@@ -96,5 +126,5 @@ StaticPopupDialogs.LEANPAD_SETUP = {
 EventUtil.RegisterOnceFrameEventAndCallback("PLAYER_ENTERING_WORLD", function()
 	if ns.db.prompted then return end
 	ns.db.prompted = true
-	StaticPopup_Show("LEANPAD_SETUP")
+	ns.ShowSetup()
 end)

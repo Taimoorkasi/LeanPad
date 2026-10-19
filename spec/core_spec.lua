@@ -31,6 +31,18 @@ describe("Core", function()
 		}, w.metricCalls)
 	end)
 
+	it("/lp restore restores the saved layout, after combat if needed", function()
+		local ns, w = wow.boot(nil)
+		w.bindings.PAD1 = "SITORSTAND"
+		ns.Apply()
+		w.combat = true
+		SlashCmdList.LEANPAD("restore")
+		assert.equal("JUMP", w.bindings.PAD1)
+		w.combat = false
+		wow.fire("PLAYER_REGEN_ENABLED")
+		assert.equal("SITORSTAND", w.bindings.PAD1)
+	end)
+
 	it("/lp settings opens the LeanPad settings page", function()
 		local _, w = wow.boot(nil)
 		SlashCmdList.LEANPAD("settings")

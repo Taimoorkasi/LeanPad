@@ -44,6 +44,12 @@ describe("Settings", function()
 			assert.same({ "LEANPAD_SETUP" }, w.popups)
 		end)
 
+		it("Set up offers to keep an existing layout", function()
+			w.bindings.PAD1 = "JUMP"
+			click("Controller setup")
+			assert.same({ "LEANPAD_SETUP_EXISTING" }, w.popups)
+		end)
+
 		it("Restore restores, out of combat", function()
 			ns.Apply()
 			w.combat = true

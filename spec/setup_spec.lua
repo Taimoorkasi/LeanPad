@@ -145,6 +145,56 @@ describe("Setup", function()
 		end)
 	end)
 
+	describe("existing layout", function()
+		local dialog
+		before_each(function()
+			dialog = StaticPopupDialogs.LEANPAD_SETUP_EXISTING
+			w.cvars = { GamePadEnable = "0", GamePadEmulateShift = "PADLSHOULDER", GamePadEmulateCtrl = "PADLTRIGGER" }
+			w.bindings = { PAD1 = "JUMP", ["CTRL-PAD1"] = "EXTRAACTIONBUTTON1" }
+		end)
+
+		it("is detected from any chord the preset would overwrite", function()
+			assert.is_true(ns.HasPadLayout())
+			w.bindings = { PADSYSTEM = "TOGGLEGAMEMENU" }
+			assert.is_false(ns.HasPadLayout())
+		end)
+
+		it("offers Keep, Cancel and Use LeanPad layout, keep first", function()
+			assert.equal("Keep my layout", dialog.button1)
+			assert.equal(CANCEL, dialog.button2)
+			assert.equal("Use LeanPad layout", dialog.button3)
+			assert.equal(0, dialog.timeout)
+			assert.is_true(dialog.whileDead)
+			assert.is_true(dialog.hideOnEscape)
+		end)
+
+		it("keeping only turns the gamepad on and leaves modifiers and bindings alone", function()
+			dialog.OnAccept()
+			assert.same({ GamePadEnable = "1", GamePadEmulateShift = "PADLSHOULDER", GamePadEmulateCtrl = "PADLTRIGGER" }, w.cvars)
+			assert.same({ PAD1 = "JUMP", ["CTRL-PAD1"] = "EXTRAACTIONBUTTON1" }, w.bindings)
+			assert.same({}, w.saved)
+			assert.is_nil(ns.db.backup)
+			assert.matches("layout is unchanged", w.printed[1])
+		end)
+
+		it("keeping waits for combat to end", function()
+			w.combat = true
+			dialog.OnAccept()
+			assert.equal("0", w.cvars.GamePadEnable)
+			w.combat = false
+			wow.fire("PLAYER_REGEN_ENABLED")
+			assert.equal("1", w.cvars.GamePadEnable)
+		end)
+
+		it("switching applies the preset and backs up the player's layout", function()
+			dialog.OnAlt()
+			assert.equal("PADRTRIGGER", w.cvars.GamePadEmulateCtrl)
+			assert.equal("MULTIACTIONBAR2BUTTON7", w.bindings["CTRL-PAD1"])
+			assert.equal("EXTRAACTIONBUTTON1", ns.db.backup.bindings["CTRL-PAD1"])
+			assert.equal("PADLSHOULDER", ns.db.backup.cvars.GamePadEmulateShift)
+		end)
+	end)
+
 	describe("setup prompt", function()
 		it("is a confirm dialog that applies on accept", function()
 			local dialog = StaticPopupDialogs.LEANPAD_SETUP
@@ -170,6 +220,12 @@ describe("Setup", function()
 			wow.fire("PLAYER_ENTERING_WORLD")
 			assert.same({ "LEANPAD_SETUP" }, w.popups)
 			assert.is_true(ns.db.prompted)
+		end)
+
+		it("offers to keep a layout the player already has", function()
+			w.bindings["SHIFT-PAD1"] = "INTERACTTARGET"
+			wow.fire("PLAYER_ENTERING_WORLD")
+			assert.same({ "LEANPAD_SETUP_EXISTING" }, w.popups)
 		end)
 
 		it("does not show again in a later session", function()
