@@ -71,14 +71,30 @@ function ns.ControllerStyle()
 	return state and state.labelStyle == "Shapes" and "playstation" or "xbox"
 end
 
--- The Blizzard bar button a binding command presses, read from the button itself so paging is respected.
-function ns.SlotForCommand(command)
+-- The pad keys whose emulated modifier is held right now.
+function ns.HeldModifierKeys()
+	local down = { ["SHIFT-"] = IsShiftKeyDown(), ["CTRL-"] = IsControlKeyDown(), ["ALT-"] = IsAltKeyDown() }
+	local held = {}
+	for _, entry in ipairs(emulatedModifiers()) do
+		if down[entry.modifier] then held[entry.key] = true end
+	end
+	return held
+end
+
+-- The Blizzard bar button a binding command presses.
+function ns.ButtonForCommand(command)
 	for _, name in ipairs(ActionButtonUtil.ActionBarButtonNames) do
 		for i = 1, NUM_ACTIONBAR_BUTTONS do
 			local button = _G[name .. i]
-			if button and button.bindingAction == command then return button.action end
+			if button and button.bindingAction == command then return button end
 		end
 	end
+end
+
+-- The action slot that button shows, read from the button itself so paging is respected.
+function ns.SlotForCommand(command)
+	local button = ns.ButtonForCommand(command)
+	return button and button.action
 end
 
 function ns.ActionInfo(binding)

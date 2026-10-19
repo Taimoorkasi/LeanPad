@@ -8,7 +8,7 @@ local realPrint = print
 -- specs; lowercase data fields read as nil, as on real frames.
 local NO_OP_METHODS = {
 	"SetSize", "SetHighlightTexture", "RegisterForClicks", "SetJustifyH", "SetTitle", "SetToplevel",
-	"SetClampedToScreen", "SetMovable", "EnableMouse", "RegisterForDrag", "SetThickness", "SetColorTexture",
+	"SetClampedToScreen", "SetMovable", "EnableMouse", "RegisterForDrag", "SetThickness", "AddMaskTexture",
 	"SetStartPoint", "SetEndPoint", "StartMoving", "StopMovingOrSizing", "SetAllPoints", "SetDrawSwipe",
 }
 
@@ -35,7 +35,14 @@ function Widget:SetPoint(...) self.point = { ... } end
 function Widget:ClearAllPoints() self.point = nil end
 function Widget:SetText(text) self.text = text end
 function Widget:GetText() return self.text end
-function Widget:SetTexture(texture) self.texture = texture end
+function Widget:SetTexture(texture) self.texture, self.color = texture, nil end
+function Widget:SetColorTexture(...) self.texture, self.color = nil, { ... } end
+function Widget:SetAtlas(atlas) self.atlas = atlas end
+function Widget:SetScale(scale) self.scale = scale end
+function Widget:SetSwipeTexture(texture) self.swipeTexture = texture end
+function Widget:SetUseCircularEdge(circular) self.circularEdge = circular end
+function Widget:Clear() self.duration = nil end
+function Widget:CreateMaskTexture() return newWidget("MaskTexture", nil, self) end
 function Widget:RegisterEvent(event) self.events[event] = true end
 function Widget:UnregisterAllEvents() self.events = {} end
 function Widget:EnableGamePadButton(enable) self.gamePadButton = enable end
@@ -116,8 +123,9 @@ function M.reset()
 
 	-- Two Blizzard bar buttons: Action Bar 1 slot 1 (no icon) and Action Bar 2 slot 1, which holds slot 61.
 	ActionButtonUtil = { ActionBarButtonNames = { "ActionButton", "MultiBarBottomLeftButton" } }
-	ActionButton1 = { bindingAction = "ACTIONBUTTON1", action = 1 }
-	MultiBarBottomLeftButton1 = { bindingAction = "MULTIACTIONBAR1BUTTON1", action = 61 }
+	local function setButtonState(self, state) self.state = state end
+	ActionButton1 = { bindingAction = "ACTIONBUTTON1", action = 1, SetButtonState = setButtonState }
+	MultiBarBottomLeftButton1 = { bindingAction = "MULTIACTIONBAR1BUTTON1", action = 61, SetButtonState = setButtonState }
 	w.actions[61] = { texture = 135808, cooldown = "cooldown:61", charge = "charge:61", count = "2", usable = true }
 
 	GetNumBindings = function() return #w.bindingList end
@@ -147,6 +155,15 @@ function M.reset()
 	IsControlKeyDown = function() return w.held.ctrl end
 	IsShiftKeyDown = function() return w.held.shift end
 	C_GamePad = { GetDeviceMappedState = function() return w.padState end }
+	w.hooks = 0
+	hooksecurefunc = function(target, method, hook)
+		local original = target[method]
+		w.hooks = w.hooks + 1
+		target[method] = function(...)
+			original(...)
+			hook(...)
+		end
+	end
 
 	Enum = {
 		SoftTargetEnableFlags = { None = 0, Gamepad = 1, Kbm = 2, Any = 3 },

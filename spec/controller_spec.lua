@@ -42,6 +42,18 @@ describe("Controller", function()
 		assert.same({ PADLTRIGGER = true, PADLSHOULDER = true }, ns.ModifierKeys())
 	end)
 
+	it("knows which modifier pad keys are held", function()
+		setModifiers(w, "PADLTRIGGER", "PADRTRIGGER", "none")
+		assert.same({}, ns.HeldModifierKeys())
+		w.held = { ctrl = true, alt = true }
+		assert.same({ PADRTRIGGER = true }, ns.HeldModifierKeys())
+	end)
+
+	it("finds the Blizzard bar button behind a binding command", function()
+		assert.equal(MultiBarBottomLeftButton1, ns.ButtonForCommand("MULTIACTIONBAR1BUTTON1"))
+		assert.is_nil(ns.ButtonForCommand("JUMP"))
+	end)
+
 	it("reads held modifiers as a binding prefix", function()
 		assert.equal("", ns.HeldPrefix())
 		w.held = { shift = true, ctrl = true, alt = true }

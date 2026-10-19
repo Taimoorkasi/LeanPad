@@ -3,15 +3,18 @@ local wow = require("spec.wow")
 describe("Crossbar", function()
 	local ns, w, bar
 
+	-- Crossbar buttons in creation order; ns.CROSSBAR keys are iterated with pairs, so find them by position.
 	local function buttonFor(key)
+		local point = ns.CROSSBAR[key]
 		for _, widget in ipairs(w.widgets) do
-			if rawget(widget, "Glyph") and widget.Glyph:GetText() == "text:" .. key then return widget end
+			local p = rawget(widget, "point")
+			if rawget(widget, "Face") and p and p[4] == point[1] and p[5] == point[2] then return widget end
 		end
 	end
 
 	before_each(function()
 		ns, w = wow.boot(nil)
-		ns.Apply() -- LT is Shift, LT+A fires Action Bar 2 slot 7; give slot 1 of that bar an action
+		ns.Apply() -- LT is Shift, RT is Ctrl
 		w.bindings["SHIFT-PAD1"] = "MULTIACTIONBAR1BUTTON1"
 		w.bindings.PAD3 = "MULTIACTIONBAR1BUTTON1"
 	end)
@@ -37,7 +40,7 @@ describe("Crossbar", function()
 		it("fits every button inside the bar", function()
 			for key, point in pairs(ns.CROSSBAR) do
 				assert.is_true(math.abs(point[1]) + ns.CROSSBAR_BUTTON_SIZE / 2 <= 220, key)
-				assert.is_true(math.abs(point[2]) + ns.CROSSBAR_BUTTON_SIZE / 2 <= 85, key)
+				assert.is_true(math.abs(point[2]) + ns.CROSSBAR_BUTTON_SIZE / 2 <= 90, key)
 			end
 		end)
 	end)
@@ -51,6 +54,7 @@ describe("Crossbar", function()
 			assert.is_true(bar.events.MODIFIER_STATE_CHANGED)
 			assert.is_true(bar.events.ACTIONBAR_UPDATE_COOLDOWN)
 			assert.is_true(bar.events.ACTIONBAR_PAGE_CHANGED)
+			assert.is_true(bar.events.GAME_PAD_ACTIVE_CHANGED)
 		end)
 
 		it("stays hidden when the player turned it off", function()
@@ -67,9 +71,33 @@ describe("Crossbar", function()
 			bar = LeanPadCrossbar
 		end)
 
-		it("show the held layer's bar actions with glyph, icon, cooldowns and count", function()
+		it("are round: circle-masked icon, round cooldown sweeps and a ring", function()
 			local button = buttonFor("PAD3")
-			assert.is_true(button:IsShown())
+			local mask
+			for _, widget in ipairs(w.widgets) do
+				if widget.kind == "MaskTexture" and widget.parent == button.Face then mask = widget end
+			end
+			assert.equal("Interface\\CharacterFrame\\TempPortraitAlphaMask", mask.texture)
+			assert.equal("Interface\\CharacterFrame\\TempPortraitAlphaMask", button.Cooldown.swipeTexture)
+			assert.is_true(button.Cooldown.circularEdge)
+			assert.is_true(button.ChargeCooldown.circularEdge)
+			assert.equal("talents-node-circle-gray", button.Ring.atlas)
+		end)
+
+		it("show all fourteen pad buttons, empty ones as a dark disc", function()
+			local shown = 0
+			for key in pairs(ns.CROSSBAR) do
+				if buttonFor(key):IsShown() then shown = shown + 1 end
+			end
+			assert.equal(14, shown)
+			local jump = buttonFor("PAD1")
+			assert.is_nil(jump.Icon.texture)
+			assert.same({ 0, 0, 0, 0.6 }, jump.Icon.color)
+			assert.is_nil(jump.slot)
+		end)
+
+		it("show the held layer's bar actions with icon, cooldowns and count", function()
+			local button = buttonFor("PAD3")
 			assert.equal(135808, button.Icon.texture)
 			assert.equal("cooldown:61", button.Cooldown.duration)
 			assert.equal("charge:61", button.ChargeCooldown.duration)
@@ -78,22 +106,54 @@ describe("Crossbar", function()
 			assert.is_true(button.Cooldown.hideNumbers)
 		end)
 
-		it("hide buttons that fire no bar action or an empty slot", function()
-			assert.is_false(buttonFor("PAD1"):IsShown()) -- Jump
-			assert.is_false(buttonFor("PAD4"):IsShown()) -- Action Bar 1 slot 2, not a Blizzard button here
-			w.bindings.PAD3 = "ACTIONBUTTON1" -- a real button whose slot is empty
-			bar:Fire("OnEvent", "UPDATE_BINDINGS")
-			assert.is_false(buttonFor("PAD3"):IsShown())
+		it("clear sweeps for actions without a cooldown or charge duration", function()
+			w.actions[61].cooldown, w.actions[61].charge = nil, nil
+			bar:Fire("OnEvent", "ACTIONBAR_UPDATE_COOLDOWN")
+			local button = buttonFor("PAD3")
+			assert.is_nil(button.Cooldown.duration)
+			assert.is_nil(button.ChargeCooldown.duration)
+			assert.same({}, w.errors)
 		end)
 
-		it("switch to the layer of the held modifiers", function()
-			assert.is_false(buttonFor("PAD1"):IsShown())
+		it("show the controller's own glyph atlas, or none when the key has no glyph", function()
+			assert.is_false(buttonFor("PAD3").Glyph:IsShown())
+			local getText = _G.GetBindingText -- busted sandboxes spec globals; the addon reads _G
+			_G.GetBindingText = function(key) return "|A:Gamepad_Shp_" .. key .. "_64:24:24|a" end
+			bar:Fire("OnEvent", "GAME_PAD_ACTIVE_CHANGED")
+			assert.is_true(buttonFor("PAD3").Glyph:IsShown())
+			assert.equal("Gamepad_Shp_PAD3_64", buttonFor("PAD3").Glyph.atlas)
+			_G.GetBindingText = getText
+		end)
+
+		it("switch to the layer of the held modifiers and light up the held modifier", function()
+			assert.is_nil(buttonFor("PAD1").slot)
 			w.held.shift = true
 			bar:Fire("OnEvent", "MODIFIER_STATE_CHANGED")
-			assert.is_true(buttonFor("PAD1"):IsShown())
+			assert.equal(61, buttonFor("PAD1").slot)
+			assert.equal("talents-node-circle-yellow", buttonFor("PADLTRIGGER").Ring.atlas)
+			assert.equal(ns.CROSSBAR_PRESSED_SCALE, buttonFor("PADLTRIGGER").Face.scale)
+			assert.equal("talents-node-circle-gray", buttonFor("PADRTRIGGER").Ring.atlas)
 			w.held.shift = nil
 			bar:Fire("OnEvent", "MODIFIER_STATE_CHANGED")
-			assert.is_false(buttonFor("PAD1"):IsShown())
+			assert.is_nil(buttonFor("PAD1").slot)
+			assert.equal(1, buttonFor("PADLTRIGGER").Face.scale)
+		end)
+
+		it("press in and light up while Blizzard's button is pushed", function()
+			local button = buttonFor("PAD3")
+			MultiBarBottomLeftButton1:SetButtonState("PUSHED")
+			assert.equal(ns.CROSSBAR_PRESSED_SCALE, button.Face.scale)
+			assert.equal("talents-node-circle-yellow", button.Ring.atlas)
+			assert.equal(1, buttonFor("PAD4").Face.scale)
+			MultiBarBottomLeftButton1:SetButtonState("NORMAL")
+			assert.equal(1, button.Face.scale)
+			assert.equal("talents-node-circle-gray", button.Ring.atlas)
+		end)
+
+		it("hook each Blizzard button once, however often the bar refreshes", function()
+			bar:Fire("OnEvent", "UPDATE_BINDINGS")
+			bar:Fire("OnEvent", "UPDATE_BINDINGS")
+			assert.equal(1, w.hooks)
 		end)
 
 		it("show countdown numbers when Blizzard's countdown option is on", function()
@@ -115,6 +175,16 @@ describe("Crossbar", function()
 			assert.equal(135808, button.Icon.texture)
 		end)
 
+		it("empty a button whose action is gone", function()
+			w.bindings.PAD3 = "ACTIONBUTTON1" -- a real button whose slot is empty
+			bar:Fire("OnEvent", "UPDATE_BINDINGS")
+			local button = buttonFor("PAD3")
+			assert.is_nil(button.slot)
+			assert.is_nil(button.Icon.texture)
+			assert.is_nil(button.Cooldown.duration)
+			assert.equal("", button.Count:GetText())
+		end)
+
 		it("re-read Blizzard's buttons a frame after an action bar page change", function()
 			MultiBarBottomLeftButton1.action = 62
 			w.actions[62] = { texture = 4242 }
@@ -130,10 +200,9 @@ describe("Crossbar", function()
 			w.actions[7] = { texture = 777 }
 			w.bindings.PAD4 = "ACTIONBUTTON1"
 			wow.fire("PLAYER_ENTERING_WORLD")
-			assert.is_false(buttonFor("PAD4"):IsShown())
+			assert.is_nil(buttonFor("PAD4").slot)
 			ActionButton1.action = 7
 			wow.nextFrame()
-			assert.is_true(buttonFor("PAD4"):IsShown())
 			assert.equal(777, buttonFor("PAD4").Icon.texture)
 		end)
 
@@ -145,34 +214,35 @@ describe("Crossbar", function()
 
 		it("keep refreshing the other buttons when one errors, and report it", function()
 			w.bindings.PAD4 = "MULTIACTIONBAR1BUTTON1"
-			local getCharge = C_ActionBar.GetActionChargeDuration
-			C_ActionBar.GetActionChargeDuration = function() error("boom") end
+			local getCount = C_ActionBar.GetActionDisplayCount
+			C_ActionBar.GetActionDisplayCount = function() error("boom") end
 			bar:Fire("OnEvent", "UPDATE_BINDINGS")
 			assert.equal(2, #w.errors)
-			assert.is_true(buttonFor("PAD3"):IsShown())
-			assert.is_true(buttonFor("PAD4"):IsShown())
+			assert.equal(135808, buttonFor("PAD3").Icon.texture)
 			assert.equal(135808, buttonFor("PAD4").Icon.texture)
 			bar:Fire("OnEvent", "ACTIONBAR_UPDATE_COOLDOWN")
 			assert.equal(4, #w.errors)
-			C_ActionBar.GetActionChargeDuration = getCharge
+			C_ActionBar.GetActionDisplayCount = getCount
 		end)
 
-		it("hide a button whose refresh fails before it knows its slot", function()
-			-- busted sandboxes spec globals, so the addon only sees stubs set on _G
+		it("leave a button empty when its refresh fails before it knows its action", function()
 			local getAction = _G.GetBindingAction
 			_G.GetBindingAction = function(binding)
 				if binding == "PAD3" then error("boom") end
 				return getAction(binding)
 			end
 			bar:Fire("OnEvent", "UPDATE_BINDINGS")
-			assert.is_false(buttonFor("PAD3"):IsShown())
+			assert.is_nil(buttonFor("PAD3").slot)
+			assert.is_nil(buttonFor("PAD3").Icon.texture)
 			assert.equal(1, #w.errors)
 			_G.GetBindingAction = getAction
 		end)
 
-		it("keep text above both cooldown frames", function()
+		it("keep ring, glyph and count above both cooldown frames", function()
 			local button = buttonFor("PAD3")
-			assert.equal(button.ChargeCooldown:GetFrameLevel() + 1, button.Glyph.parent.level)
+			assert.equal(button.ChargeCooldown:GetFrameLevel() + 1, button.Ring.parent.level)
+			assert.equal(button.Ring.parent, button.Glyph.parent)
+			assert.equal(button.Ring.parent, button.Count.parent)
 		end)
 	end)
 
