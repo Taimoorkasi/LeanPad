@@ -12,7 +12,8 @@ ns.CROSSBAR_BUTTON_SIZE = 40
 
 -- Cooldowns, charges and usability change often; only these refresh the shown buttons' state.
 local STATE_EVENTS = { ACTIONBAR_UPDATE_COOLDOWN = true, ACTIONBAR_UPDATE_USABLE = true, ACTIONBAR_UPDATE_STATE = true, SPELL_UPDATE_CHARGES = true }
-local PAGE_EVENTS = { ACTIONBAR_PAGE_CHANGED = true, UPDATE_BONUS_ACTIONBAR = true }
+-- Blizzard re-points its bar buttons on these, possibly after LeanPad's handler runs.
+local PAGE_EVENTS = { ACTIONBAR_PAGE_CHANGED = true, UPDATE_BONUS_ACTIONBAR = true, PLAYER_ENTERING_WORLD = true }
 local LAYOUT_EVENTS = { "UPDATE_BINDINGS", "MODIFIER_STATE_CHANGED", "ACTIONBAR_SLOT_CHANGED", "CVAR_UPDATE" }
 
 local bar
@@ -49,7 +50,7 @@ local function onEvent(_, event)
 			if button.slot then updateState(button) end
 		end
 	elseif PAGE_EVENTS[event] then
-		RunNextFrame(ns.RefreshCrossbar) -- Blizzard re-points its bar buttons on this event; read them after
+		RunNextFrame(ns.RefreshCrossbar) -- read Blizzard's buttons once its own handlers have run
 	else
 		ns.RefreshCrossbar()
 	end
@@ -90,6 +91,8 @@ local function build()
 		for event in pairs(STATE_EVENTS) do bar:RegisterEvent(event) end
 		for event in pairs(PAGE_EVENTS) do bar:RegisterEvent(event) end
 		ns.RefreshCrossbar()
+		-- First shown during login, when Blizzard may not have pointed its main bar buttons at slots yet.
+		RunNextFrame(ns.RefreshCrossbar)
 	end)
 	bar:SetScript("OnHide", function() bar:UnregisterAllEvents() end)
 	bar:SetScript("OnEvent", onEvent)

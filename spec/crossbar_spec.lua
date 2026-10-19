@@ -124,6 +124,25 @@ describe("Crossbar", function()
 			assert.equal(4242, buttonFor("PAD3").Icon.texture)
 		end)
 
+		it("re-read Blizzard's buttons a frame after login, when the main bar gets its slots", function()
+			ns, w = wow.boot({ prompted = true })
+			ActionButton1.action = nil -- not yet pointed at a slot when PLAYER_ENTERING_WORLD reaches LeanPad
+			w.actions[7] = { texture = 777 }
+			w.bindings.PAD4 = "ACTIONBUTTON1"
+			wow.fire("PLAYER_ENTERING_WORLD")
+			assert.is_false(buttonFor("PAD4"):IsShown())
+			ActionButton1.action = 7
+			wow.nextFrame()
+			assert.is_true(buttonFor("PAD4"):IsShown())
+			assert.equal(777, buttonFor("PAD4").Icon.texture)
+		end)
+
+		it("re-read Blizzard's buttons a frame after a loading screen", function()
+			wow.nextFrame()
+			bar:Fire("OnEvent", "PLAYER_ENTERING_WORLD")
+			assert.equal(1, #w.nextFrame)
+		end)
+
 		it("keep text above both cooldown frames", function()
 			local button = buttonFor("PAD3")
 			assert.equal(button.ChargeCooldown:GetFrameLevel() + 1, button.Glyph.parent.level)
