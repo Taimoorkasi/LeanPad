@@ -5,6 +5,10 @@ EventUtil.ContinueOnAddOnLoaded(addonName, function()
 	ns.db = LeanPadDB
 end)
 
+-- Names for Bindings.xml, which the client loads from the addon folder on its own.
+BINDING_HEADER_LEANPAD = "LeanPad"
+BINDING_NAME_LEANPAD_TOGGLE_CURSOR = "Toggle gamepad cursor"
+
 SLASH_LEANPAD1 = "/lp"
 SlashCmdList.LEANPAD = function(msg)
 	if msg == "perf" then

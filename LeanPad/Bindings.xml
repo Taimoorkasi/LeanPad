@@ -1,0 +1,5 @@
+<Bindings>
+	<Binding name="LEANPAD_TOGGLE_CURSOR" header="LEANPAD" category="ADDONS">
+		SetGamePadCursorControl(not IsGamePadCursorControlEnabled())
+	</Binding>
+</Bindings>

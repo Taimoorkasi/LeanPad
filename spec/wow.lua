@@ -156,6 +156,9 @@ function M.reset()
 	IsControlKeyDown = function() return w.held.ctrl end
 	IsShiftKeyDown = function() return w.held.shift end
 	C_GamePad = { GetDeviceMappedState = function() return w.padState end }
+	w.cursorControl = false
+	SetGamePadCursorControl = function(enabled) w.cursorControl = enabled end
+	IsGamePadCursorControlEnabled = function() return w.cursorControl end
 	w.hooks = 0
 	hooksecurefunc = function(target, method, hook)
 		local original = target[method]
