@@ -43,6 +43,12 @@ EventUtil.ContinueOnAddOnLoaded(addonName, function()
 	button("Edit bindings", "Key Bindings", function() Settings.OpenToCategory(Settings.KEYBINDINGS_CATEGORY_ID) end,
 		"Change any binding in Blizzard's key binding editor.")
 
+	header("Crossbar")
+	local showCrossbar = Settings.RegisterProxySetting(category, "LEANPAD_SHOW_CROSSBAR", Settings.VarType.Boolean, "Show crossbar", true,
+		function() return ns.db.crossbar ~= false end, ns.SetCrossbarShown)
+	Settings.CreateCheckbox(category, showCrossbar,
+		"Show the actions on the held layer, with cooldowns and charges, in a controller-shaped bar.")
+
 	header("Gamepad")
 	Settings.SetupCVarCheckbox(category, "GamePadEnable", "Enable gamepad")
 	local S = Settings.VarType.String

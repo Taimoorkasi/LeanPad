@@ -85,7 +85,7 @@ function ns.ActionInfo(binding)
 	local action = GetBindingAction(binding)
 	if action == "" then return end
 	local slot = ns.SlotForCommand(action)
-	return GetBindingName(action), slot and GetActionTexture(slot)
+	return GetBindingName(action), slot and C_ActionBar.GetActionTexture(slot)
 end
 
 function ns.Assign(binding, action)
@@ -105,7 +105,7 @@ end
 
 local function commandLabel(action)
 	local slot = ns.SlotForCommand(action)
-	local icon = slot and GetActionTexture(slot)
+	local icon = slot and C_ActionBar.GetActionTexture(slot)
 	return (icon and ("|T%s:16|t "):format(icon) or "") .. GetBindingName(action)
 end
 

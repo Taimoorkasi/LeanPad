@@ -4,16 +4,18 @@ local M = {}
 
 local realPrint = print
 
--- Widget methods LeanPad may call. Anything else errors, so a misspelt method fails the specs.
+-- Widget methods LeanPad may call. Any other PascalCase name errors, so a misspelt method fails the
+-- specs; lowercase data fields read as nil, as on real frames.
 local NO_OP_METHODS = {
 	"SetSize", "SetHighlightTexture", "RegisterForClicks", "SetJustifyH", "SetTitle", "SetToplevel",
 	"SetClampedToScreen", "SetMovable", "EnableMouse", "RegisterForDrag", "SetThickness", "SetColorTexture",
-	"SetStartPoint", "SetEndPoint", "StartMoving", "StopMovingOrSizing",
+	"SetStartPoint", "SetEndPoint", "StartMoving", "StopMovingOrSizing", "SetAllPoints", "SetDrawSwipe",
 }
 
 local Widget = {}
-Widget.__index = function(_, method)
-	return Widget[method] or error("widget method not allowed by spec/wow.lua: " .. tostring(method), 2)
+Widget.__index = function(_, key)
+	if Widget[key] then return Widget[key] end
+	if type(key) == "string" and key:find("^%u") then error("widget method not allowed by spec/wow.lua: " .. key, 2) end
 end
 for _, method in ipairs(NO_OP_METHODS) do Widget[method] = function() end end
 
@@ -37,6 +39,11 @@ function Widget:SetTexture(texture) self.texture = texture end
 function Widget:RegisterEvent(event) self.events[event] = true end
 function Widget:UnregisterAllEvents() self.events = {} end
 function Widget:EnableGamePadButton(enable) self.gamePadButton = enable end
+function Widget:SetDesaturated(desaturated) self.desaturated = desaturated end
+function Widget:SetCooldownFromDurationObject(duration) self.duration = duration end
+function Widget:SetHideCountdownNumbers(hide) self.hideNumbers = hide end
+function Widget:SetFrameLevel(level) self.level = level end
+function Widget:GetFrameLevel() return rawget(self, "level") or 1 end
 function Widget:IsShown() return self.shown end
 function Widget:SetShown(shown)
 	if shown == self.shown then return end
@@ -69,7 +76,7 @@ function M.reset()
 	local w = {
 		cvars = {}, bindings = {}, saved = {}, printed = {}, popups = {}, opened = {},
 		onLoaded = {}, onceEvents = {}, metricCalls = {}, controls = {}, layout = {},
-		combat = false, widgets = {}, held = {}, placed = {}, textures = {},
+		combat = false, widgets = {}, held = {}, placed = {}, actions = {}, nextFrame = {},
 		bindingList = {
 			{ "HEADER_BLANK", "BINDING_HEADER_MOVEMENT" },
 			{ "JUMP", "BINDING_HEADER_MOVEMENT" },
@@ -111,12 +118,23 @@ function M.reset()
 	ActionButtonUtil = { ActionBarButtonNames = { "ActionButton", "MultiBarBottomLeftButton" } }
 	ActionButton1 = { bindingAction = "ACTIONBUTTON1", action = 1 }
 	MultiBarBottomLeftButton1 = { bindingAction = "MULTIACTIONBAR1BUTTON1", action = 61 }
-	w.textures[61] = 135808
+	w.actions[61] = { texture = 135808, cooldown = "cooldown:61", charge = "charge:61", count = "2", usable = true }
 
 	GetNumBindings = function() return #w.bindingList end
 	GetBinding = function(index) return w.bindingList[index][1], w.bindingList[index][2] end
 	GetBindingName = function(action) return "name:" .. action end
-	GetActionTexture = function(slot) return w.textures[slot] end
+	-- Slots in w.actions hold an action; cooldowns come back as opaque duration objects, as in Midnight.
+	local function action(slot) return w.actions[slot] or {} end
+	C_ActionBar = {
+		HasAction = function(slot) return w.actions[slot] ~= nil end,
+		GetActionTexture = function(slot) return action(slot).texture end,
+		GetActionCooldownDuration = function(slot) return action(slot).cooldown end,
+		GetActionChargeDuration = function(slot) return action(slot).charge end,
+		GetActionDisplayCount = function(slot) return action(slot).count end,
+		IsUsableAction = function(slot) return action(slot).usable end,
+	}
+	GetCVarBool = function(name) return w.cvars[name] == "1" end
+	RunNextFrame = function(callback) table.insert(w.nextFrame, callback) end
 	GetCursorInfo = function() return w.cursor end
 	PlaceAction = function(slot) table.insert(w.placed, slot) end
 	IsAltKeyDown = function() return w.held.alt end
@@ -166,6 +184,12 @@ function M.reset()
 		end,
 		RegisterAddOnCategory = function(registered) w.registered = registered end,
 		OpenToCategory = function(id) table.insert(w.opened, id) end,
+		RegisterProxySetting = function(_, variable, variableType, label, default, getValue, setValue)
+			return { variable = variable, type = variableType, label = label, default = default, getValue = getValue, setValue = setValue }
+		end,
+		CreateCheckbox = function(_, setting, tooltip)
+			table.insert(w.controls, { kind = "checkbox", variable = setting.variable, setting = setting, tooltip = tooltip })
+		end,
 		SetupCVarCheckbox = function(_, variable, label)
 			table.insert(w.controls, { kind = "checkbox", variable = variable, label = label })
 		end,
@@ -192,6 +216,13 @@ end
 
 function M.restore()
 	print = realPrint
+end
+
+-- Runs callbacks queued with RunNextFrame, as the next frame would.
+function M.nextFrame()
+	local queued = M.state.nextFrame
+	M.state.nextFrame = {}
+	for _, callback in ipairs(queued) do callback() end
 end
 
 -- Finds a menu entry by its exact label.

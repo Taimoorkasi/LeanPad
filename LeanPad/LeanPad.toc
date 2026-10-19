@@ -9,4 +9,5 @@
 Core.lua
 Setup.lua
 Controller.lua
+Crossbar.lua
 Settings.lua

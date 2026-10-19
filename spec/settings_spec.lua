@@ -17,12 +17,12 @@ describe("Settings", function()
 		assert.equal(w.category, ns.category)
 	end)
 
-	it("lays out Setup, Gamepad and Soft targeting sections", function()
+	it("lays out Setup, Crossbar, Gamepad and Soft targeting sections", function()
 		local headers = {}
 		for _, item in ipairs(w.layout) do
 			if item.kind == "header" then table.insert(headers, item.text) end
 		end
-		assert.same({ "Setup", "Gamepad", "Soft targeting" }, headers)
+		assert.same({ "Setup", "Crossbar", "Gamepad", "Soft targeting" }, headers)
 	end)
 
 	describe("buttons", function()
