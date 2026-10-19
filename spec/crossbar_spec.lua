@@ -84,16 +84,29 @@ describe("Crossbar", function()
 			assert.equal("talents-node-circle-gray", button.Ring.atlas)
 		end)
 
-		it("show all fourteen pad buttons, empty ones as a dark disc", function()
-			local shown = 0
+		it("show buttons that fire a bar action on any layer, plus the layer modifiers, and hide the rest", function()
+			local shown = {}
 			for key in pairs(ns.CROSSBAR) do
-				if buttonFor(key):IsShown() then shown = shown + 1 end
+				if buttonFor(key):IsShown() then table.insert(shown, key) end
 			end
-			assert.equal(14, shown)
-			local jump = buttonFor("PAD1")
+			table.sort(shown)
+			-- PAD3 on Base, PAD1 and PADDUP on LT; LT and RT switch layers. The fake has two Blizzard bar buttons.
+			assert.same({ "PAD1", "PAD3", "PADDUP", "PADLTRIGGER", "PADRTRIGGER" }, shown)
+		end)
+
+		it("show a button with nothing on the held layer as a dark disc", function()
+			local jump = buttonFor("PAD1") -- Jump on Base, a bar action on LT
+			assert.is_true(jump:IsShown())
 			assert.is_nil(jump.Icon.texture)
 			assert.same({ 0, 0, 0, 0.6 }, jump.Icon.color)
 			assert.is_nil(jump.slot)
+		end)
+
+		it("show and hide buttons as bindings change", function()
+			assert.is_false(buttonFor("PAD2"):IsShown())
+			w.bindings["CTRL-PAD2"] = "ACTIONBUTTON1"
+			bar:Fire("OnEvent", "UPDATE_BINDINGS")
+			assert.is_true(buttonFor("PAD2"):IsShown())
 		end)
 
 		it("show the held layer's bar actions with icon, cooldowns and count", function()
@@ -226,16 +239,13 @@ describe("Crossbar", function()
 		end)
 
 		it("leave a button empty when its refresh fails before it knows its action", function()
-			local getAction = _G.GetBindingAction
-			_G.GetBindingAction = function(binding)
-				if binding == "PAD3" then error("boom") end
-				return getAction(binding)
-			end
+			local hasAction = C_ActionBar.HasAction
+			C_ActionBar.HasAction = function() error("boom") end
 			bar:Fire("OnEvent", "UPDATE_BINDINGS")
 			assert.is_nil(buttonFor("PAD3").slot)
 			assert.is_nil(buttonFor("PAD3").Icon.texture)
 			assert.equal(1, #w.errors)
-			_G.GetBindingAction = getAction
+			C_ActionBar.HasAction = hasAction
 		end)
 
 		it("keep ring, glyph and count above both cooldown frames", function()

@@ -59,6 +59,18 @@ local function updateState(button)
 	button.Icon:SetDesaturated(not C_ActionBar.IsUsableAction(slot))
 end
 
+-- Pad keys worth a button: those firing a Blizzard bar button on some layer, plus the modifiers that switch layers.
+local function usedKeys(modifierKeys)
+	local used = {}
+	for key in pairs(ns.CROSSBAR) do
+		used[key] = modifierKeys[key]
+		for _, layer in ipairs(ns.Layers()) do
+			if ns.ButtonForCommand(GetBindingAction(layer.prefix .. key)) then used[key] = true end
+		end
+	end
+	return used
+end
+
 local function refreshButton(button, key, prefix, hideNumbers, heldKeys)
 	-- Start empty, so a button whose action can't be read shows as an empty disc.
 	button.slot, button.source = nil, nil
@@ -82,13 +94,15 @@ local function refreshButton(button, key, prefix, hideNumbers, heldKeys)
 	updateState(button)
 end
 
--- Shows every pad button with what it fires on the held layer.
+-- Shows the pad buttons in use with what they fire on the held layer.
 -- Each button updates in its own securecallfunction, so one error is reported without stopping the rest.
 function ns.RefreshCrossbar()
 	local prefix = ns.HeldPrefix()
 	local hideNumbers = not GetCVarBool("countdownForCooldowns")
 	local heldKeys = ns.HeldModifierKeys()
+	local used = usedKeys(ns.ModifierKeys())
 	for key, button in pairs(buttons) do
+		button:SetShown(used[key] == true)
 		securecallfunction(refreshButton, button, key, prefix, hideNumbers, heldKeys)
 	end
 end
