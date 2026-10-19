@@ -143,6 +143,33 @@ describe("Crossbar", function()
 			assert.equal(1, #w.nextFrame)
 		end)
 
+		it("keep refreshing the other buttons when one errors, and report it", function()
+			w.bindings.PAD4 = "MULTIACTIONBAR1BUTTON1"
+			local getCharge = C_ActionBar.GetActionChargeDuration
+			C_ActionBar.GetActionChargeDuration = function() error("boom") end
+			bar:Fire("OnEvent", "UPDATE_BINDINGS")
+			assert.equal(2, #w.errors)
+			assert.is_true(buttonFor("PAD3"):IsShown())
+			assert.is_true(buttonFor("PAD4"):IsShown())
+			assert.equal(135808, buttonFor("PAD4").Icon.texture)
+			bar:Fire("OnEvent", "ACTIONBAR_UPDATE_COOLDOWN")
+			assert.equal(4, #w.errors)
+			C_ActionBar.GetActionChargeDuration = getCharge
+		end)
+
+		it("hide a button whose refresh fails before it knows its slot", function()
+			-- busted sandboxes spec globals, so the addon only sees stubs set on _G
+			local getAction = _G.GetBindingAction
+			_G.GetBindingAction = function(binding)
+				if binding == "PAD3" then error("boom") end
+				return getAction(binding)
+			end
+			bar:Fire("OnEvent", "UPDATE_BINDINGS")
+			assert.is_false(buttonFor("PAD3"):IsShown())
+			assert.equal(1, #w.errors)
+			_G.GetBindingAction = getAction
+		end)
+
 		it("keep text above both cooldown frames", function()
 			local button = buttonFor("PAD3")
 			assert.equal(button.ChargeCooldown:GetFrameLevel() + 1, button.Glyph.parent.level)

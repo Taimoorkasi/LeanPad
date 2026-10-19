@@ -28,26 +28,32 @@ local function updateState(button)
 	button.Icon:SetDesaturated(not C_ActionBar.IsUsableAction(slot))
 end
 
+local function refreshButton(button, key, prefix, hideNumbers)
+	button.slot = nil
+	button:Hide() -- stays hidden if anything below errors, instead of showing a stale empty button
+	local slot = ns.SlotForCommand(GetBindingAction(prefix .. key))
+	if not (slot and C_ActionBar.HasAction(slot)) then return end
+	button.slot = slot
+	button.Icon:SetTexture(C_ActionBar.GetActionTexture(slot))
+	button.Cooldown:SetHideCountdownNumbers(hideNumbers)
+	button:Show()
+	updateState(button)
+end
+
 -- Shows what each button fires on the held layer: only buttons bound to a filled Blizzard bar slot appear.
+-- Each button updates in its own securecallfunction, so one error is reported without stopping the rest.
 function ns.RefreshCrossbar()
 	local prefix = ns.HeldPrefix()
 	local hideNumbers = not GetCVarBool("countdownForCooldowns")
 	for key, button in pairs(buttons) do
-		local slot = ns.SlotForCommand(GetBindingAction(prefix .. key))
-		button.slot = slot and C_ActionBar.HasAction(slot) and slot or nil
-		button:SetShown(button.slot ~= nil)
-		if button.slot then
-			button.Icon:SetTexture(C_ActionBar.GetActionTexture(slot))
-			button.Cooldown:SetHideCountdownNumbers(hideNumbers)
-			updateState(button)
-		end
+		securecallfunction(refreshButton, button, key, prefix, hideNumbers)
 	end
 end
 
 local function onEvent(_, event)
 	if STATE_EVENTS[event] then
 		for _, button in pairs(buttons) do
-			if button.slot then updateState(button) end
+			if button.slot then securecallfunction(updateState, button) end
 		end
 	elseif PAGE_EVENTS[event] then
 		RunNextFrame(ns.RefreshCrossbar) -- read Blizzard's buttons once its own handlers have run

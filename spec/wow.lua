@@ -135,6 +135,12 @@ function M.reset()
 	}
 	GetCVarBool = function(name) return w.cvars[name] == "1" end
 	RunNextFrame = function(callback) table.insert(w.nextFrame, callback) end
+	-- Like the client's: an error goes to the error handler and the caller carries on.
+	w.errors = {}
+	securecallfunction = function(fn, ...)
+		local ok, err = pcall(fn, ...)
+		if not ok then table.insert(w.errors, err) end
+	end
 	GetCursorInfo = function() return w.cursor end
 	PlaceAction = function(slot) table.insert(w.placed, slot) end
 	IsAltKeyDown = function() return w.held.alt end
