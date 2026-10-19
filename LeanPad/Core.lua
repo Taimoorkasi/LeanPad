@@ -12,7 +12,9 @@ SlashCmdList.LEANPAD = function(msg)
 		print(("LeanPad ms/tick: session %.3f, recent %.3f, encounter %.3f, peak %.3f"):format(
 			get(addonName, M.SessionAverageTime), get(addonName, M.RecentAverageTime),
 			get(addonName, M.EncounterAverageTime), get(addonName, M.PeakTime)))
-	else
+	elseif msg == "settings" then
 		Settings.OpenToCategory(ns.category:GetID())
+	else
+		ns.ToggleController()
 	end
 end

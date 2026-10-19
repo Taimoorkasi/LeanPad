@@ -34,6 +34,11 @@ describe("Settings", function()
 			button.click()
 		end
 
+		it("Open shows the controller editor", function()
+			click("Controller layout")
+			assert.is_true(LeanPadControllerFrame:IsShown())
+		end)
+
 		it("Set up shows the confirm dialog", function()
 			click("Controller setup")
 			assert.same({ "LEANPAD_SETUP" }, w.popups)

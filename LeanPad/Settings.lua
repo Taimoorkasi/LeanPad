@@ -32,6 +32,8 @@ EventUtil.ContinueOnAddOnLoaded(addonName, function()
 	end
 
 	header("Setup")
+	button("Controller layout", "Open", function() ns.ToggleController() end,
+		"See and change what every controller button does, per trigger layer. Also /lp.")
 	button("Controller setup", "Set up", function() StaticPopup_Show("LEANPAD_SETUP") end,
 		"Turn on the gamepad, set the trigger modifiers and soft targeting, and bind the controller to Action Bars 1-4.")
 	button("Undo setup", "Restore", function() ns.OutOfCombat(ns.Restore) end,
