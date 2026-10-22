@@ -11,9 +11,10 @@ Your actions stay on Blizzard's own action bars, so Blizzard draws the cooldowns
 - **One-click setup.** Turns on the gamepad, makes LT and RT act as Shift and Ctrl, sets the cursor clicks and gamepad soft targeting, and binds the controller to Action Bars 1-4. If you already have a controller layout, LeanPad keeps it by default.
 - **Undo.** Setup saves your previous CVars and bindings first. `/lp restore` puts them back.
 - **Three crossbar layers.** LT, RT and LT+RT each map the D-pad and face buttons onto 8 slots of their own action bar.
-- **Controller editor.** `/lp` shows a drawing of your controller (PlayStation or Xbox, detected from the pad). Press any button, holding a trigger first for its layer, and LeanPad shows what it does: the action, where it lives and what the same button does on the other layers. From there, pick a different action, clear it, or drag a spell onto it. Cursor users can click the drawing instead. The Menu button closes the editor.
+- **Controller editor.** `/lp` shows a drawing of your controller (PlayStation or Xbox, detected from the pad) with every bound button labelled around it, one layer at a time. Press any button, holding a layer button first for its layer, and LeanPad shows what it does: the spell on the slot, where it lives and what the same button does on the other layers. From there, pick a different action, clear it, or drag a spell onto it. Cursor users can click the drawing instead. The Menu button closes the editor.
+- **Settings page.** The editor's Settings button opens LeanPad's own page: which pad to use, Xbox or PlayStation labels, the layer buttons, the cursor clicks, the crossbar and soft targeting.
 - **Crossbar HUD.** Shows your controller actions in controller-shaped clusters, with cooldowns, charges, usability and press feedback. It can show only the held layer or all layers at once.
-- **Settings panel.** Every option lives in Blizzard's own Settings panel under *AddOns > LeanPad*.
+- **Blizzard's Settings panel.** *AddOns > LeanPad* opens the editor and its settings page, runs setup and undoes it.
 - **Combat-safe.** Bindings and CVars are only written out of combat. A request made in combat runs once combat ends.
 
 ## Requirements
@@ -36,7 +37,7 @@ On your first login, LeanPad asks whether to set up the controller. You can run 
 | Command | What it does |
 | --- | --- |
 | `/lp` | Open or close the controller editor |
-| `/lp settings` | Open LeanPad's Settings panel |
+| `/lp settings` | Open the editor on its settings page |
 | `/lp restore` | Restore the controller settings and bindings from before setup |
 | `/lp perf` | Print LeanPad's CPU cost from the in-game addon profiler |
 
