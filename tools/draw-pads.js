@@ -1,5 +1,5 @@
 // Draws LeanPad's controller art: steel line art on a slate body, the editor's own palette.
-// Writes LeanPad/Art/*.tga (32-bit, power-of-two sizes, as the client wants) and an SVG + PNG preview of each pad.
+// Writes LeanPad/Art/*.tga (32-bit, power-of-two sizes, as the client wants), an SVG + PNG preview of each pad and a PNG sheet of the command icons.
 // Button positions here are mirrored in ns.PADS in LeanPad/Controller.lua; change both together.
 // Proportions were taken from the CC0 "8th gen console vector gamepad collection" by TheHoodieGuy02;
 // every path is drawn fresh.
@@ -181,4 +181,8 @@ for (const [name, pad] of Object.entries(pads)) {
 }
 for (const [name, shape] of Object.entries(rings)) render(name, svg("0 0 128 128", shape), 128, 128);
 for (const [name, parts] of Object.entries(icons)) render(name, svg("0 0 64 64", icon(parts)), 64, 64);
+// A contact sheet of the command icons for the README.
+const sheet = Object.values(icons).map((parts, i) => `<g transform="translate(${i * 72 + 4} 4)">${icon(parts)}</g>`).join("");
+const sheetWidth = Object.keys(icons).length * 72 + 4;
+fs.writeFileSync(path.join(PREVIEW, "Icons.png"), new Resvg(svg(`0 0 ${sheetWidth} 72`, sheet), { fitTo: { mode: "width", value: sheetWidth * 2 }, background: "#10151c" }).render().asPng());
 console.log("wrote", fs.readdirSync(OUT).join(", "));

@@ -4,34 +4,31 @@ All notable changes to LeanPad are documented here. The format is based on [Keep
 
 ## [Unreleased]
 
+### Added
+
+- **Settings page** inside the editor, from its Settings button, `/lp settings` or Blizzard's *AddOns > LeanPad*: gamepad on or off, which pad to use when several are connected, Xbox or PlayStation labels whatever the pad reports, the three layer buttons, play style, soft targeting, the crossbar's view, size, opacity, position and mouse, and the native cursor's clicks, speed, auto-show, stick hiding and touchpad. Every change flashes *Saved* in the footer once it is written, including changes queued until combat ends.
+- **Spells and macros in Change action.** The menu opens with your spellbook, by tab for your spec with icons, and your macros. Pick one and it lands on the button: into the bar slot the button already fires, or into the first free slot of that layer's own bar, which the button is bound to on the spot. Bar slots and Blizzard's other commands keep their lists beneath.
+- **Play styles**: Tank, Melee, Ranged, Healer, or Auto by spec. A style sets how the body answers the stick in combat (tanks never show their back, melee and ranged strafe but spin to run, healers run free) and whom soft targeting looks for. Off until chosen.
+- **Crossbar layout editing.** Unlock the crossbar from the settings page or Blizzard's Edit Mode, then drag the whole bar, any one set or any single button, and scroll over a set to size it. Drops snap to a grid and line up with neighbours; Shift drops freely; *Reset layout* puts everything back. Positions and sizes are saved.
+- **Crossbar mouse mode**, off by default: drop a spell from the spellbook or talents onto a socket to put it in that button's bar slot, and hover a socket for its tooltip.
+- **Command icons** in LeanPad's own style for targeting (with next, previous and party-number badges), interact, jump, auto-run, the cursor toggle, bags, game menu, map, spellbook and character pane; Blizzard's micro-menu atlases for the other panels. They show on the crossbar and in the editor.
+- LeanPad is listed in the minimap's addon compartment, and `/leanpad` works as well as `/lp`.
+
 ### Changed
 
-- The default layout puts *Toggle gamepad cursor* on the right stick click (R3), instead of Action Bar 1 slot 7, so you can click NPCs, objects and windows. Existing layouts are not changed; use *Reset to default layout* in `/lp` to pick it up.
-- Redesigned controller editor (`/lp`): the controller sits fixed in the middle with every bound button labelled beside it, one layer per tab, a leader curving from each label to its button. Press any button, holding a layer button first for its layer, and the strip below shows the spell on its slot, where it lives and the same button on the other layers, with Change action, Clear and spell drop. Cursor users can click or hover the drawing; the Menu button closes the editor.
-- The editor has its own flat look: slate panels, one amber accent and Arial Narrow, drawn with colour textures only. The controller drawings are redrawn in steel on slate to match.
-- New settings page inside the editor, from its Settings button or `/lp settings`: gamepad on or off, which pad to use when several are connected, Xbox or PlayStation labels regardless of what the pad reports, the three layer buttons, the cursor clicks, the crossbar and soft targeting. Blizzard's Settings panel keeps the setup buttons and opens the page.
-- The layer buttons can also be changed from the Change menu above the drawing. As in FFXIV and WoW: Forever, a layer button only opens its layer: making a button a layer button clears its own bindings on every layer, the editor offers nothing to change or drop on it, and the crossbar never shows a socket for it.
-- `/leanpad` works as well as `/lp`, for anyone whose other addons already take `/lp`.
-- The crossbar is one setting now: off, one set that swaps with the held layer, or all layers at once. It can be sized from 60% to 120% and, after *Unlock to drag* on the settings page, moved anywhere; the spot is kept.
-- Cursor settings for the native gamepad cursor: speed, whether it appears when a window opens, when the sticks hide it, and whether the DualSense touchpad moves it.
-- LeanPad is listed in the minimap's addon compartment; clicking it opens the editor.
-- Every change flashes a Saved line in the window's footer for two seconds once it is written, including changes queued until combat ends.
-- Entering Blizzard's Edit Mode unlocks the crossbar for dragging; leaving it locks the bar again. While unlocked, the bar carries a Reset position button, and the settings page adds an Opacity choice.
-- The sockets between the two diamonds now sit on the diamonds' centre line: one socket a side is level with the D-pad and face buttons, two straddle the line, three fill the column. Along that line the gaps are even, 32 between every neighbour. Layer buttons, the cursor toggle and auto-run get no socket.
-- Commands that sit on no bar slot get a face on the crossbar and in the editor: LeanPad's own icons, drawn in the pad art's style, for enemy and friendly targeting (with a next or previous arrow, or a party number), interact, jump, auto-run, the cursor toggle, bags, the game menu, the map, the spellbook and the character pane; Blizzard's micro-menu atlases for the other panels. Auto-run and the cursor toggle keep their face to the editor.
-- A spell dropped on a button that fires no bar slot yet, on the drawing or the crossbar, gets the same free slot on the layer's bar instead of being refused. Only another pad button counts as taking a slot; keyboard keys on Bar 1's slots never made a bar look full.
-- Change action now starts with Spells, by spellbook tab for your spec with icons, and Macros. Pick one and it lands on the button: into the bar slot the button already fires, or, for a button that fires none, into the first free slot of that layer's own bar, which the button is bound to on the spot. Bar slots and Blizzard's other commands keep their lists beneath.
-- Mouse on the crossbar, off by default: a spell dragged from the spellbook or talents onto a socket goes into that button's bar slot, and hovering a socket shows its action's tooltip.
-- Layout editing while the crossbar is unlocked: drag the whole bar, any one set, or any single button; scroll over a set to size it in 5% steps. Drops snap to an 8-unit grid and pull level with a neighbour on one axis, Shift drops freely, and Reset layout on the outline puts everything back. Every set and button comes back where it was left.
-- Play style on the settings page: Tank, Melee, Ranged, Healer or Auto by spec. It sets how the body answers the stick in combat (tanks never show their back, melee and ranged strafe but spin to run, healers run free) and whom soft targeting looks for. Off until chosen.
+- **Redesigned controller editor** (`/lp`). The controller sits fixed in the middle with every bound button labelled beside it and a leader curving to the button, one layer per tab. Press a button, holding a layer button first for its layer, and the strip below shows the spell on its slot, where it lives and the same button on the other layers, with Change action, Clear and spell drop. Cursor users can hover and click the drawing. The Menu button closes it.
+- The editor has its own flat look: slate panels, one amber accent and Arial Narrow, drawn with colour textures only. The controller drawings are redrawn in steel on slate to match, and ship in `LeanPad/Art/`, generated by `tools/draw-pads.js`.
+- **Layer buttons only open layers**, as in FFXIV and WoW: Forever. Making a button a layer button clears its own bindings on every layer; the editor offers nothing to change or drop on it, and the crossbar shows no socket for it.
+- The crossbar's view is one setting: off, one set that swaps with the held layer, or all layers at once. The sockets between the two diamonds sit on the diamonds' centre line with even gaps; the cursor toggle and auto-run get no socket.
+- Blizzard's Settings panel now holds only the entry points: open the editor, open the settings page, set up, undo, Action Bars and Key Bindings.
 - Editor copy follows the pad: PlayStation users read L2, R2 and Options, not LT, RT and Menu.
-- Controller art now ships in `LeanPad/Art/`, generated by `tools/draw-pads.js`.
-- Crossbar HUD: tighter D-pad and face-button diamonds, and smaller glyphs that sit above each icon instead of covering it.
+- The default layout puts *Toggle gamepad cursor* on the right stick click (R3), instead of Action Bar 1 slot 7. Existing layouts are not changed; use *Reset to default layout* to pick it up.
 
 ### Fixed
 
-- *Default layout* now clears the triggers' own bindings, so tapping LT or RT no longer fires a leftover action from a previous layout.
-- Crossbar press feedback no longer disappears while a button is held, when the bar refreshes mid-press (for example when a cast changes its action slot).
+- *Default layout* clears the triggers' own bindings, so tapping LT or RT no longer fires a leftover action from a previous layout.
+- Crossbar press feedback no longer disappears while a button is held, when the bar refreshes mid-press.
+- A spell picked for, or dropped on, a button with no bar slot now finds a free slot. Keyboard keys on a slot, such as 1 to = on Action Bar 1, no longer make the bar look full; only another pad button takes a slot.
 
 ## [0.1.0] - 2026-10-22
 

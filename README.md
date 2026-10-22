@@ -2,9 +2,14 @@
 
 A lean controller addon for retail World of Warcraft (Midnight, 12.1.5).
 
-WoW already has a full gamepad layer built in: controller buttons are ordinary key bindings, the triggers can act as Shift and Ctrl, and there is a native gamepad cursor and soft targeting. LeanPad configures that layer for you instead of rebuilding it. You get a one-click setup, a crossbar-style layout across three trigger layers, a visual controller editor and a crossbar HUD. It has no libraries and no code running while you are idle; its only art is its own controller drawings.
+WoW already has a full gamepad layer built in: controller buttons are ordinary key bindings, the triggers can act as Shift and Ctrl, and there is a native gamepad cursor and soft targeting. LeanPad configures that layer for you instead of rebuilding it. You get a one-click setup, a crossbar-style layout across three trigger layers, a visual controller editor with its own settings page, and a movable crossbar HUD. It has no libraries and no code running while you are idle; its only art is its own controller drawings and command icons.
 
 Your actions stay on Blizzard's own action bars, so Blizzard draws the cooldowns, glows and range, and the layout keeps working if you disable the addon.
+
+<p align="center">
+  <img src="tools/preview/PadPlayStation.png" alt="LeanPad's PlayStation controller drawing" width="420">
+  <img src="tools/preview/PadXbox.png" alt="LeanPad's Xbox controller drawing" width="420">
+</p>
 
 ## Features
 
@@ -16,6 +21,10 @@ Your actions stay on Blizzard's own action bars, so Blizzard draws the cooldowns
 - **Play styles.** Tank keeps the body facing the camera in combat, so you never show the pack your back. Melee and Ranged strafe but spin to run when you push straight back. Healer runs free, since heals need no facing, and gets friendly soft targeting. Auto follows your spec.
 - **Crossbar HUD.** Shows your controller actions in controller-shaped clusters, with cooldowns, charges, usability and press feedback. One set that swaps as you hold a layer button, or all layers at once. Unlock it from the settings page or Blizzard's Edit Mode to drag the bar, each set or each button, with grid and neighbour snapping, and scroll over a set to size it. Turn its mouse on to drop spells onto sockets and read their tooltips.
 - **Blizzard's Settings panel.** *AddOns > LeanPad* opens the editor and its settings page, runs setup and undoes it.
+- **Icons for every command.** Targeting, interact, jump, bags, menus and the rest have faces of their own, so the crossbar and the editor never show a blank socket for a command that lives on no action bar.
+
+  <img src="tools/preview/Icons.png" alt="LeanPad's command icons" width="640">
+
 - **Combat-safe.** Bindings and CVars are only written out of combat. A request made in combat runs once combat ends.
 
 ## Requirements
@@ -29,7 +38,7 @@ Your actions stay on Blizzard's own action bars, so Blizzard draws the cooldowns
 2. Copy the `LeanPad` folder (the one containing `LeanPad.toc`) into `World of Warcraft\_retail_\Interface\AddOns\`.
 3. Start the game, or type `/reload` if it is already running.
 
-On your first login, LeanPad asks whether to set up the controller. You can run setup again any time from the Settings panel.
+On your first login, LeanPad asks whether to set up the controller. You can run setup again any time from the editor's settings page or *Settings > AddOns > LeanPad*. LeanPad is also listed in the minimap's addon compartment.
 
 > **Using ConsolePort?** Disable it before using LeanPad. Both addons manage the gamepad bindings and CVars, and they will overwrite each other.
 
@@ -43,6 +52,14 @@ On your first login, LeanPad asks whether to set up the controller. You can run 
 | `/lp perf` | Print LeanPad's CPU cost from the in-game addon profiler |
 
 LeanPad also adds a **Toggle gamepad cursor** binding under *Key Bindings > AddOns > LeanPad*.
+
+### Changing a button
+
+1. Open the editor with `/lp`. Hold a layer button first to work on that layer.
+2. Press the button you want to change. The strip under the drawing shows what it does now and on the other layers.
+3. Choose **Change action**. *Spells* and *Macros* list your spellbook and macros; pick one and LeanPad puts it on the button, finding a free slot on that layer's action bar if the button has none. *Bar slots* and *Commands* list everything else Blizzard can bind. You can also drag a spell from the spellbook onto the strip.
+
+Each change is saved straight away to your account's or character's key bindings, whichever WoW is using, and the footer says *Saved*.
 
 ### Default layout
 
@@ -92,13 +109,13 @@ Ground rules for changes:
 - Only write CVars and bindings out of combat, from code the player triggered.
 - Never compare or do arithmetic on combat values; in Midnight they may be secret.
 - No `OnUpdate` while idle and no embedded libraries.
-- Art only where it matters. The controller drawings and highlight rings in `LeanPad/Art/` are LeanPad's own, generated by `tools/draw-pads.js` (see below). Everything else uses Blizzard's atlases, fonts and color textures.
+- Art only where it matters. The controller drawings, highlight rings and command icons in `LeanPad/Art/` are LeanPad's own, generated by `tools/draw-pads.js` (see below). Everything else uses Blizzard's atlases, fonts and color textures.
 - Use `hooksecurefunc` only, and never change attributes on Blizzard's secure frames.
 - LeanPad is written from scratch on WoW's native gamepad API. Do not copy code, presets or layouts from other controller addons.
 
 ### Controller art
 
-The controller drawings are generated, not hand-edited. To change them, edit `tools/draw-pads.js` and run:
+The controller drawings and command icons are generated, not hand-edited. To change them, edit `tools/draw-pads.js` and run:
 
 ```sh
 cd tools
@@ -106,7 +123,7 @@ npm install
 node draw-pads.js
 ```
 
-It writes the textures to `LeanPad/Art/` (32-bit TGA, the format the game loads) and a preview of each pad to `tools/preview/`. If you move a button in the drawing, update its position in `ns.PADS` in `LeanPad/Controller.lua` too. The drawings are original; their proportions follow the CC0 [vector gamepad collection](https://opengameart.org/content/8th-gen-console-vector-gamepad-collection) by TheHoodieGuy02.
+It writes the textures to `LeanPad/Art/` (32-bit TGA, the format the game loads), and a preview of each pad and a sheet of the icons to `tools/preview/`. If you move a button in the drawing, update its position in `ns.PADS` in `LeanPad/Controller.lua` too; if you add an icon, give it an entry in `ns.COMMAND_ICONS`. The drawings are original; their proportions follow the CC0 [vector gamepad collection](https://opengameart.org/content/8th-gen-console-vector-gamepad-collection) by TheHoodieGuy02.
 
 The reasoning behind the design is in [docs/WoW controller addon design.md](docs/WoW%20controller%20addon%20design.md).
 
