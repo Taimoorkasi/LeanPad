@@ -98,3 +98,7 @@ The reasoning behind the design is in [docs/WoW controller addon design.md](docs
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md).
+
+## License
+
+LeanPad is licensed under the GNU General Public License, version 2 or (at your option) any later version. The full text is in [LICENSE](LICENSE).

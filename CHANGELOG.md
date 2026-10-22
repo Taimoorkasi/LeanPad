@@ -20,5 +20,5 @@ First public release.
 - `/lp perf` readout from the in-game addon profiler.
 - In-combat requests to change bindings or CVars are queued until combat ends.
 
-[Unreleased]: https://github.com/OWNER/leanpad/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/OWNER/leanpad/releases/tag/v0.1.0
+[Unreleased]: https://github.com/Taimoorkasi/LeanPad/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/Taimoorkasi/LeanPad/releases/tag/v0.1.0
