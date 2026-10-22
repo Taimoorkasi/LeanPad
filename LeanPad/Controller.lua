@@ -192,18 +192,27 @@ function ns.SetLayerButton(cvar, key)
 	end)
 end
 
--- Drops what is on the cursor into the Blizzard bar slot this button fires, so the action stays in WoW's slots.
+-- Drops what is on the cursor into the Blizzard bar slot this button fires, finding it one when it has none,
+-- so the action stays in WoW's slots.
 function ns.PlaceOnButton(binding)
 	if InCombatLockdown() then return print("LeanPad: action bars can't change in combat.") end
-	local slot = ns.SlotForCommand(GetBindingAction(binding))
-	if not slot then return print("LeanPad: bind this button to an action bar slot first, then drop actions on it.") end
-	PlaceAction(slot)
+	local slot = ns.EnsureSlot(binding)
+	if slot then PlaceAction(slot) end
 end
 
 local function commandLabel(action)
 	local slot = ns.SlotForCommand(action)
 	local icon = slot and C_ActionBar.GetActionTexture(slot)
 	return (icon and ("|T%s:16|t "):format(icon) or "") .. GetBindingName(action)
+end
+
+-- Whether a pad button, on any layer, already fires a command. Keyboard keys on it don't count: Bar 1 has
+-- 1 to = on every slot and that must not make the bar look full.
+local function padBound(command)
+	for _, key in ipairs({ GetBindingKey(command) }) do
+		if key:find("PAD[%u%d]+$") then return true end
+	end
+	return false
 end
 
 -- The bar slot a binding fires, binding the button to the first free slot of its layer's own bar when it has none.
@@ -216,7 +225,7 @@ function ns.EnsureSlot(binding)
 	for i = 1, NUM_ACTIONBAR_BUTTONS do
 		local command = bar .. i
 		slot = ns.SlotForCommand(command)
-		if slot and not C_ActionBar.HasAction(slot) and not GetBindingKey(command) then
+		if slot and not C_ActionBar.HasAction(slot) and not padBound(command) then
 			SetBinding(binding, command)
 			SaveBindings(GetCurrentBindingSet())
 			return slot

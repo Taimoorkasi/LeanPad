@@ -194,11 +194,21 @@ describe("Controller", function()
 			assert.same({ 61 }, w.placed)
 		end)
 
-		it("refuses drops on buttons that don't fire a bar slot", function()
+		it("finds a dropped-on button a free slot on its layer's bar, ignoring keyboard keys on that slot", function()
 			w.bindings.PAD1 = "JUMP"
+			w.bindings["1"] = "ACTIONBUTTON1" -- the keyboard's own key for slot 1 leaves it free for a pad button
+			ns.PlaceOnButton("PAD1")
+			assert.equal("ACTIONBUTTON1", w.bindings.PAD1)
+			assert.same({ 1 }, w.placed)
+		end)
+
+		it("refuses drops when the layer's bar has no slot left for the button", function()
+			w.bindings.PAD1 = "JUMP"
+			w.bindings.PAD3 = "ACTIONBUTTON1" -- another pad button fires the only slot the fake's Bar 1 has
 			ns.PlaceOnButton("PAD1")
 			assert.same({}, w.placed)
-			assert.matches("action bar slot first", w.printed[1])
+			assert.equal("JUMP", w.bindings.PAD1)
+			assert.matches("Action Bar 1 has no free slot left", w.printed[1])
 		end)
 
 		it("refuses drops in combat", function()
@@ -267,6 +277,7 @@ describe("Controller", function()
 		it("binds a button with no slot to the first free slot of its layer's bar, then places", function()
 			_G.ActionButton2 = { bindingAction = "ACTIONBUTTON2", action = 2 } -- busted sandboxes spec globals; the addon reads _G
 			w.bindings.PAD3 = "ACTIONBUTTON1" -- slot 1 is X's
+			w.bindings["2"] = "ACTIONBUTTON2" -- a keyboard key on slot 2 doesn't take it
 			w.bindings.PAD2 = "INTERACTTARGET"
 			wow.entry(menuFor("PAD2"), "Macros").entries[2].callback() -- the character macro, numbered after the account's 120
 			assert.equal("ACTIONBUTTON2", w.bindings.PAD2)

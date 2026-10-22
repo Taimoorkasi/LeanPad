@@ -233,9 +233,12 @@ function M.reset()
 		table.insert(w.pickups, { "macro", index })
 	end
 	GetBindingKey = function(command)
+		local keys = {}
 		for key, action in pairs(w.bindings) do
-			if action == command then return key end
+			if action == command then table.insert(keys, key) end
 		end
+		table.sort(keys)
+		return unpack(keys)
 	end
 	GameTooltip = {
 		SetOwner = function(_, owner, anchor) w.tooltip = { owner = owner, anchor = anchor } end,
