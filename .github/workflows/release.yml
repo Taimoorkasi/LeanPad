@@ -70,6 +70,12 @@ jobs:
         run: |
           git tag "v$VERSION"
           git push origin "v$VERSION"
-      - uses: BigWigsMods/packager@v2
-        with:
-          args: -t LeanPad
+      # The packager skips a branch push whose commit carries a tag, expecting that tag's own push to start a run.
+      # Our tag was pushed with GITHUB_TOKEN, which starts none, so the packager is told this is the tag's run.
+      - name: Package and upload
+        env:
+          PACKAGER: e50a250f8705041e40f2fa1ddcb280a686d65aa0 # BigWigsMods/packager v2, pinned
+        run: |
+          curl -fsSL "https://raw.githubusercontent.com/BigWigsMods/packager/$PACKAGER/release.sh" -o "$RUNNER_TEMP/release.sh"
+          GITHUB_EVENT_NAME=workflow_dispatch GITHUB_REF="refs/tags/v$VERSION" GITHUB_REF_NAME="v$VERSION" \
+            bash "$RUNNER_TEMP/release.sh" -t LeanPad
