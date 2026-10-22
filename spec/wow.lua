@@ -7,9 +7,9 @@ local realPrint = print
 -- Widget methods LeanPad may call. Any other PascalCase name errors, so a misspelt method fails the
 -- specs; lowercase data fields read as nil, as on real frames.
 local NO_OP_METHODS = {
-	"SetSize", "SetHighlightTexture", "RegisterForClicks", "SetJustifyH", "SetTitle", "SetToplevel",
+	"SetSize", "SetHighlightTexture", "SetJustifyH", "SetTitle", "SetToplevel",
 	"SetClampedToScreen", "SetMovable", "EnableMouse", "RegisterForDrag", "SetThickness", "AddMaskTexture", "SetBlendMode",
-	"SetStartPoint", "SetEndPoint", "StartMoving", "StopMovingOrSizing", "SetAllPoints", "SetDrawSwipe",
+	"SetBackdrop", "SetBackdropColor", "SetBackdropBorderColor", "StartMoving", "StopMovingOrSizing", "SetAllPoints", "SetDrawSwipe",
 }
 
 local Widget = {}
@@ -38,6 +38,11 @@ function Widget:GetText() return self.text end
 function Widget:SetTexture(texture) self.texture, self.color = texture, nil end
 function Widget:SetColorTexture(...) self.texture, self.color = nil, { ... } end
 function Widget:SetAtlas(atlas) self.atlas = atlas end
+function Widget:SetTexCoord(...) self.texCoord = { ... } end
+function Widget:SetVertexColor(...) self.vertexColor = { ... } end
+function Widget:SetStartPoint(...) self.startPoint = { ... } end
+function Widget:SetEndPoint(...) self.endPoint = { ... } end
+function Widget:SetEnabled(enabled) self.enabled = enabled end
 function Widget:SetScale(scale) self.scale = scale end
 function Widget:SetAlpha(alpha) self.alpha = alpha end
 function Widget:SetSwipeTexture(texture) self.swipeTexture = texture end
