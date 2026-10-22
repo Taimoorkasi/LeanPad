@@ -95,6 +95,7 @@ describe("Options page", function()
 		assert.is_true(wow.entry(w.menu.root, "LT").selected())
 		wow.entry(w.menu.root, "LB").callback()
 		assert.equal("PADLSHOULDER", w.cvars.GamePadEmulateShift)
+		assert.is_nil(w.bindings.PADLSHOULDER) -- a layer button holds no action
 		assert.equal(NONE, controlFor("Layer 3, acts as Alt").Label:GetText())
 		local left = controlFor("Left click")
 		assert.equal("A", left.Label:GetText())

@@ -143,6 +143,20 @@ function ns.WriteCVar(cvar, value)
 	end)
 end
 
+-- Layer buttons only open layers, as in FFXIV and WoW: Forever, so a button that becomes one loses its own
+-- bindings on every layer; otherwise a short hold would fire them through the client's tap window.
+function ns.SetLayerButton(cvar, key)
+	ns.OutOfCombat(function()
+		SetCVar(cvar, key)
+		if key ~= "none" then
+			for _, layer in ipairs(ns.Layers()) do SetBinding(layer.prefix .. key, nil) end
+			SaveBindings(GetCurrentBindingSet())
+			print(("LeanPad: %s is now a layer button, so its own bindings were cleared."):format(ns.KeyName(key)))
+		end
+		ns.Saved()
+	end)
+end
+
 -- Drops what is on the cursor into the Blizzard bar slot this button fires, so the action stays in WoW's slots.
 function ns.PlaceOnButton(binding)
 	if InCombatLockdown() then return print("LeanPad: action bars can't change in combat.") end
@@ -293,16 +307,8 @@ function ns.ActionPlace(action)
 	return "Key binding command"
 end
 
--- A button's other job, so the player doesn't rebind their way out of the cursor or a layer.
+-- A button's other job, so the player doesn't rebind their way out of the cursor.
 local function note(key, action)
-	local modifier = ns.ModifierKeys()[key]
-	if modifier then
-		local text = "Works as " .. MODIFIER_NAMES[modifier] .. " while held, opening its layer."
-		if action ~= "" then
-			text = text .. (" A tap under %s ms still does the action above."):format(GetCVar("GamePadEmulateTapWindowMs") or 350)
-		end
-		return text
-	end
 	if action == "LEANPAD_TOGGLE_CURSOR" then return "Keeps the gamepad cursor reachable." end
 	if GetCVar("GamePadCursorLeftClick") == key then return "Also the cursor's left-click." end
 	if GetCVar("GamePadCursorRightClick") == key then return "Also the cursor's right-click." end
@@ -335,11 +341,14 @@ local function promptText()
 	return hold .. ns.KeyName(MENU_KEY) .. " closes this window. Using the cursor? Click a button on the picture."
 end
 
--- What a key's callout says on the current layer: its action, or that it opens a layer; nil leaves it blank.
+local function layerButtonName(key)
+	return "Opens the " .. ns.KeyName(key) .. " layer"
+end
+
+-- What a key's callout says on the current layer: that it opens a layer, or its action; nil leaves it blank.
 local function calloutName(key)
-	local name = ns.ActionInfo(currentPrefix() .. key)
-	if name then return name end
-	if ns.ModifierKeys()[key] then return "Opens the " .. ns.KeyName(key) .. " layer" end
+	if ns.ModifierKeys()[key] then return layerButtonName(key) end
+	return ns.ActionInfo(currentPrefix() .. key)
 end
 
 -- The label at its row, and a leader that leaves it flat then bends into the button along the line between them.
@@ -396,16 +405,22 @@ local function fillStrip()
 	ns.SetGlyph(strip, key)
 	strip.Key:SetText(ns.KeyName(key))
 	strip.Layer:SetText(layers[tabIndex].label .. " layer")
+	local layerButton = ns.ModifierKeys()[key] ~= nil
 	local name, icon = ns.ActionInfo(binding)
+	if layerButton then name, icon = layerButtonName(key), nil end
 	strip.Icon:SetTexture(icon)
 	strip.Icon:SetShown(icon ~= nil)
 	strip.Name:SetText(name or NOT_BOUND)
-	strip.Place:SetText(name and ns.ActionPlace(action) or "Pick an action, or drop a spell here.")
+	strip.Place:SetText(layerButton and "Layer button: hold it to use that layer. It fires nothing itself."
+		or name and ns.ActionPlace(action) or "Pick an action, or drop a spell here.")
 	strip.Note:SetText(note(key, action))
 	strip.Clear:SetEnabled(action ~= "")
+	strip.Change:SetShown(not layerButton)
+	strip.Clear:SetShown(not layerButton)
+	strip.Hint:SetShown(not layerButton)
 	local others = {}
 	for index, layer in ipairs(layers) do
-		if index ~= tabIndex then
+		if index ~= tabIndex and not layerButton then
 			table.insert(others, layer.label .. " " .. (ns.ActionInfo(layer.prefix .. key) or NOT_BOUND))
 		end
 	end
@@ -504,7 +519,11 @@ local function onEvent(_, event)
 end
 
 local function placeHere()
-	if selected then ns.PlaceOnButton(currentPrefix() .. selected) end
+	if not selected then return end
+	if ns.ModifierKeys()[selected] then
+		return print(("LeanPad: %s is a layer button and holds no action."):format(ns.KeyName(selected)))
+	end
+	ns.PlaceOnButton(currentPrefix() .. selected)
 end
 
 -- The Change... menu beside the tabs: which pad button acts as Shift, Ctrl and Alt.
@@ -512,7 +531,7 @@ local function layerMenu(_, root)
 	for _, modifier in ipairs(TAB_ORDER) do
 		local submenu = root:CreateButton(MODIFIER_NAMES[modifier] .. " button")
 		ns.Radios(submenu, ns.KeyOptions(ns.MODIFIER_KEYS), function() return GetCVar(MODIFIER_CVARS[modifier]) or "none" end,
-			function(key) ns.WriteCVar(MODIFIER_CVARS[modifier], key) end)
+			function(key) ns.SetLayerButton(MODIFIER_CVARS[modifier], key) end)
 	end
 end
 
@@ -560,15 +579,15 @@ local function buildStrip()
 	strip.Note:SetPoint("TOPLEFT", strip.Others, "BOTTOMLEFT", 0, -6)
 	strip.Note:SetWidth(440)
 
-	local change = ns.Button(strip, "Change action...", COL, function(self)
+	strip.Change = ns.Button(strip, "Change action...", COL, function(self)
 		MenuUtil.CreateContextMenu(self, function(_, root) ns.BuildAssignMenu(root, currentPrefix() .. selected) end)
 	end, true)
-	change:SetPoint("TOPRIGHT")
+	strip.Change:SetPoint("TOPRIGHT")
 	strip.Clear = ns.Button(strip, "Clear", COL, function() ns.Assign(currentPrefix() .. selected, nil) end)
-	strip.Clear:SetPoint("TOP", change, "BOTTOM", 0, -8)
-	local hint = ns.Text(strip, 12, C.muted, "CENTER")
-	hint:SetPoint("TOP", strip.Clear, "BOTTOM", 0, -8)
-	hint:SetText("or drag a spell from your spellbook here")
+	strip.Clear:SetPoint("TOP", strip.Change, "BOTTOM", 0, -8)
+	strip.Hint = ns.Text(strip, 12, C.muted, "CENTER")
+	strip.Hint:SetPoint("TOP", strip.Clear, "BOTTOM", 0, -8)
+	strip.Hint:SetText("or drag a spell from your spellbook here")
 end
 
 local function buildEditor()

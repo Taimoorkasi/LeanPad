@@ -135,6 +135,15 @@ describe("Crossbar", function()
 			assert.is_true(buttonFor("PAD2"):IsShown())
 		end)
 
+		it("never show a layer button, even with a stale binding on it", function()
+			w.bindings.PADRTRIGGER = "ACTIONBUTTON1"
+			bar:Fire("OnEvent", "UPDATE_BINDINGS")
+			assert.is_false(buttonFor("PADRTRIGGER"):IsShown())
+			w.cvars.GamePadEmulateCtrl = "none" -- no longer a layer button: its action shows
+			bar:Fire("OnEvent", "CVAR_UPDATE")
+			assert.is_true(buttonFor("PADRTRIGGER"):IsShown())
+		end)
+
 		it("show the held layer's bar actions with icon, cooldowns and count", function()
 			local button = buttonFor("PAD3")
 			assert.equal(1, button.alpha)

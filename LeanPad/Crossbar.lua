@@ -74,12 +74,12 @@ local function updateState(button)
 	button.Icon:SetDesaturated(not C_ActionBar.IsUsableAction(slot))
 end
 
--- Pad keys worth a button: those firing a Blizzard bar button on some layer.
+-- Pad keys worth a button: those firing a Blizzard bar button on some layer. Layer buttons never do.
 local function actionKeys(layers)
-	local used = {}
+	local used, layerButtons = {}, ns.ModifierKeys()
 	for key in pairs(ns.CROSSBAR) do
 		for _, layer in ipairs(layers) do
-			if ns.ButtonForCommand(GetBindingAction(layer.prefix .. key)) then used[key] = true end
+			if not layerButtons[key] and ns.ButtonForCommand(GetBindingAction(layer.prefix .. key)) then used[key] = true end
 		end
 	end
 	return used

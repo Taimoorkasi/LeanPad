@@ -14,10 +14,31 @@ describe("Core", function()
 		assert.is_true(ns.db.prompted)
 	end)
 
-	it("registers /lp", function()
+	it("registers /lp and /leanpad", function()
 		wow.boot(nil)
 		assert.equal("/lp", SLASH_LEANPAD1)
+		assert.equal("/leanpad", SLASH_LEANPAD2)
 		assert.is_function(SlashCmdList.LEANPAD)
+	end)
+
+	it("adds only globals that carry the LeanPad name, so nothing collides with other addons", function()
+		wow.reset()
+		local before = {}
+		for name in pairs(_G) do before[name] = true end
+		local ns = wow.loadAddon()
+		LeanPadDB = {}
+		wow.addonLoaded("LeanPad")
+		wow.fire("PLAYER_ENTERING_WORLD")
+		ns.ToggleController()
+		ns.OpenOptions()
+		local added = {}
+		for name in pairs(_G) do
+			if not before[name] then table.insert(added, name) end
+		end
+		assert.is_true(#added >= 6, table.concat(added, ", "))
+		for _, name in ipairs(added) do
+			assert.is_truthy(name:find("^LeanPad") or name:find("^LEANPAD") or name:find("^SLASH_LEANPAD") or name:find("^BINDING_%u+_LEANPAD"), name)
+		end
 	end)
 
 	it("/lp perf prints the addon's own profiler averages", function()

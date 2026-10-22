@@ -105,10 +105,10 @@ local function buildLeft(x, y)
 	y = note(x, y, "With one pad connected, All connected is the same as choosing it.") + GAP
 	y = heading(x, y, "Layer buttons")
 	for _, layer in ipairs(LAYER_BUTTONS) do
-		y = row(x, y, layer[2], keyChoice(ns.MODIFIER_KEYS, layer[1]))
+		y = row(x, y, layer[2], choice(ns.KeyOptions(ns.MODIFIER_KEYS), function() return GetCVar(layer[1]) or "none" end,
+			function(key) ns.SetLayerButton(layer[1], key) end))
 	end
-	y = note(x, y, ("Hold a layer button to open its layer. A tap under %s ms still presses the button's own binding, so clear it or keep it as a tap action."):format(
-		GetCVar("GamePadEmulateTapWindowMs") or 350)) + GAP
+	y = note(x, y, "Hold a layer button to use its layer. Layer buttons fire nothing themselves: a button made one loses its own bindings.") + GAP
 	y = heading(x, y, "Soft targeting")
 	for i, cvar in ipairs(SOFT_TARGETS) do
 		y = row(x, y, SOFT_TARGET_LABELS[i], cvarChoice(softTargetOptions(), cvar, "0"))

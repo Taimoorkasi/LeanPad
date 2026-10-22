@@ -13,6 +13,7 @@ BINDING_NAME_LEANPAD_TOGGLE_CURSOR = "Toggle gamepad cursor"
 function LeanPad_OnCompartmentClick() ns.ToggleController() end
 
 SLASH_LEANPAD1 = "/lp"
+SLASH_LEANPAD2 = "/leanpad"
 SlashCmdList.LEANPAD = function(msg)
 	if msg == "perf" then
 		local M, get = Enum.AddOnProfilerMetric, C_AddOnProfiler.GetAddOnMetric
