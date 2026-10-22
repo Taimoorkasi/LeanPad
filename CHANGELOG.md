@@ -4,6 +4,8 @@ All notable changes to LeanPad are documented here. The format is based on [Keep
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-22
+
 ### Added
 
 - **Settings page** inside the editor, from its Settings button, `/lp settings` or Blizzard's *AddOns > LeanPad*: gamepad on or off, which pad to use when several are connected, Xbox or PlayStation labels whatever the pad reports, the three layer buttons, play style, soft targeting, the crossbar's view, size, opacity, position and mouse, and the native cursor's clicks, speed, auto-show, stick hiding and touchpad. Every change flashes *Saved* in the footer once it is written, including changes queued until combat ends.
@@ -46,5 +48,6 @@ First public release.
 - `/lp perf` readout from the in-game addon profiler.
 - In-combat requests to change bindings or CVars are queued until combat ends.
 
-[Unreleased]: https://github.com/Taimoorkasi/LeanPad/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/Taimoorkasi/LeanPad/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/Taimoorkasi/LeanPad/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Taimoorkasi/LeanPad/releases/tag/v0.1.0
