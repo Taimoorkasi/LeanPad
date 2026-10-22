@@ -24,8 +24,11 @@ ns.BINDINGS = {
 	PADDDOWN = "ACTIONBUTTON6",
 	PADDLEFT = "TARGETPREVIOUSENEMY",
 	PADDRIGHT = "TARGETNEARESTENEMY",
+	-- The triggers are Shift and Ctrl now; clear their own bindings so a tap doesn't fire a leftover action.
+	PADLTRIGGER = "",
+	PADRTRIGGER = "",
 	PADLSTICK = "TOGGLEAUTORUN",
-	PADRSTICK = "ACTIONBUTTON7",
+	PADRSTICK = "LEANPAD_TOGGLE_CURSOR", -- the cursor, for clicking NPCs, objects and UI; A and B then click
 	PADBACK = "OPENALLBAGS",
 	PADFORWARD = "TOGGLEGAMEMENU",
 	["SHIFT-PADBACK"] = "TOGGLEWORLDMAP",

@@ -9,10 +9,11 @@ for key in ([[PADDUP PADDRIGHT PADDDOWN PADDLEFT PAD1 PAD2 PAD3 PAD4 PAD5 PAD6 P
 	PAD_KEYS[key] = true
 end
 
--- Binding commands LeanPad uses, as defined in Blizzard_FrameXML/Bindings_Standard.xml, build 12.1.5 (70448).
+-- Binding commands LeanPad uses, as defined in Blizzard_FrameXML/Bindings_Standard.xml, build 12.1.5 (70448), plus LeanPad's own Bindings.xml.
 local COMMANDS = {}
 for command in ([[JUMP INTERACTTARGET TARGETNEARESTENEMY TARGETPREVIOUSENEMY TOGGLEAUTORUN OPENALLBAGS
-	TOGGLEGAMEMENU TOGGLEWORLDMAP TOGGLECHARACTER0 TOGGLESPELLBOOK]]):gmatch("%S+") do
+	TOGGLEGAMEMENU TOGGLEWORLDMAP TOGGLECHARACTER0 TOGGLESPELLBOOK
+	LEANPAD_TOGGLE_CURSOR]]):gmatch("%S+") do
 	COMMANDS[command] = true
 end
 for i = 1, 12 do
@@ -40,12 +41,14 @@ describe("Setup", function()
 				assert.is_truthy(button, key)
 				assert.is_true(MODIFIER_PREFIXES[prefix], "modifier prefix of " .. key)
 				assert.is_true(PAD_KEYS[button], "pad key " .. key)
-				assert.is_true(COMMANDS[action], "command " .. action)
+				assert.is_true(action == "" or COMMANDS[action], "command " .. action)
 			end
 		end)
 
-		it("binds 17 base keys plus three 8-slot crossbar layers", function()
-			assert.equal(17 + 3 * 8, count(ns.BINDINGS))
+		it("binds 17 base keys, clears both triggers, and adds three 8-slot crossbar layers", function()
+			assert.equal(19 + 3 * 8, count(ns.BINDINGS))
+			assert.equal("", ns.BINDINGS.PADLTRIGGER)
+			assert.equal("", ns.BINDINGS.PADRTRIGGER)
 		end)
 
 		it("maps each trigger layer onto slots 1-8 of its own Blizzard bar, clockwise from the top", function()
@@ -99,9 +102,11 @@ describe("Setup", function()
 	describe("Apply", function()
 		it("writes every CVar and binding and saves the current binding set", function()
 			w.bindingSet = Enum.BindingSet.Character
+			w.bindings.PADRTRIGGER = "ACTIONBUTTON2" -- a leftover the preset must clear
 			ns.Apply()
 			for cvar, value in pairs(ns.CVARS) do assert.equal(value, w.cvars[cvar]) end
-			for key, action in pairs(ns.BINDINGS) do assert.equal(action, w.bindings[key]) end
+			for key, action in pairs(ns.BINDINGS) do assert.equal(action ~= "" and action or nil, w.bindings[key]) end
+			assert.is_nil(w.bindings.PADRTRIGGER)
 			assert.same({ Enum.BindingSet.Character }, w.saved)
 			assert.matches("controller set up", w.printed[1])
 		end)
