@@ -36,6 +36,10 @@ local PAGE_EVENTS = { ACTIONBAR_PAGE_CHANGED = true, UPDATE_BONUS_ACTIONBAR = tr
 local LAYOUT_EVENTS = { "UPDATE_BINDINGS", "MODIFIER_STATE_CHANGED", "ACTIONBAR_SLOT_CHANGED", "CVAR_UPDATE", "GAME_PAD_ACTIVE_CHANGED" }
 
 local bar
+local locked = true -- unlocked from the settings page or Edit Mode, the bar, its sets and buttons take the mouse
+-- Toggles that make no sense on a hotbar keep their face in the editor only.
+local HUD_SKIP = { LEANPAD_TOGGLE_CURSOR = true, TOGGLEAUTORUN = true }
+local NOT_BOUND = "Not bound"
 local clusters = {}
 local watched = {}
 
@@ -80,6 +84,11 @@ local function updateState(button)
 	button.Icon:SetDesaturated(not C_ActionBar.IsUsableAction(slot))
 end
 
+local function faced(action)
+	local face = ns.CommandIcon(action)
+	return face and not HUD_SKIP[action] and face or nil
+end
+
 -- Pad keys worth a button: those firing a Blizzard bar button, or a command with a face, on some layer.
 -- Layer buttons never do.
 local function actionKeys(layers)
@@ -87,7 +96,7 @@ local function actionKeys(layers)
 	for key in pairs(ns.CROSSBAR) do
 		for _, layer in ipairs(layers) do
 			local action = GetBindingAction(layer.prefix .. key)
-			if not layerButtons[key] and (ns.ButtonForCommand(action) or ns.CommandIcon(action)) then used[key] = true end
+			if not layerButtons[key] and (ns.ButtonForCommand(action) or faced(action)) then used[key] = true end
 		end
 	end
 	return used
@@ -114,11 +123,11 @@ local function refreshButton(button, key, prefix, hideNumbers)
 	local slot = source and source.action
 	if not (slot and C_ActionBar.HasAction(slot)) then
 		-- Commands off the bars have no cooldown or press to show, just their face and badge.
-		local atlas, badge = ns.CommandIcon(action)
-		if atlas then
+		local face = faced(action)
+		if face then
 			button:SetAlpha(1)
-			button.Icon:SetAtlas(atlas)
-			button.Count:SetText(badge or "")
+			ns.ShowIcon(button.Icon, face)
+			button.Count:SetText(face.badge or "")
 		end
 		return
 	end
@@ -213,11 +222,18 @@ local function droppedOffset(frame, parent)
 	return (x * scale - px * parentScale) / parentScale, (y * scale - py * parentScale) / parentScale
 end
 
+-- Only an unlocked frame moves, and never while a spell rides the cursor: that drag is a drop.
 local function draggable(frame, onDrop)
 	frame:SetMovable(true)
 	frame:RegisterForDrag("LeftButton")
-	frame:SetScript("OnDragStart", frame.StartMoving)
+	frame:SetScript("OnDragStart", function(self)
+		if locked or GetCursorInfo() then return end
+		self.moving = true
+		self:StartMoving()
+	end)
 	frame:SetScript("OnDragStop", function(self)
+		if not self.moving then return end
+		self.moving = nil
 		self:StopMovingOrSizing()
 		onDrop(self)
 	end)
@@ -243,6 +259,7 @@ function ns.RefreshCrossbar()
 		cluster.frame:SetShown(layer ~= nil)
 		if layer then
 			placeCluster(cluster, index, not allLayers or layer.prefix == held)
+			cluster.frame.prefix = layer.prefix
 			cluster.Label:SetText(layer.prefix ~= "" and layer.label or "")
 			for key, button in pairs(cluster.buttons) do
 				button:SetShown(used[key] == true)
@@ -325,6 +342,20 @@ local function makeButton(parent, key)
 		local x, y = droppedOffset(self, parent)
 		remember("socketPoints", key, { snap(x, y, otherPoints(ns.CROSSBAR, key)) })
 	end)
+	-- With the mouse on, a spell dropped on a socket goes into the bar slot its button fires, and hovering tells the action.
+	local function drop() ns.PlaceOnButton(parent.prefix .. key) end
+	button:SetScript("OnReceiveDrag", drop)
+	button:SetScript("OnMouseUp", function() if GetCursorInfo() then drop() end end)
+	button:SetScript("OnEnter", function(self)
+		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+		if self.slot then
+			GameTooltip:SetAction(self.slot)
+		else
+			GameTooltip:SetText(ns.ActionInfo(parent.prefix .. key) or NOT_BOUND)
+		end
+		GameTooltip:Show()
+	end)
+	button:SetScript("OnLeave", function() GameTooltip:Hide() end)
 	button.Cooldown = makeCooldown(button.Face)
 	button.ChargeCooldown = makeCooldown(button.Face)
 	button.ChargeCooldown:SetDrawSwipe(false)
@@ -363,6 +394,16 @@ local function makeCluster(index)
 	return cluster
 end
 
+-- Sets take the mouse only while unlocked; buttons also when the player wants drops and tooltips.
+local function applyMouse()
+	local buttons = not locked or ns.db.crossbarMouse == true
+	for _, cluster in ipairs(clusters) do
+		cluster.frame:EnableMouse(not locked)
+		cluster.frame:EnableMouseWheel(not locked)
+		for _, button in pairs(cluster.buttons) do button:EnableMouse(buttons) end
+	end
+end
+
 local DEFAULT_POINT = { "BOTTOM", "BOTTOM", 0, 60 }
 
 local function anchor()
@@ -398,6 +439,7 @@ local function build()
 	end)
 	reset:SetPoint("TOP", hint, "BOTTOM", 0, -8)
 	bar.Outline:Hide()
+	applyMouse()
 	-- Listen only while shown, so a hidden crossbar costs nothing.
 	bar:SetScript("OnShow", function()
 		for _, event in ipairs(LAYOUT_EVENTS) do bar:RegisterEvent(event) end
@@ -434,17 +476,17 @@ function ns.SetCrossbarOpacity(alpha)
 end
 
 -- Locked, the bar ignores the mouse so it never gets in the way of play; unlocking lasts until reload.
-local locked = true
 function ns.SetCrossbarLocked(lock)
 	locked = lock
 	if not bar then build() end
 	bar:EnableMouse(not locked)
 	bar.Outline:SetShown(not locked)
-	for _, cluster in ipairs(clusters) do
-		cluster.frame:EnableMouse(not locked)
-		cluster.frame:EnableMouseWheel(not locked)
-		for _, button in pairs(cluster.buttons) do button:EnableMouse(not locked) end
-	end
+	applyMouse()
+end
+
+function ns.SetCrossbarMouse(on)
+	ns.db.crossbarMouse = on
+	if bar then applyMouse() end
 end
 
 function ns.CrossbarLocked() return locked end

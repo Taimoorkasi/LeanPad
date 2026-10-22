@@ -145,9 +145,10 @@ describe("Crossbar", function()
 			assert.same({ "CENTER", clusters()[1], "CENTER", 39, -54 }, buttonFor("PADRSTICK").point)
 		end)
 
-		it("give commands off the bars a Blizzard face with a badge, and no cooldown or press", function()
+		it("give commands off the bars a face with a badge, and no cooldown or press", function()
 			local right = buttonFor("PADDRIGHT") -- Target nearest enemy in the preset
-			assert.equal("Crosshair_Attack_64", right.Icon.atlas)
+			assert.equal("Interface\\AddOns\\LeanPad\\Art\\IconTargetEnemy", right.Icon.texture)
+			assert.equal("Interface\\AddOns\\LeanPad\\Art\\IconJump", buttonFor("PAD1").Icon.texture)
 			assert.equal("|A:common-icon-forwardarrow:12:12|a", right.Count:GetText())
 			assert.equal(1, right.alpha)
 			assert.is_nil(right.slot)
@@ -166,11 +167,13 @@ describe("Crossbar", function()
 		end)
 
 		it("show a button with nothing on the held layer as a faint empty slot", function()
-			local jump = buttonFor("PAD1") -- Jump on Base, a bar action on LT
-			assert.is_true(jump:IsShown())
-			assert.equal(ns.CROSSBAR_EMPTY_ALPHA, jump.alpha)
-			assert.is_nil(jump.Icon.texture)
-			assert.is_nil(jump.slot)
+			w.bindings["SHIFT-PADLSHOULDER"] = "MULTIACTIONBAR1BUTTON1" -- a bar action on LT; on Base, a bar button the fake lacks
+			bar:Fire("OnEvent", "UPDATE_BINDINGS")
+			local lb = buttonFor("PADLSHOULDER")
+			assert.is_true(lb:IsShown())
+			assert.equal(ns.CROSSBAR_EMPTY_ALPHA, lb.alpha)
+			assert.is_nil(lb.Icon.texture)
+			assert.is_nil(lb.slot)
 		end)
 
 		it("show and hide buttons as bindings change", function()
@@ -402,6 +405,44 @@ describe("Crossbar", function()
 		end)
 	end)
 
+	describe("mouse", function()
+		before_each(function()
+			wow.fire("PLAYER_ENTERING_WORLD")
+			bar = LeanPadCrossbar
+		end)
+
+		it("stays off the buttons until asked, then takes drops and shows tooltips while locked", function()
+			assert.is_false(buttonFor("PAD3").mouse)
+			ns.SetCrossbarMouse(true)
+			assert.is_true(ns.db.crossbarMouse)
+			assert.is_true(buttonFor("PAD3").mouse)
+			assert.is_false(clusters()[1].mouse)
+			local x = buttonFor("PAD3") -- Action Bar 2, slot 1 on Base
+			x:Fire("OnReceiveDrag")
+			assert.same({ 61 }, w.placed)
+			w.cursor = "spell"
+			x:Fire("OnMouseUp")
+			assert.same({ 61, 61 }, w.placed)
+			w.cursor = nil
+			x:Fire("OnMouseUp")
+			assert.same({ 61, 61 }, w.placed)
+			x:Fire("OnEnter")
+			assert.same({ owner = x, anchor = "ANCHOR_RIGHT", slot = 61, shown = true }, w.tooltip)
+			x:Fire("OnLeave")
+			assert.is_nil(w.tooltip)
+			buttonFor("PADDRIGHT"):Fire("OnEnter")
+			assert.equal("name:TARGETNEARESTENEMY", w.tooltip.text)
+			ns.SetCrossbarMouse(false)
+			assert.is_false(buttonFor("PAD3").mouse)
+		end)
+
+		it("comes back on at login when it was left on", function()
+			ns, w = wow.boot({ crossbarMouse = true })
+			wow.fire("PLAYER_ENTERING_WORLD")
+			assert.is_true(buttonFor("PAD3").mouse)
+		end)
+	end)
+
 	describe("settings", function()
 		it("Show crossbar hides and shows the bar and remembers the choice", function()
 			ns.SetCrossbarShown(false)
@@ -504,13 +545,16 @@ describe("Crossbar", function()
 
 			it("pulls a dropped set level with a neighbour on one axis, unless Shift is held", function()
 				set.cx, set.cy = 5, -131 -- near the fourth set's slot at 0, -135: both axes within reach, so neither pulls
+				set:Fire("OnDragStart")
 				set:Fire("OnDragStop")
 				assert.same({ 8, -128 }, ns.db.clusterPoints[1])
 				set.cx, set.cy = 5, -70 -- level in x only: pulled onto the fourth set's column
+				set:Fire("OnDragStart")
 				set:Fire("OnDragStop")
 				assert.same({ 0, -72 }, ns.db.clusterPoints[1])
 				w.held.shift = true
 				set.cx, set.cy = 5, -70
+				set:Fire("OnDragStart")
 				set:Fire("OnDragStop")
 				assert.same({ 5, -70 }, ns.db.clusterPoints[1])
 			end)
@@ -529,12 +573,14 @@ describe("Crossbar", function()
 			it("keeps where a button is dragged to, for every set, and resets the whole layout from the outline", function()
 				local x = buttonFor("PAD3")
 				x.cx, x.cy, set.cx, set.cy = 11, 21, 0, 0
+				x:Fire("OnDragStart")
 				x:Fire("OnDragStop")
 				assert.same({ 8, 24 }, ns.db.socketPoints.PAD3) -- on the grid; no neighbour near enough to pull
 				assert.same({ "CENTER", set, "CENTER", 8, 24 }, x.point)
 				ns.SetCrossbarStyle("all") -- the other sets, once shown, share the spot
 				assert.same({ "CENTER", clusters()[2], "CENTER", 8, 24 }, buttonFor("PAD3", 2).point)
 				x.cx, x.cy = 158, 10 -- nearly under Y and nearly level with B: pulled into Y's column and B's row
+				x:Fire("OnDragStart")
 				x:Fire("OnDragStop")
 				assert.same({ ns.CROSSBAR.PAD4[1], ns.CROSSBAR.PAD2[2] }, ns.db.socketPoints.PAD3)
 				-- A dragged socket between the diamonds leaves the stack.
@@ -556,6 +602,19 @@ describe("Crossbar", function()
 				assert.same({ "BOTTOM", UIParent, "BOTTOM", 0, 60 }, bar.point)
 				assert.same({ "CENTER", set, "CENTER", ns.CROSSBAR.PAD3[1], ns.CROSSBAR.PAD3[2] }, x.point)
 				assert.same({ "CENTER", bar, "CENTER", 0, 60 }, set.point)
+			end)
+
+			it("moves nothing while locked, nor while a spell rides the cursor", function()
+				ns.SetCrossbarLocked(true)
+				set.cx, set.cy = 5, -70
+				set:Fire("OnDragStart")
+				set:Fire("OnDragStop")
+				assert.is_nil(ns.db.clusterPoints)
+				ns.SetCrossbarLocked(false)
+				w.cursor = "spell"
+				set:Fire("OnDragStart")
+				set:Fire("OnDragStop")
+				assert.is_nil(ns.db.clusterPoints)
 			end)
 
 			it("comes back with the sets and buttons where they were left", function()

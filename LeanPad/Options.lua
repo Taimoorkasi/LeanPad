@@ -2,7 +2,7 @@ local _, ns = ...
 
 -- LeanPad's own settings page inside the controller window. Blizzard's Settings panel stays the way in.
 local C = ns.COLORS
-local MARGIN, GAP, COLUMN, ROW = 16, 20, 432, 34
+local MARGIN, GAP, COLUMN, ROW = 16, 16, 432, 32
 local SOFT_TARGETS = { "SoftTargetEnemy", "SoftTargetFriend", "SoftTargetInteract" }
 local SOFT_TARGET_LABELS = { "Enemies", "Friends", "Interact" }
 local STYLES = { { "auto", "Auto" }, { "xbox", "Xbox" }, { "playstation", "PlayStation" } }
@@ -165,7 +165,13 @@ local function buildRight(x, y)
 		ns.SetCrossbarOpacity(tonumber(value))
 		ns.Saved()
 	end))
-	y = row(x, y, "Position", lockButton()) + GAP
+	y = row(x, y, "Position", lockButton())
+	local mouse = ns.Checkbox(page, function() return ns.db.crossbarMouse == true end, function(on)
+		ns.SetCrossbarMouse(on)
+		ns.Saved()
+	end)
+	table.insert(controls, mouse)
+	y = row(x, y, "Mouse: drop spells on it, see tooltips", mouse) + GAP
 	y = heading(x, y, "Cursor")
 	for _, click in ipairs(CLICKS) do
 		y = row(x, y, click[2], keyChoice(ns.CLICK_KEYS, click[1]))

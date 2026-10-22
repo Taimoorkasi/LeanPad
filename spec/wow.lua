@@ -196,6 +196,13 @@ function M.reset()
 		if not ok then table.insert(w.errors, err) end
 	end
 	GetCursorInfo = function() return w.cursor end
+	GameTooltip = {
+		SetOwner = function(_, owner, anchor) w.tooltip = { owner = owner, anchor = anchor } end,
+		SetAction = function(_, slot) w.tooltip.slot = slot end,
+		SetText = function(_, text) w.tooltip.text = text end,
+		Show = function() w.tooltip.shown = true end,
+		Hide = function() w.tooltip = nil end,
+	}
 	PlaceAction = function(slot) table.insert(w.placed, slot) end
 	IsAltKeyDown = function() return w.held.alt end
 	IsControlKeyDown = function() return w.held.ctrl end

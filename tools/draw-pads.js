@@ -117,6 +117,25 @@ const pads = {
 	},
 };
 
+// Faces for commands that live on no bar slot, in the pad drawings' own style: steel line art on slate, one amber accent.
+const ICON_INK = "#dbe4ec", ICON_ACCENT = "#f6b73c", ICON_FILL = "#1b2430", ICON_RIM = "#3a4a5e";
+const line = (d, extra = {}) => el("path", { d, fill: "none", stroke: ICON_INK, "stroke-width": 4.5, "stroke-linecap": "round", "stroke-linejoin": "round", ...extra });
+const icons = {
+	IconTargetEnemy: [el("circle", { cx: 32, cy: 32, r: 14, fill: "none", stroke: ICON_INK, "stroke-width": 4.5 }),
+		line("M32 8 V16 M32 48 V56 M8 32 H16 M48 32 H56"), el("circle", { cx: 32, cy: 32, r: 4, fill: ICON_ACCENT })],
+	IconTargetFriend: [el("circle", { cx: 32, cy: 23, r: 8, fill: "none", stroke: ICON_INK, "stroke-width": 4.5 }), line("M16 52 C16 40 24 36 32 36 C40 36 48 40 48 52")],
+	IconInteract: [line("M32 44 V22", { "stroke-width": 9 }), line("M20 20 C24 12 40 12 44 20"), line("M14 28 C18 14 46 14 50 28", { stroke: ICON_ACCENT })],
+	IconJump: [line("M32 46 V18 M22 28 L32 18 L42 28"), line("M18 52 H46", { stroke: ICON_ACCENT })],
+	IconAutorun: [line("M20 20 L32 32 L20 44"), line("M34 20 L46 32 L34 44", { stroke: ICON_ACCENT })],
+	IconCursor: [el("path", { d: "M20 14 L20 46 L28 39 L34 51 L40 48 L34 36 L44 36 Z", fill: ICON_INK, stroke: ICON_FILL, "stroke-width": 2, "stroke-linejoin": "round" })],
+	IconBags: [el("rect", { x: 18, y: 26, width: 28, height: 24, rx: 5, fill: "none", stroke: ICON_INK, "stroke-width": 4.5 }), line("M24 26 C24 14 40 14 40 26", { stroke: ICON_ACCENT })],
+	IconMenu: [line("M18 22 H46 M18 32 H46 M18 42 H46")],
+	IconMap: [line("M32 52 C32 52 18 36 18 27 A14 14 0 1 1 46 27 C46 36 32 52 32 52 Z"), el("circle", { cx: 32, cy: 27, r: 5, fill: ICON_ACCENT })],
+	IconSpellbook: [el("rect", { x: 17, y: 16, width: 30, height: 32, rx: 3, fill: "none", stroke: ICON_INK, "stroke-width": 4.5 }), line("M32 16 V48"), line("M22 26 H27 M22 34 H27", { stroke: ICON_ACCENT })],
+	IconCharacter: [line("M32 12 L48 19 C48 38 40 48 32 52 C24 48 16 38 16 19 Z"), line("M32 24 V40", { stroke: ICON_ACCENT })],
+};
+const icon = (parts) => el("circle", { cx: 32, cy: 32, r: 31, fill: ICON_FILL, stroke: ICON_RIM, "stroke-width": 2 }) + parts.join("");
+
 // White strokes, tinted in game with SetVertexColor.
 const rings = {
 	Ring: el("circle", { cx: 64, cy: 64, r: 58, fill: "none", stroke: "#fff", "stroke-width": 7 }),
@@ -161,4 +180,5 @@ for (const [name, pad] of Object.entries(pads)) {
 	fs.writeFileSync(path.join(PREVIEW, name + ".png"), png);
 }
 for (const [name, shape] of Object.entries(rings)) render(name, svg("0 0 128 128", shape), 128, 128);
+for (const [name, parts] of Object.entries(icons)) render(name, svg("0 0 64 64", icon(parts)), 64, 64);
 console.log("wrote", fs.readdirSync(OUT).join(", "));

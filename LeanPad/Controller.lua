@@ -1,5 +1,7 @@
 local addonName, ns = ...
 
+local ART = "Interface\\AddOns\\" .. addonName .. "\\Art\\"
+
 -- Tabs list modifier layers left trigger first; binding keys spell them ALT-CTRL-SHIFT-, WoW's order.
 local TAB_ORDER = { "SHIFT-", "CTRL-", "ALT-" }
 local CANONICAL = { "ALT-", "CTRL-", "SHIFT-" }
@@ -129,24 +131,36 @@ function ns.ActionInfo(binding)
 	return slotName(slot) or GetBindingName(action), C_ActionBar.GetActionTexture(slot)
 end
 
--- Blizzard atlases for commands that live on no bar slot, so targeting, interact and menus get a face too.
--- The second entry is a badge for the socket's corner: an arrow for next and previous, a number for party members.
-local NEXT, PREVIOUS, FRIEND = "|A:common-icon-forwardarrow:12:12|a", "|A:common-icon-backarrow:12:12|a", "groupfinder-icon-friend"
+-- Faces for commands that live on no bar slot: LeanPad's own icons from Art/, drawn by tools/draw-pads.js, and
+-- Blizzard's micro-menu atlases for the panels that already have one. A badge sits in the socket's corner:
+-- an arrow for next and previous, a number for party members.
+local NEXT, PREVIOUS = "|A:common-icon-forwardarrow:12:12|a", "|A:common-icon-backarrow:12:12|a"
+local function own(name, badge) return { texture = ART .. "Icon" .. name, badge = badge } end
+local function micro(name) return { atlas = "UI-HUD-MicroMenu-" .. name .. "-Up" } end
 ns.COMMAND_ICONS = {
-	TARGETNEARESTENEMY = { "Crosshair_Attack_64", NEXT }, TARGETPREVIOUSENEMY = { "Crosshair_Attack_64", PREVIOUS },
-	TARGETNEARESTFRIEND = { FRIEND, NEXT }, TARGETPREVIOUSFRIEND = { FRIEND, PREVIOUS }, TARGETSELF = { FRIEND },
-	TARGETPARTYMEMBER1 = { FRIEND, "1" }, TARGETPARTYMEMBER2 = { FRIEND, "2" }, TARGETPARTYMEMBER3 = { FRIEND, "3" }, TARGETPARTYMEMBER4 = { FRIEND, "4" },
-	INTERACTTARGET = { "Crosshair_GrabbingHand_64" }, OPENALLBAGS = { "bag-main" },
-	TOGGLEGAMEMENU = { "UI-HUD-MicroMenu-GameMenu-Up" }, TOGGLESPELLBOOK = { "UI-HUD-MicroMenu-SpellbookAbilities-Up" },
-	TOGGLETALENTS = { "UI-HUD-MicroMenu-SpecTalents-Up" }, TOGGLEQUESTLOG = { "UI-HUD-MicroMenu-Questlog-Up" },
-	TOGGLECOLLECTIONS = { "UI-HUD-MicroMenu-Collections-Up" }, TOGGLEACHIEVEMENT = { "UI-HUD-MicroMenu-Achievements-Up" },
-	TOGGLEGROUPFINDER = { "UI-HUD-MicroMenu-Groupfinder-Up" }, TOGGLEENCOUNTERJOURNAL = { "UI-HUD-MicroMenu-AdventureGuide-Up" },
-	TOGGLEPROFESSIONBOOK = { "UI-HUD-MicroMenu-Professions-Up" }, TOGGLEWORLDMAP = { "Waypoint-MapPin-ChatIcon" },
+	TARGETNEARESTENEMY = own("TargetEnemy", NEXT), TARGETPREVIOUSENEMY = own("TargetEnemy", PREVIOUS),
+	TARGETNEARESTFRIEND = own("TargetFriend", NEXT), TARGETPREVIOUSFRIEND = own("TargetFriend", PREVIOUS), TARGETSELF = own("TargetFriend"),
+	TARGETPARTYMEMBER1 = own("TargetFriend", "1"), TARGETPARTYMEMBER2 = own("TargetFriend", "2"),
+	TARGETPARTYMEMBER3 = own("TargetFriend", "3"), TARGETPARTYMEMBER4 = own("TargetFriend", "4"),
+	INTERACTTARGET = own("Interact"), JUMP = own("Jump"), TOGGLEAUTORUN = own("Autorun"), LEANPAD_TOGGLE_CURSOR = own("Cursor"),
+	OPENALLBAGS = own("Bags"), TOGGLEGAMEMENU = own("Menu"), TOGGLEWORLDMAP = own("Map"), TOGGLESPELLBOOK = own("Spellbook"),
+	TOGGLECHARACTER0 = own("Character"),
+	TOGGLETALENTS = micro("SpecTalents"), TOGGLEQUESTLOG = micro("Questlog"), TOGGLECOLLECTIONS = micro("Collections"),
+	TOGGLEACHIEVEMENT = micro("Achievements"), TOGGLEGROUPFINDER = micro("Groupfinder"), TOGGLEENCOUNTERJOURNAL = micro("AdventureGuide"),
+	TOGGLEPROFESSIONBOOK = micro("Professions"),
 }
 
 function ns.CommandIcon(action)
-	local icon = ns.COMMAND_ICONS[action]
-	if icon then return icon[1], icon[2] end
+	return ns.COMMAND_ICONS[action]
+end
+
+-- Puts a command's face on a texture, from LeanPad's art or Blizzard's atlas.
+function ns.ShowIcon(texture, icon)
+	if icon.atlas then
+		texture:SetAtlas(icon.atlas)
+	else
+		texture:SetTexture(icon.texture)
+	end
 end
 
 function ns.Assign(binding, action)
@@ -222,7 +236,6 @@ end
 -- The controller drawings in Art/, made by tools/draw-pads.js, and where each button sits on them in the
 -- drawing's own units: centre x, centre y, width, height, then the callout column (L or R) and row. Keep in
 -- step with draw-pads.js.
-local ART = "Interface\\AddOns\\" .. addonName .. "\\Art\\"
 ns.PADS = {
 	playstation = {
 		texture = ART .. "PadPlayStation",
@@ -429,13 +442,13 @@ local function fillStrip()
 	local layerButton = ns.ModifierKeys()[key] ~= nil
 	local name, icon = ns.ActionInfo(binding)
 	if layerButton then name, icon = layerButtonName(key), nil end
-	local atlas = not layerButton and not icon and ns.CommandIcon(action) or nil
+	local face = not layerButton and not icon and ns.CommandIcon(action) or nil
 	if icon then
 		strip.Icon:SetTexture(icon)
-	elseif atlas then
-		strip.Icon:SetAtlas(atlas)
+	elseif face then
+		ns.ShowIcon(strip.Icon, face)
 	end
-	strip.Icon:SetShown((icon or atlas) ~= nil)
+	strip.Icon:SetShown((icon or face) ~= nil)
 	strip.Name:SetText(name or NOT_BOUND)
 	strip.Place:SetText(layerButton and "Layer button: hold it to use that layer. It fires nothing itself."
 		or name and ns.ActionPlace(action) or "Pick an action, or drop a spell here.")
