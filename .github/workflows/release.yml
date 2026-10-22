@@ -1,13 +1,49 @@
-# Pushing a version tag such as v0.2.0 runs the tests, then packages LeanPad/ and uploads the zip
-# to GitHub Releases and CurseForge (project ID in the TOC). Needs the CF_API_KEY repository secret.
+# Releasing is one step: add a dated version section to CHANGELOG.md, such as "## [0.3.0] - 2026-11-01", and push
+# to main. This workflow sees a version with no tag yet, runs the tests, tags it v0.3.0 and has the BigWigs packager
+# zip LeanPad/ and upload it to GitHub Releases and CurseForge (project ID in the TOC). Pushing a v* tag by hand
+# releases that tag the same way. Needs the CF_API_KEY repository secret; WAGO_API_TOKEN once a Wago ID is in the TOC.
 name: Release
 
 on:
   push:
+    branches: [main]
+    paths: [CHANGELOG.md]
     tags: ["v*"]
+  workflow_dispatch:
+
+concurrency: release
 
 jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      release: ${{ steps.version.outputs.release }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: version
+        run: |
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            version="${GITHUB_REF_NAME#v}"
+            release=true
+          else
+            # The newest released version is the first "## [x.y.z]" heading; [Unreleased] is skipped.
+            version=$(grep -m1 -oP '^## \[\K[0-9]+\.[0-9]+\.[0-9]+(?=\])' CHANGELOG.md || true)
+            if [ -z "$version" ] || git rev-parse -q --verify "refs/tags/v$version" > /dev/null; then
+              release=false
+            else
+              release=true
+            fi
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "release=$release" >> "$GITHUB_OUTPUT"
+          echo "Version $version, release: $release"
+
   test:
+    needs: plan
+    if: needs.plan.outputs.release == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -15,18 +51,25 @@ jobs:
       - run: docker run --rm -v "$PWD:/src" leanpad-test
 
   release:
-    needs: test
+    needs: [plan, test]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     env:
+      VERSION: ${{ needs.plan.outputs.version }}
       CF_API_TOKEN: ${{ secrets.CF_API_KEY }}
       WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }}
       GH_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # the packager builds the changelog and version from the tag history
+          fetch-depth: 0 # the packager reads the version and changelog from the tag history
+      # A tag pushed with GITHUB_TOKEN starts no new run, so tagging here never releases twice.
+      - name: Tag the version
+        if: github.ref_type != 'tag'
+        run: |
+          git tag "v$VERSION"
+          git push origin "v$VERSION"
       - uses: BigWigsMods/packager@v2
         with:
           args: -t LeanPad

@@ -129,7 +129,15 @@ It writes the textures to `LeanPad/Art/` (32-bit TGA, the format the game loads)
 
 ### Releasing
 
-Push a version tag, such as `v0.2.0`. The release workflow in `.github/workflows/release.yml` runs the tests, then the [BigWigs packager](https://github.com/BigWigsMods/packager) zips the `LeanPad/` folder, stamps the tag into the TOC's version and uploads the zip to GitHub Releases and CurseForge. It needs the `CF_API_KEY` repository secret, and `WAGO_API_TOKEN` once a Wago ID is in the TOC.
+To release, turn the changelog's *Unreleased* notes into a dated version section and push to `main`:
+
+```markdown
+## [Unreleased]
+
+## [0.3.0] - 2026-11-01
+```
+
+The release workflow in `.github/workflows/release.yml` sees a version with no tag yet, runs the tests, tags it `v0.3.0`, and the [BigWigs packager](https://github.com/BigWigsMods/packager) zips the `LeanPad/` folder, stamps the version into the TOC and uploads the zip to GitHub Releases and CurseForge. Pushes that leave the newest version unchanged release nothing. Pushing a `v*` tag by hand releases that tag the same way. It needs the `CF_API_KEY` repository secret, and `WAGO_API_TOKEN` once a Wago ID is in the TOC.
 
 The reasoning behind the design is in [docs/WoW controller addon design.md](docs/WoW%20controller%20addon%20design.md).
 
