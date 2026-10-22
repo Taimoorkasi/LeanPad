@@ -137,7 +137,7 @@ To release, turn the changelog's *Unreleased* notes into a dated version section
 ## [0.3.0] - 2026-11-01
 ```
 
-The release workflow in `.github/workflows/release.yml` sees a version with no tag yet, runs the tests, tags it `v0.3.0`, and the [BigWigs packager](https://github.com/BigWigsMods/packager) zips the `LeanPad/` folder, stamps the version into the TOC and uploads the zip to GitHub Releases and CurseForge. Pushes that leave the newest version unchanged release nothing. Pushing a `v*` tag by hand releases that tag the same way. It needs the `CF_API_KEY` repository secret, and `WAGO_API_TOKEN` once a Wago ID is in the TOC.
+The release workflow in `.github/workflows/release.yml` sees a version with no tag yet, runs the tests, tags it `v0.3.0`, and `tools/release.sh` zips the `LeanPad/` folder, stamps the version into the TOC and uploads the zip to GitHub Releases and CurseForge, with that version's changelog section as the notes. Pushes that leave the newest version unchanged release nothing. Pushing a `v*` tag by hand releases that tag the same way, and *Run workflow* on the Actions page re-releases the newest version. It needs the `CF_API_KEY` repository secret. To check a release without publishing, run `DRY_RUN=1 tools/release.sh 0.3.0` from the repository root.
 
 The reasoning behind the design is in [docs/WoW controller addon design.md](docs/WoW%20controller%20addon%20design.md).
 

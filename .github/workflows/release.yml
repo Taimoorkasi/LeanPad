@@ -1,8 +1,8 @@
 # Releasing is one step: add a dated version section to CHANGELOG.md, such as "## [0.3.0] - 2026-11-01", and push
-# to main. This workflow sees a version with no tag yet, runs the tests, tags it v0.3.0 and has the BigWigs packager
-# zip LeanPad/ and upload it to GitHub Releases and CurseForge (project ID in the TOC). Pushing a v* tag by hand
+# to main. This workflow sees a version with no tag yet, runs the tests, tags it v0.3.0, and tools/release.sh zips
+# LeanPad/ and uploads it to GitHub Releases and CurseForge (project ID in the TOC). Pushing a v* tag by hand
 # releases that tag the same way, and Run workflow on GitHub re-releases the newest changelog version.
-# Needs the CF_API_KEY repository secret; WAGO_API_TOKEN once a Wago ID is in the TOC.
+# Needs the CF_API_KEY repository secret.
 name: Release
 
 on:
@@ -63,27 +63,18 @@ jobs:
     env:
       VERSION: ${{ needs.plan.outputs.version }}
       CF_API_TOKEN: ${{ secrets.CF_API_KEY }}
-      WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }}
-      GH_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # the packager reads the version and changelog from the tag history
+          fetch-depth: 0
       # A tag pushed with GITHUB_TOKEN starts no new run, so tagging here never releases twice.
-      - name: Tag the version
-        if: github.ref_type != 'tag'
+      - name: Tag, package and upload
         run: |
+          cp tools/release.sh "$RUNNER_TEMP/release.sh" # the tagged commit may predate the script
           if ! git rev-parse -q --verify "refs/tags/v$VERSION" > /dev/null; then
             git tag "v$VERSION"
             git push origin "v$VERSION"
           fi
           git checkout -q "v$VERSION" # package exactly the tagged commit
-      # The packager skips a branch push whose commit carries a tag, expecting that tag's own push to start a run.
-      # Our tag was pushed with GITHUB_TOKEN, which starts none, so the packager is told this is the tag's run.
-      - name: Package and upload
-        env:
-          PACKAGER: e50a250f8705041e40f2fa1ddcb280a686d65aa0 # BigWigsMods/packager v2, pinned
-        run: |
-          curl -fsSL "https://raw.githubusercontent.com/BigWigsMods/packager/$PACKAGER/release.sh" -o "$RUNNER_TEMP/release.sh"
-          GITHUB_EVENT_NAME=workflow_dispatch GITHUB_REF="refs/tags/v$VERSION" GITHUB_REF_NAME="v$VERSION" \
-            bash "$RUNNER_TEMP/release.sh" -t LeanPad
+          bash "$RUNNER_TEMP/release.sh" "$VERSION"
