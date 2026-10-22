@@ -180,6 +180,11 @@ function M.reset()
 	GetCVarBool = function(name) return w.cvars[name] == "1" end
 	RunNextFrame = function(callback) table.insert(w.nextFrame, callback) end
 	C_Timer = { After = function(seconds, callback) table.insert(w.timers, { seconds = seconds, callback = callback }) end }
+	-- A Beast Mastery hunter until a spec says otherwise.
+	w.spec, w.specID, w.role = 1, 253, "DAMAGER"
+	GetSpecialization = function() return w.spec end
+	GetSpecializationInfo = function() return w.specID end
+	GetSpecializationRole = function() return w.role end
 	EventRegistry = { RegisterCallback = function(_, event, callback) w.callbacks[event] = callback end }
 	-- Like the client's: an error goes to the error handler and the caller carries on.
 	w.errors = {}

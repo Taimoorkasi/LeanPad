@@ -131,3 +131,47 @@ EventUtil.RegisterOnceFrameEventAndCallback("PLAYER_ENTERING_WORLD", function()
 	ns.db.prompted = true
 	ns.ShowSetup()
 end)
+
+-- Play styles: how the body answers the stick in combat, and whom soft targeting looks for, per role.
+-- Tanks never show the pack their back; melee and ranged strafe but spin to run when pushed straight back;
+-- healers run free, since heals need no facing, and get friendly soft targeting.
+ns.PLAYSTYLES = {
+	tank = { GamePadFaceMovementMaxAngleCombat = "180", SoftTargetEnemyArc = "1", SoftTargetFriend = "0" },
+	melee = { GamePadFaceMovementMaxAngleCombat = "115", SoftTargetEnemyArc = "1", SoftTargetFriend = "0" },
+	ranged = { GamePadFaceMovementMaxAngleCombat = "115", SoftTargetEnemyArc = "2", SoftTargetFriend = "0" },
+	healer = { GamePadFaceMovementMaxAngleCombat = "0", SoftTargetEnemyArc = "2", SoftTargetFriend = "1", SoftTargetFriendArc = "2" },
+}
+-- Damage specs the role API can't tell apart: these cast from range. shortcut: hand-kept, add any new ranged spec.
+local RANGED_SPECS = {
+	[62] = true, [63] = true, [64] = true, [102] = true, [253] = true, [254] = true, [258] = true,
+	[262] = true, [265] = true, [266] = true, [267] = true, [1467] = true, [1473] = true,
+}
+
+-- The style the current spec plays, or nil before a spec is chosen.
+function ns.SpecStyle()
+	local spec = GetSpecialization()
+	if not spec then return end
+	local role = GetSpecializationRole(spec)
+	if role == "TANK" then return "tank" end
+	if role == "HEALER" then return "healer" end
+	return RANGED_SPECS[GetSpecializationInfo(spec)] and "ranged" or "melee"
+end
+
+-- Writes the chosen style's CVars; Auto follows the spec. Unset means the player keeps their own values.
+-- shortcut: these CVars are not in the setup backup, so Undo setup leaves them; add them if that bites.
+function ns.ApplyPlaystyle()
+	local style = ns.db.playstyle
+	if style == "auto" then style = ns.SpecStyle() end
+	local preset = style and ns.PLAYSTYLES[style]
+	if not preset then return end
+	ns.OutOfCombat(function()
+		for cvar, value in pairs(preset) do SetCVar(cvar, value) end
+	end)
+end
+
+local specWatcher = CreateFrame("Frame")
+specWatcher:RegisterEvent("ACTIVE_PLAYER_SPECIALIZATION_CHANGED")
+specWatcher:SetScript("OnEvent", function()
+	if ns.db.playstyle == "auto" then ns.ApplyPlaystyle() end
+end)
+EventUtil.RegisterOnceFrameEventAndCallback("PLAYER_ENTERING_WORLD", ns.ApplyPlaystyle)
