@@ -6,7 +6,10 @@ local MARGIN, GAP, COLUMN, ROW = 16, 24, 432, 36
 local SOFT_TARGETS = { "SoftTargetEnemy", "SoftTargetFriend", "SoftTargetInteract" }
 local SOFT_TARGET_LABELS = { "Enemies", "Friends", "Interact" }
 local STYLES = { { "auto", "Auto" }, { "xbox", "Xbox" }, { "playstation", "PlayStation" } }
-local CROSSBAR_STYLES = { { "active", "Held layer only" }, { "all", "All layers" } }
+local CROSSBARS = { { "off", OFF }, { "active", "One set, swaps with the held layer" }, { "all", "All layers, the held one large" } }
+local SCALES = { { "0.6", "60%" }, { "0.8", "80%" }, { "1", "100%" }, { "1.2", "120%" } }
+local SPEEDS = { { "0.6", "Slow" }, { "1", "Normal" }, { "1.5", "Fast" } }
+local STICK_HIDES = { { "0", "Never" }, { "1", "When the character moves" }, { "2", "When either stick moves" } }
 local LAYER_BUTTONS = {
 	{ "GamePadEmulateShift", "Layer 1, acts as Shift" }, { "GamePadEmulateCtrl", "Layer 2, acts as Ctrl" }, { "GamePadEmulateAlt", "Layer 3, acts as Alt" },
 }
@@ -42,8 +45,13 @@ end
 -- A dropdown over value/label options; options may be a function when the choices depend on the pads connected.
 local function choice(options, current, set)
 	local function list() return type(options) == "function" and options() or options end
-	local dropdown = ns.Dropdown(page, 200, function() return ns.LabelOf(list(), current()) end,
-		function(root) ns.Radios(root, list(), current, set) end)
+	local dropdown
+	dropdown = ns.Dropdown(page, 200, function() return ns.LabelOf(list(), current()) end, function(root)
+		ns.Radios(root, list(), current, function(value)
+			set(value)
+			dropdown:Refresh()
+		end)
+	end)
 	table.insert(controls, dropdown)
 	return dropdown
 end
@@ -54,6 +62,12 @@ end
 
 local function keyChoice(keys, cvar)
 	return choice(ns.KeyOptions(keys), function() return GetCVar(cvar) or "none" end, function(value) ns.WriteCVar(cvar, value) end)
+end
+
+local function cvarCheckbox(cvar)
+	local box = ns.Checkbox(page, function() return GetCVar(cvar) == "1" end, function(on) ns.WriteCVar(cvar, on and "1" or "0") end)
+	table.insert(controls, box)
+	return box
 end
 
 local function heading(x, y, text)
@@ -79,18 +93,9 @@ local function note(x, y, text)
 	return y + 34
 end
 
-local function action(x, y, label, onClick, text)
-	local button = ns.Button(page, label, 190, onClick)
-	button:SetPoint("TOPLEFT", x, -y)
-	return note(x, y + 38, text) + 4
-end
-
 local function buildLeft(x, y)
 	y = heading(x, y, "Controller")
-	local enable = ns.Checkbox(page, function() return GetCVar("GamePadEnable") == "1" end,
-		function(on) ns.WriteCVar("GamePadEnable", on and "1" or "0") end)
-	table.insert(controls, enable)
-	y = row(x, y, "Gamepad input", enable)
+	y = row(x, y, "Gamepad input", cvarCheckbox("GamePadEnable"))
 	y = row(x, y, "Active pad", cvarChoice(deviceOptions, "GamePadSingleActiveID", "0"))
 	y = row(x, y, "Button labels", choice(styleOptions, function() return ns.db.padStyle or "auto" end, function(value)
 		ns.db.padStyle = value
@@ -103,27 +108,51 @@ local function buildLeft(x, y)
 	end
 	y = note(x, y, ("Hold a layer button to open its layer. A tap under %s ms still presses the button's own binding, so clear it or keep it as a tap action."):format(
 		GetCVar("GamePadEmulateTapWindowMs") or 350)) + GAP
-	y = heading(x, y, "Cursor clicks")
-	for _, click in ipairs(CLICKS) do
-		y = row(x, y, click[2], keyChoice(ns.CLICK_KEYS, click[1]))
-	end
-end
-
-local function buildRight(x, y)
-	y = heading(x, y, "Crossbar")
-	local show = ns.Checkbox(page, function() return ns.db.crossbar ~= false end, ns.SetCrossbarShown)
-	table.insert(controls, show)
-	y = row(x, y, "Show crossbar", show)
-	y = row(x, y, "Layers shown", choice(CROSSBAR_STYLES, function() return ns.db.crossbarStyle or "active" end, ns.SetCrossbarStyle)) + GAP
 	y = heading(x, y, "Soft targeting")
 	for i, cvar in ipairs(SOFT_TARGETS) do
 		y = row(x, y, SOFT_TARGET_LABELS[i], cvarChoice(softTargetOptions(), cvar, "0"))
 	end
-	y = y + GAP
+end
+
+local function crossbarChoice()
+	return choice(CROSSBARS, function() return ns.db.crossbar == false and "off" or (ns.db.crossbarStyle or "active") end, function(value)
+		if value ~= "off" then ns.SetCrossbarStyle(value) end
+		ns.SetCrossbarShown(value ~= "off")
+	end)
+end
+
+-- Unlocks the crossbar for dragging; the button reads as the next thing it will do.
+local function lockButton()
+	local button = ns.Button(page, "", 200, function(self)
+		ns.SetCrossbarLocked(not ns.CrossbarLocked())
+		self:Refresh()
+	end)
+	button:SetHeight(28)
+	function button:Refresh() self:SetText(ns.CrossbarLocked() and "Unlock to drag" or "Lock in place") end
+	button:Refresh()
+	table.insert(controls, button)
+	return button
+end
+
+local function buildRight(x, y)
+	y = heading(x, y, "Crossbar")
+	y = row(x, y, "View", crossbarChoice())
+	y = row(x, y, "Size", choice(SCALES, function() return tostring(ns.db.crossbarScale or 1) end, function(value) ns.SetCrossbarScale(tonumber(value)) end))
+	y = row(x, y, "Position", lockButton()) + GAP
+	y = heading(x, y, "Cursor")
+	for _, click in ipairs(CLICKS) do
+		y = row(x, y, click[2], keyChoice(ns.CLICK_KEYS, click[1]))
+	end
+	y = row(x, y, "Speed", cvarChoice(SPEEDS, "GamePadCursorSpeedMax", "1"))
+	y = row(x, y, "Show it when a window opens", cvarCheckbox("GamePadCursorAutoEnable"))
+	y = row(x, y, "Hide it", cvarChoice(STICK_HIDES, "GamePadCursorAutoDisableSticks", "2"))
+	y = row(x, y, "Touchpad moves it", cvarCheckbox("GamePadTouchCursorEnable")) + GAP
 	y = heading(x, y, "Setup") + 4
-	y = action(x, y, "Reset to default layout...", function() StaticPopup_Show("LEANPAD_SETUP") end,
-		"Rebinds the controller to LeanPad's layout. Your current bindings are saved first.")
-	action(x, y, "Undo setup", function() ns.OutOfCombat(ns.Restore) end, "Puts back the settings and bindings from before setup.")
+	local reset = ns.Button(page, "Reset to default layout...", 200, function() StaticPopup_Show("LEANPAD_SETUP") end)
+	reset:SetPoint("TOPLEFT", x, -y)
+	local undo = ns.Button(page, "Undo setup", 200, function() ns.OutOfCombat(ns.Restore) end)
+	undo:SetPoint("LEFT", reset, "RIGHT", 8, 0)
+	note(x, y + 38, "Reset rebinds the controller to LeanPad's layout, saving your current bindings first. Undo puts back the settings and bindings from before setup.")
 end
 
 function ns.BuildOptions(frame)

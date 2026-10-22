@@ -7,7 +7,7 @@ local realPrint = print
 -- Widget methods LeanPad may call. Any other PascalCase name errors, so a misspelt method fails the
 -- specs; lowercase data fields read as nil, as on real frames.
 local NO_OP_METHODS = {
-	"SetSize", "SetWidth", "SetHeight", "SetJustifyH", "SetToplevel", "SetClampedToScreen", "SetMovable", "EnableMouse", "RegisterForDrag",
+	"SetSize", "SetWidth", "SetHeight", "SetJustifyH", "SetToplevel", "SetClampedToScreen", "SetMovable", "RegisterForDrag",
 	"SetThickness", "AddMaskTexture", "SetBlendMode", "SetBackdrop", "SetBackdropBorderColor", "StartMoving", "StopMovingOrSizing",
 	"SetAllPoints", "SetDrawSwipe", "SetFont", "SetTextColor", "SetNormalFontObject", "SetHighlightFontObject", "SetDisabledFontObject",
 	"SetNormalAtlas", "SetHighlightAtlas",
@@ -34,6 +34,8 @@ function Widget:GetName() return self.name end
 function Widget:SetScript(script, handler) self.scripts[script] = handler end
 function Widget:SetPoint(...) self.point = { ... } end
 function Widget:ClearAllPoints() self.point = nil end
+function Widget:GetPoint() return unpack(self.point) end
+function Widget:EnableMouse(enabled) self.mouse = enabled end
 function Widget:SetText(text) self.text = text end
 function Widget:GetText() return self.text end
 function Widget:SetTexture(texture) self.texture, self.color = texture, nil end
@@ -319,6 +321,14 @@ function M.tocFiles()
 		if line ~= "" and not line:find("^#") then table.insert(files, line) end
 	end
 	return files
+end
+
+-- A "## Key: value" line from the TOC.
+function M.tocHeader(key)
+	for line in io.lines("LeanPad/LeanPad.toc") do
+		local value = line:match("^## " .. key .. ": (.+)$")
+		if value then return value end
+	end
 end
 
 -- Runs every addon file the way the client does: with the addon name and a shared namespace as varargs.

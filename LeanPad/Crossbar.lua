@@ -249,8 +249,28 @@ end
 local function build()
 	bar = CreateFrame("Frame", "LeanPadCrossbar", UIParent)
 	bar:SetSize(1140, 420)
-	bar:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, 60)
+	local point = ns.db.crossbarPoint or { "BOTTOM", "BOTTOM", 0, 60 }
+	bar:SetPoint(point[1], UIParent, point[2], point[3], point[4])
+	bar:SetScale(ns.db.crossbarScale or 1)
 	for index = 1, #ns.CROSSBAR_CLUSTERS do clusters[index] = makeCluster() end
+	-- Unlocked from the settings page, the bar takes the mouse and can be dragged; the spot is kept.
+	bar:SetMovable(true)
+	bar:SetClampedToScreen(true)
+	bar:RegisterForDrag("LeftButton")
+	bar:SetScript("OnDragStart", bar.StartMoving)
+	bar:SetScript("OnDragStop", function()
+		bar:StopMovingOrSizing()
+		local anchor, _, relativePoint, x, y = bar:GetPoint(1)
+		ns.db.crossbarPoint = { anchor, relativePoint, x, y }
+	end)
+	bar.Outline = CreateFrame("Frame", nil, bar, "BackdropTemplate")
+	bar.Outline:SetAllPoints()
+	bar.Outline:SetBackdrop({ edgeFile = ns.WHITE, edgeSize = 2 })
+	bar.Outline:SetBackdropBorderColor(unpack(ns.COLORS.accent))
+	local hint = ns.Text(bar.Outline, 14, ns.COLORS.accent, "CENTER")
+	hint:SetPoint("TOP", 0, -8)
+	hint:SetText("Drag the crossbar, then lock it on the settings page")
+	bar.Outline:Hide()
 	-- Listen only while shown, so a hidden crossbar costs nothing.
 	bar:SetScript("OnShow", function()
 		for _, event in ipairs(LAYOUT_EVENTS) do bar:RegisterEvent(event) end
@@ -275,6 +295,22 @@ function ns.SetCrossbarStyle(style)
 	ns.db.crossbarStyle = style
 	if bar and bar:IsShown() then ns.RefreshCrossbar() end
 end
+
+function ns.SetCrossbarScale(scale)
+	ns.db.crossbarScale = scale
+	if bar then bar:SetScale(scale) end
+end
+
+-- Locked, the bar ignores the mouse so it never gets in the way of play; unlocking lasts until reload.
+local locked = true
+function ns.SetCrossbarLocked(lock)
+	locked = lock
+	if not bar then build() end
+	bar:EnableMouse(not locked)
+	bar.Outline:SetShown(not locked)
+end
+
+function ns.CrossbarLocked() return locked end
 
 EventUtil.RegisterOnceFrameEventAndCallback("PLAYER_ENTERING_WORLD", function()
 	ns.SetCrossbarShown(ns.db.crossbar ~= false)
