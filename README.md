@@ -8,10 +8,13 @@ WoW already has a full gamepad layer built in: controller buttons are ordinary k
 
 Your actions stay on Blizzard's own action bars, so Blizzard draws the cooldowns, glows and range, and the layout keeps working if you disable the addon.
 
-<p align="center">
-  <img src="tools/preview/PadPlayStation.png" alt="LeanPad's PlayStation controller drawing" width="420">
-  <img src="tools/preview/PadXbox.png" alt="LeanPad's Xbox controller drawing" width="420">
-</p>
+**Easy binding setup.** Press a button on your pad and see what it does on every layer, then change it in one step.
+
+![The LeanPad controller editor with Y selected](docs/images/easy-binding-setup.png)
+
+**Easy to understand settings.** Layer buttons, pad, labels, cursor, crossbar and soft targeting on one page next to the editor.
+
+![The LeanPad settings page](docs/images/easy-to-understand-settings.png)
 
 ## Features
 
@@ -116,6 +119,12 @@ Ground rules for changes:
 - LeanPad is written from scratch on WoW's native gamepad API. Do not copy code, presets or layouts from other controller addons.
 
 ### Controller art
+
+<p align="center">
+  <img src="tools/preview/PadPlayStation.png" alt="LeanPad's PlayStation controller drawing" width="420">
+  <img src="tools/preview/PadXbox.png" alt="LeanPad's Xbox controller drawing" width="420">
+</p>
+
 
 The controller drawings, command icons and logo are generated, not hand-edited. To change them, edit `tools/draw-pads.js` and run:
 
