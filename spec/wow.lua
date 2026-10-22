@@ -125,8 +125,9 @@ function M.reset()
 	-- Two Blizzard bar buttons: Action Bar 1 slot 1 (no icon) and Action Bar 2 slot 1, which holds slot 61.
 	ActionButtonUtil = { ActionBarButtonNames = { "ActionButton", "MultiBarBottomLeftButton" } }
 	local function setButtonState(self, state) self.state = state end
-	ActionButton1 = { bindingAction = "ACTIONBUTTON1", action = 1, SetButtonState = setButtonState }
-	MultiBarBottomLeftButton1 = { bindingAction = "MULTIACTIONBAR1BUTTON1", action = 61, SetButtonState = setButtonState }
+	local function getButtonState(self) return self.state or "NORMAL" end
+	ActionButton1 = { bindingAction = "ACTIONBUTTON1", action = 1, SetButtonState = setButtonState, GetButtonState = getButtonState }
+	MultiBarBottomLeftButton1 = { bindingAction = "MULTIACTIONBAR1BUTTON1", action = 61, SetButtonState = setButtonState, GetButtonState = getButtonState }
 	w.actions[61] = { texture = 135808, cooldown = "cooldown:61", charge = "charge:61", count = "2", usable = true }
 
 	GetNumBindings = function() return #w.bindingList end

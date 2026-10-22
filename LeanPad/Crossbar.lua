@@ -3,10 +3,10 @@ local _, ns = ...
 -- Button centres from a cluster's centre: D-pad and face diamonds on the outside,
 -- shoulder, trigger and stick click columns between them.
 ns.CROSSBAR = {
-	PADDUP = { -150, 50 }, PADDLEFT = { -200, 0 }, PADDRIGHT = { -100, 0 }, PADDDOWN = { -150, -50 },
+	PADDUP = { -150, 46 }, PADDLEFT = { -196, 0 }, PADDRIGHT = { -104, 0 }, PADDDOWN = { -150, -46 },
 	PADLSHOULDER = { -50, 28 }, PADLTRIGGER = { -50, -28 }, PADLSTICK = { -50, -84 },
 	PADRSHOULDER = { 50, 28 }, PADRTRIGGER = { 50, -28 }, PADRSTICK = { 50, -84 },
-	PAD4 = { 150, 50 }, PAD3 = { 100, 0 }, PAD2 = { 200, 0 }, PAD1 = { 150, -50 },
+	PAD4 = { 150, 46 }, PAD3 = { 104, 0 }, PAD2 = { 196, 0 }, PAD1 = { 150, -46 },
 }
 -- Cluster centres from the bar's centre, in ns.Layers() order: Base on top, then the first modifier left,
 -- the second right and both together below, as WoW: Forever lays out its controller bars.
@@ -20,7 +20,8 @@ ns.CROSSBAR_EMPTY_ALPHA = 0.35
 
 -- Blizzard's circular alpha mask makes icons, sweeps and the rim round without any art of LeanPad's own.
 local CIRCLE = "Interface\\CharacterFrame\\TempPortraitAlphaMask"
-local RIM, RIM_PRESSED = { 0.05, 0.05, 0.05, 0.9 }, { 1, 0.82, 0, 1 }
+-- Rim colours: dark at rest, gold while pressed or, in the editor, hovered.
+ns.RIM, ns.RIM_LIT = { 0.05, 0.05, 0.05, 0.9 }, { 1, 0.82, 0, 1 }
 
 -- Cooldowns, charges and usability change often; only these refresh the filled buttons' state.
 local STATE_EVENTS = { ACTIONBAR_UPDATE_COOLDOWN = true, ACTIONBAR_UPDATE_USABLE = true, ACTIONBAR_UPDATE_STATE = true, SPELL_UPDATE_CHARGES = true }
@@ -40,7 +41,7 @@ end
 
 local function setPressed(button, pressed)
 	button.Face:SetScale(pressed and ns.CROSSBAR_PRESSED_SCALE or 1)
-	button.Rim:SetColorTexture(unpack(pressed and RIM_PRESSED or RIM))
+	button.Rim:SetColorTexture(unpack(pressed and ns.RIM_LIT or ns.RIM))
 	button.Flash:SetShown(pressed)
 end
 
@@ -94,9 +95,7 @@ local function refreshButton(button, key, prefix, hideNumbers)
 	button.ChargeCooldown:Clear()
 	button.Count:SetText("")
 	setPressed(button, false)
-	local glyph = GetBindingText(key):match("|A:([^:|]+)")
-	button.Glyph:SetShown(glyph ~= nil)
-	if glyph then button.Glyph:SetAtlas(glyph) end
+	ns.SetGlyph(button, key)
 
 	local source = ns.ButtonForCommand(GetBindingAction(prefix .. key))
 	local slot = source and source.action
@@ -106,6 +105,8 @@ local function refreshButton(button, key, prefix, hideNumbers)
 	button:SetAlpha(1)
 	button.Icon:SetTexture(C_ActionBar.GetActionTexture(slot))
 	button.Cooldown:SetHideCountdownNumbers(hideNumbers)
+	-- Refreshes can land mid-press, e.g. a cast changing its slot; keep a held button looking held.
+	setPressed(button, source:GetButtonState() == "PUSHED")
 	updateState(button)
 end
 
@@ -176,43 +177,59 @@ local function makeCooldown(parent)
 	return cooldown
 end
 
-local function makeButton(parent, point)
-	local size = ns.CROSSBAR_BUTTON_SIZE
-	local button = CreateFrame("Frame", nil, parent)
+-- A round icon with a thin rim and the pad glyph just above it.
+function ns.MakeSocket(frameType, parent, size)
+	local button = CreateFrame(frameType, nil, parent)
 	button:SetSize(size, size)
-	button:SetPoint("CENTER", parent, "CENTER", point[1], point[2])
 	-- Everything sits on Face, centred on the button, so a press can shrink it in place.
 	local face = CreateFrame("Frame", nil, button)
 	face:SetSize(size, size)
 	face:SetPoint("CENTER")
 	button.Face = face
 
-	-- A slightly larger dark disc behind the icon reads as a thin rim; it turns gold while pressed.
+	-- A slightly larger dark disc behind the icon reads as a thin rim.
 	button.Rim = face:CreateTexture(nil, "BACKGROUND")
 	button.Rim:SetSize(size + 4, size + 4)
 	button.Rim:SetPoint("CENTER")
 	button.Rim:AddMaskTexture(circleMask(face, size + 4))
-	local iconMask = circleMask(face, size)
+	button.Rim:SetColorTexture(unpack(ns.RIM))
+	button.IconMask = circleMask(face, size)
 	button.Icon = face:CreateTexture(nil, "ARTWORK")
 	button.Icon:SetAllPoints()
-	button.Icon:AddMaskTexture(iconMask)
-	button.Cooldown = makeCooldown(face)
-	button.ChargeCooldown = makeCooldown(face)
+	button.Icon:AddMaskTexture(button.IconMask)
+
+	-- The glyph sits on its own frame, which callers raise above anything they add, such as cooldowns.
+	button.Overlay = CreateFrame("Frame", nil, face)
+	button.Overlay:SetAllPoints()
+	button.Glyph = button.Overlay:CreateTexture(nil, "OVERLAY", nil, 1)
+	button.Glyph:SetSize(18, 18)
+	button.Glyph:SetPoint("BOTTOM", face, "TOP", 0, -6) -- mostly above the icon, so it does not cover the art
+	return button
+end
+
+-- Shows the pad glyph atlas from the key's binding text, or nothing when the key has no glyph.
+function ns.SetGlyph(button, key)
+	local glyph = GetBindingText(key):match("|A:([^:|]+)")
+	button.Glyph:SetShown(glyph ~= nil)
+	if glyph then button.Glyph:SetAtlas(glyph) end
+end
+
+local function makeButton(parent, point)
+	local button = ns.MakeSocket("Frame", parent, ns.CROSSBAR_BUTTON_SIZE)
+	button:SetPoint("CENTER", parent, "CENTER", point[1], point[2])
+	button.Cooldown = makeCooldown(button.Face)
+	button.ChargeCooldown = makeCooldown(button.Face)
 	button.ChargeCooldown:SetDrawSwipe(false)
 
-	-- Flash, glyph and count sit on their own frame above both cooldowns, which would otherwise cover them.
-	local overlay = CreateFrame("Frame", nil, face)
-	overlay:SetAllPoints()
+	-- Flash, glyph and count sit above both cooldowns, which would otherwise cover them.
+	local overlay = button.Overlay
 	overlay:SetFrameLevel(button.ChargeCooldown:GetFrameLevel() + 1)
 	button.Flash = overlay:CreateTexture(nil, "OVERLAY")
 	button.Flash:SetAllPoints()
 	button.Flash:SetColorTexture(1, 1, 1, 0.45)
 	button.Flash:SetBlendMode("ADD")
-	button.Flash:AddMaskTexture(iconMask)
+	button.Flash:AddMaskTexture(button.IconMask)
 	button.Flash:Hide()
-	button.Glyph = overlay:CreateTexture(nil, "OVERLAY", nil, 1)
-	button.Glyph:SetSize(22, 22)
-	button.Glyph:SetPoint("CENTER", face, "TOP", 0, 2)
 	button.Count = overlay:CreateFontString(nil, "OVERLAY", "NumberFontNormal")
 	button.Count:SetPoint("BOTTOMRIGHT", -2, 2)
 	return button
@@ -225,7 +242,7 @@ local function makeCluster()
 	frame.buttons = cluster.buttons
 	for key, point in pairs(ns.CROSSBAR) do cluster.buttons[key] = makeButton(frame, point) end
 	cluster.Label = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
-	cluster.Label:SetPoint("CENTER", frame, "CENTER", 0, 70)
+	cluster.Label:SetPoint("CENTER", frame, "CENTER", 0, 92)
 	return cluster
 end
 
