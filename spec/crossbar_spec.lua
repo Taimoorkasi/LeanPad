@@ -110,14 +110,51 @@ describe("Crossbar", function()
 			assert.same({ 0.05, 0.05, 0.05, 0.9 }, button.Rim.color)
 		end)
 
-		it("show buttons that fire a bar action on any layer and hide the rest, modifiers included", function()
+		it("show buttons with a bar action or a faced command on any layer, plus the layer buttons as hints", function()
 			local shown = {}
 			for key in pairs(ns.CROSSBAR) do
 				if buttonFor(key):IsShown() then table.insert(shown, key) end
 			end
 			table.sort(shown)
-			-- PAD3 on Base, PAD1 and PADDUP on LT. The fake has two Blizzard bar buttons.
-			assert.same({ "PAD1", "PAD3", "PADDUP" }, shown)
+			-- Bar actions: PAD3 on Base, PAD1 and PADDUP on LT. Faced commands: interact, targeting, the cursor toggle.
+			-- Auto-run and the shoulders' missing bar buttons stay hidden.
+			assert.same({ "PAD1", "PAD2", "PAD3", "PADDLEFT", "PADDRIGHT", "PADDUP", "PADLTRIGGER", "PADRSTICK", "PADRTRIGGER" }, shown)
+		end)
+
+		it("give commands off the bars a Blizzard face with a badge, and no cooldown or press", function()
+			local right = buttonFor("PADDRIGHT") -- Target nearest enemy in the preset
+			assert.equal("Crosshair_Attack_64", right.Icon.atlas)
+			assert.equal("|A:common-icon-forwardarrow:12:12|a", right.Count:GetText())
+			assert.equal(1, right.alpha)
+			assert.is_nil(right.slot)
+			assert.equal("|A:common-icon-backarrow:12:12|a", buttonFor("PADDLEFT").Count:GetText())
+			assert.equal("common-icon-move", buttonFor("PADRSTICK").Icon.atlas)
+			assert.is_false(buttonFor("PADLSTICK"):IsShown())
+		end)
+
+		it("show a layer button as a hint socket, lit while held, never its stale action", function()
+			w.bindings.PADRTRIGGER = "ACTIONBUTTON1"
+			w.glyphs.PADRTRIGGER = "|A:Gamepad_Shp_RTrigger_64:0:0|a"
+			bar:Fire("OnEvent", "UPDATE_BINDINGS")
+			local rt = buttonFor("PADRTRIGGER")
+			assert.is_true(rt:IsShown())
+			assert.is_nil(rt.Icon.texture)
+			assert.is_true(rt.BigGlyph:IsShown())
+			assert.equal("Gamepad_Shp_RTrigger_64", rt.BigGlyph.atlas)
+			assert.is_false(rt.Glyph:IsShown())
+			assert.equal("Ctrl", rt.Hint:GetText())
+			assert.is_true(rt.Hint:IsShown())
+			assert.equal(1, rt.alpha)
+			assert.same(ns.RIM, rt.Rim.color)
+			w.held.ctrl = true
+			bar:Fire("OnEvent", "MODIFIER_STATE_CHANGED")
+			assert.same(ns.RIM_LIT, rt.Rim.color)
+			w.held.ctrl = false
+			w.cvars.GamePadEmulateCtrl = "none" -- no longer a layer button: its own action shows again
+			bar:Fire("OnEvent", "CVAR_UPDATE")
+			assert.is_true(rt:IsShown())
+			assert.is_false(rt.Hint:IsShown())
+			assert.is_false(rt.BigGlyph:IsShown())
 		end)
 
 		it("show a button with nothing on the held layer as a faint empty slot", function()
@@ -129,19 +166,10 @@ describe("Crossbar", function()
 		end)
 
 		it("show and hide buttons as bindings change", function()
-			assert.is_false(buttonFor("PAD2"):IsShown())
-			w.bindings["CTRL-PAD2"] = "ACTIONBUTTON1"
+			assert.is_false(buttonFor("PADLSHOULDER"):IsShown())
+			w.bindings["CTRL-PADLSHOULDER"] = "ACTIONBUTTON1"
 			bar:Fire("OnEvent", "UPDATE_BINDINGS")
-			assert.is_true(buttonFor("PAD2"):IsShown())
-		end)
-
-		it("never show a layer button, even with a stale binding on it", function()
-			w.bindings.PADRTRIGGER = "ACTIONBUTTON1"
-			bar:Fire("OnEvent", "UPDATE_BINDINGS")
-			assert.is_false(buttonFor("PADRTRIGGER"):IsShown())
-			w.cvars.GamePadEmulateCtrl = "none" -- no longer a layer button: its action shows
-			bar:Fire("OnEvent", "CVAR_UPDATE")
-			assert.is_true(buttonFor("PADRTRIGGER"):IsShown())
+			assert.is_true(buttonFor("PADLSHOULDER"):IsShown())
 		end)
 
 		it("show the held layer's bar actions with icon, cooldowns and count", function()
@@ -431,11 +459,28 @@ describe("Crossbar", function()
 			assert.is_true(ns.CrossbarLocked())
 		end)
 
-		it("comes back where it was left, at the saved size", function()
-			ns, w = wow.boot({ crossbarPoint = { "TOPLEFT", "TOPLEFT", 300, -400 }, crossbarScale = 0.6 })
+		it("fades to the chosen opacity and resets its position from the outline", function()
+			wow.fire("PLAYER_ENTERING_WORLD")
+			local bar = LeanPadCrossbar
+			ns.SetCrossbarOpacity(0.6)
+			assert.equal(0.6, ns.db.crossbarAlpha)
+			assert.equal(0.6, bar.alpha)
+			ns.db.crossbarPoint = { "TOPLEFT", "TOPLEFT", 300, -400 }
+			local reset
+			for _, widget in ipairs(w.widgets) do
+				if widget.parent == bar.Outline and widget.text == "Reset position" then reset = widget end
+			end
+			reset:Fire("OnClick")
+			assert.is_nil(ns.db.crossbarPoint)
+			assert.same({ "BOTTOM", UIParent, "BOTTOM", 0, 60 }, bar.point)
+		end)
+
+		it("comes back where it was left, at the saved size and opacity", function()
+			ns, w = wow.boot({ crossbarPoint = { "TOPLEFT", "TOPLEFT", 300, -400 }, crossbarScale = 0.6, crossbarAlpha = 0.4 })
 			wow.fire("PLAYER_ENTERING_WORLD")
 			assert.same({ "TOPLEFT", UIParent, "TOPLEFT", 300, -400 }, LeanPadCrossbar.point)
 			assert.equal(0.6, LeanPadCrossbar.scale)
+			assert.equal(0.4, LeanPadCrossbar.alpha)
 		end)
 	end)
 end)

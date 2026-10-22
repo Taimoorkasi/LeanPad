@@ -74,19 +74,21 @@ local function updateState(button)
 	button.Icon:SetDesaturated(not C_ActionBar.IsUsableAction(slot))
 end
 
--- Pad keys worth a button: those firing a Blizzard bar button on some layer. Layer buttons never do.
+-- Pad keys worth a button: those firing a Blizzard bar button, or a command with a face, on some layer.
+-- Layer buttons never do; they get a hint socket instead.
 local function actionKeys(layers)
 	local used, layerButtons = {}, ns.ModifierKeys()
 	for key in pairs(ns.CROSSBAR) do
 		for _, layer in ipairs(layers) do
-			if not layerButtons[key] and ns.ButtonForCommand(GetBindingAction(layer.prefix .. key)) then used[key] = true end
+			local action = GetBindingAction(layer.prefix .. key)
+			if not layerButtons[key] and (ns.ButtonForCommand(action) or ns.CommandIcon(action)) then used[key] = true end
 		end
 	end
 	return used
 end
 
-local function refreshButton(button, key, prefix, hideNumbers)
-	-- Start as a faint empty slot, which is also what a button whose action can't be read keeps showing.
+-- A faint empty slot, which is also what a button whose action can't be read keeps showing.
+local function clearButton(button)
 	button.slot, button.source = nil, nil
 	button:SetAlpha(ns.CROSSBAR_EMPTY_ALPHA)
 	button.Icon:SetDesaturated(false)
@@ -94,12 +96,41 @@ local function refreshButton(button, key, prefix, hideNumbers)
 	button.Cooldown:Clear()
 	button.ChargeCooldown:Clear()
 	button.Count:SetText("")
+	button.BigGlyph:Hide()
+	button.Hint:Hide()
 	setPressed(button, false)
+end
+
+-- A layer button's socket is a hint: its glyph large, the modifier it acts as beneath, lit while held.
+local function refreshHint(button, key, modifier, held)
+	clearButton(button)
+	button:SetAlpha(1)
+	button.Glyph:Hide()
+	local glyph = ns.GlyphAtlas(key)
+	button.BigGlyph:SetShown(glyph ~= nil)
+	if glyph then button.BigGlyph:SetAtlas(glyph) end
+	button.Hint:SetText(ns.MODIFIER_NAMES[modifier])
+	button.Hint:Show()
+	setPressed(button, held)
+end
+
+local function refreshButton(button, key, prefix, hideNumbers)
+	clearButton(button)
 	ns.SetGlyph(button, key)
 
-	local source = ns.ButtonForCommand(GetBindingAction(prefix .. key))
+	local action = GetBindingAction(prefix .. key)
+	local source = ns.ButtonForCommand(action)
 	local slot = source and source.action
-	if not (slot and C_ActionBar.HasAction(slot)) then return end
+	if not (slot and C_ActionBar.HasAction(slot)) then
+		-- Commands off the bars have no cooldown or press to show, just their face and badge.
+		local atlas, badge = ns.CommandIcon(action)
+		if atlas then
+			button:SetAlpha(1)
+			button.Icon:SetAtlas(atlas)
+			button.Count:SetText(badge or "")
+		end
+		return
+	end
 	button.slot, button.source = slot, source
 	watch(source)
 	button:SetAlpha(1)
@@ -134,7 +165,7 @@ function ns.RefreshCrossbar()
 	local held = ns.HeldPrefix()
 	local allLayers = ns.db.crossbarStyle == "all"
 	local hideNumbers = not GetCVarBool("countdownForCooldowns")
-	local used = actionKeys(layers)
+	local used, layerButtons, heldKeys = actionKeys(layers), ns.ModifierKeys(), ns.HeldModifierKeys()
 	for index, cluster in ipairs(clusters) do
 		local layer = allLayers and layers[index] or (index == 1 and heldLayer(layers, held)) or nil
 		cluster.frame:SetShown(layer ~= nil)
@@ -142,8 +173,13 @@ function ns.RefreshCrossbar()
 			placeCluster(cluster, index, not allLayers or layer.prefix == held)
 			cluster.Label:SetText(layer.prefix ~= "" and layer.label or "")
 			for key, button in pairs(cluster.buttons) do
-				button:SetShown(used[key] == true)
-				securecallfunction(refreshButton, button, key, layer.prefix, hideNumbers)
+				local modifier = layerButtons[key]
+				button:SetShown(used[key] == true or modifier ~= nil)
+				if modifier then
+					securecallfunction(refreshHint, button, key, modifier, heldKeys[key] == true)
+				else
+					securecallfunction(refreshButton, button, key, layer.prefix, hideNumbers)
+				end
 			end
 		end
 	end
@@ -232,6 +268,12 @@ local function makeButton(parent, point)
 	button.Flash:Hide()
 	button.Count = overlay:CreateFontString(nil, "OVERLAY", "NumberFontNormal")
 	button.Count:SetPoint("BOTTOMRIGHT", -2, 2)
+	-- For a layer button's hint socket: the glyph in the middle and the modifier's name beneath.
+	button.BigGlyph = overlay:CreateTexture(nil, "OVERLAY")
+	button.BigGlyph:SetSize(28, 28)
+	button.BigGlyph:SetPoint("CENTER")
+	button.Hint = ns.Text(overlay, 11, ns.COLORS.text2, "CENTER")
+	button.Hint:SetPoint("TOP", button, "BOTTOM", 0, -2)
 	return button
 end
 
@@ -246,12 +288,20 @@ local function makeCluster()
 	return cluster
 end
 
+local DEFAULT_POINT = { "BOTTOM", "BOTTOM", 0, 60 }
+
+local function anchor()
+	local point = ns.db.crossbarPoint or DEFAULT_POINT
+	bar:ClearAllPoints()
+	bar:SetPoint(point[1], UIParent, point[2], point[3], point[4])
+end
+
 local function build()
 	bar = CreateFrame("Frame", "LeanPadCrossbar", UIParent)
 	bar:SetSize(1140, 420)
-	local point = ns.db.crossbarPoint or { "BOTTOM", "BOTTOM", 0, 60 }
-	bar:SetPoint(point[1], UIParent, point[2], point[3], point[4])
+	anchor()
 	bar:SetScale(ns.db.crossbarScale or 1)
+	bar:SetAlpha(ns.db.crossbarAlpha or 1)
 	for index = 1, #ns.CROSSBAR_CLUSTERS do clusters[index] = makeCluster() end
 	-- Unlocked from the settings page, the bar takes the mouse and can be dragged; the spot is kept.
 	bar:SetMovable(true)
@@ -270,6 +320,11 @@ local function build()
 	local hint = ns.Text(bar.Outline, 14, ns.COLORS.accent, "CENTER")
 	hint:SetPoint("TOP", 0, -8)
 	hint:SetText("Drag the crossbar, then lock it on the settings page")
+	local reset = ns.Button(bar.Outline, "Reset position", 140, function()
+		ns.db.crossbarPoint = nil
+		anchor()
+	end)
+	reset:SetPoint("TOP", hint, "BOTTOM", 0, -8)
 	bar.Outline:Hide()
 	-- Listen only while shown, so a hidden crossbar costs nothing.
 	bar:SetScript("OnShow", function()
@@ -299,6 +354,11 @@ end
 function ns.SetCrossbarScale(scale)
 	ns.db.crossbarScale = scale
 	if bar then bar:SetScale(scale) end
+end
+
+function ns.SetCrossbarOpacity(alpha)
+	ns.db.crossbarAlpha = alpha
+	if bar then bar:SetAlpha(alpha) end
 end
 
 -- Locked, the bar ignores the mouse so it never gets in the way of play; unlocking lasts until reload.

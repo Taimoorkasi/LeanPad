@@ -5,6 +5,7 @@ local TAB_ORDER = { "SHIFT-", "CTRL-", "ALT-" }
 local CANONICAL = { "ALT-", "CTRL-", "SHIFT-" }
 local MODIFIER_CVARS = { ["SHIFT-"] = "GamePadEmulateShift", ["CTRL-"] = "GamePadEmulateCtrl", ["ALT-"] = "GamePadEmulateAlt" }
 local MODIFIER_NAMES = { ["SHIFT-"] = "Shift", ["CTRL-"] = "Ctrl", ["ALT-"] = "Alt" }
+ns.MODIFIER_NAMES = MODIFIER_NAMES
 
 -- Pad keys that can be a layer button, and keys that can be the cursor's clicks.
 ns.MODIFIER_KEYS = { "none", "PADLTRIGGER", "PADRTRIGGER", "PADLSHOULDER", "PADRSHOULDER", "PADPADDLE1", "PADPADDLE2", "PADPADDLE3", "PADPADDLE4" }
@@ -126,6 +127,26 @@ function ns.ActionInfo(binding)
 	if not slot then return GetBindingName(action) end
 	if not C_ActionBar.HasAction(slot) then return ns.MUTED_HEX .. "Empty slot|r" end
 	return slotName(slot) or GetBindingName(action), C_ActionBar.GetActionTexture(slot)
+end
+
+-- Blizzard atlases for commands that live on no bar slot, so targeting, interact and menus get a face too.
+-- The second entry is a badge for the socket's corner: an arrow for next and previous, a number for party members.
+local NEXT, PREVIOUS, FRIEND = "|A:common-icon-forwardarrow:12:12|a", "|A:common-icon-backarrow:12:12|a", "groupfinder-icon-friend"
+ns.COMMAND_ICONS = {
+	TARGETNEARESTENEMY = { "Crosshair_Attack_64", NEXT }, TARGETPREVIOUSENEMY = { "Crosshair_Attack_64", PREVIOUS },
+	TARGETNEARESTFRIEND = { FRIEND, NEXT }, TARGETPREVIOUSFRIEND = { FRIEND, PREVIOUS }, TARGETSELF = { FRIEND },
+	TARGETPARTYMEMBER1 = { FRIEND, "1" }, TARGETPARTYMEMBER2 = { FRIEND, "2" }, TARGETPARTYMEMBER3 = { FRIEND, "3" }, TARGETPARTYMEMBER4 = { FRIEND, "4" },
+	INTERACTTARGET = { "Crosshair_GrabbingHand_64" }, OPENALLBAGS = { "bag-main" }, LEANPAD_TOGGLE_CURSOR = { "common-icon-move" },
+	TOGGLEGAMEMENU = { "UI-HUD-MicroMenu-GameMenu-Up" }, TOGGLESPELLBOOK = { "UI-HUD-MicroMenu-SpellbookAbilities-Up" },
+	TOGGLETALENTS = { "UI-HUD-MicroMenu-SpecTalents-Up" }, TOGGLEQUESTLOG = { "UI-HUD-MicroMenu-Questlog-Up" },
+	TOGGLECOLLECTIONS = { "UI-HUD-MicroMenu-Collections-Up" }, TOGGLEACHIEVEMENT = { "UI-HUD-MicroMenu-Achievements-Up" },
+	TOGGLEGROUPFINDER = { "UI-HUD-MicroMenu-Groupfinder-Up" }, TOGGLEENCOUNTERJOURNAL = { "UI-HUD-MicroMenu-AdventureGuide-Up" },
+	TOGGLEPROFESSIONBOOK = { "UI-HUD-MicroMenu-Professions-Up" }, TOGGLEWORLDMAP = { "Waypoint-MapPin-ChatIcon" },
+}
+
+function ns.CommandIcon(action)
+	local icon = ns.COMMAND_ICONS[action]
+	if icon then return icon[1], icon[2] end
 end
 
 function ns.Assign(binding, action)
@@ -408,8 +429,13 @@ local function fillStrip()
 	local layerButton = ns.ModifierKeys()[key] ~= nil
 	local name, icon = ns.ActionInfo(binding)
 	if layerButton then name, icon = layerButtonName(key), nil end
-	strip.Icon:SetTexture(icon)
-	strip.Icon:SetShown(icon ~= nil)
+	local atlas = not layerButton and not icon and ns.CommandIcon(action) or nil
+	if icon then
+		strip.Icon:SetTexture(icon)
+	elseif atlas then
+		strip.Icon:SetAtlas(atlas)
+	end
+	strip.Icon:SetShown((icon or atlas) ~= nil)
 	strip.Name:SetText(name or NOT_BOUND)
 	strip.Place:SetText(layerButton and "Layer button: hold it to use that layer. It fires nothing itself."
 		or name and ns.ActionPlace(action) or "Pick an action, or drop a spell here.")

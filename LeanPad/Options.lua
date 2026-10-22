@@ -2,12 +2,14 @@ local _, ns = ...
 
 -- LeanPad's own settings page inside the controller window. Blizzard's Settings panel stays the way in.
 local C = ns.COLORS
-local MARGIN, GAP, COLUMN, ROW = 16, 24, 432, 36
+local MARGIN, GAP, COLUMN, ROW = 16, 20, 432, 34
 local SOFT_TARGETS = { "SoftTargetEnemy", "SoftTargetFriend", "SoftTargetInteract" }
 local SOFT_TARGET_LABELS = { "Enemies", "Friends", "Interact" }
 local STYLES = { { "auto", "Auto" }, { "xbox", "Xbox" }, { "playstation", "PlayStation" } }
 local CROSSBARS = { { "off", OFF }, { "active", "One set, swaps with the held layer" }, { "all", "All layers, the held one large" } }
 local SCALES = { { "0.6", "60%" }, { "0.8", "80%" }, { "1", "100%" }, { "1.2", "120%" } }
+local OPACITIES = { { "1", "100%" }, { "0.8", "80%" }, { "0.6", "60%" }, { "0.4", "40%" } }
+local PLAYSTYLES = { { "manual", "Keep my own settings" }, { "auto", "Auto" }, { "tank", "Tank" }, { "melee", "Melee" }, { "ranged", "Ranged" }, { "healer", "Healer" } }
 local SPEEDS = { { "0.6", "Slow" }, { "1", "Normal" }, { "1.5", "Fast" } }
 local STICK_HIDES = { { "0", "Never" }, { "1", "When the character moves" }, { "2", "When either stick moves" } }
 local LAYER_BUTTONS = {
@@ -28,6 +30,17 @@ local function deviceOptions()
 	for _, id in ipairs(C_GamePad.GetAllDeviceIDs()) do
 		local state = C_GamePad.GetDeviceMappedState(id)
 		table.insert(options, { tostring(id), state and state.name or ("Controller " .. id) })
+	end
+	return options
+end
+
+-- Auto names the style the current spec plays.
+local function playstyleOptions()
+	local options, spec = {}, ns.SpecStyle()
+	for _, style in ipairs(PLAYSTYLES) do
+		local label = style[2]
+		if style[1] == "auto" and spec then label = ("Auto (%s)"):format(ns.LabelOf(PLAYSTYLES, spec)) end
+		table.insert(options, { style[1], label })
 	end
 	return options
 end
@@ -102,14 +115,19 @@ local function buildLeft(x, y)
 		ns.RefreshController()
 		ns.Saved()
 	end))
-	y = note(x, y, "With one pad connected, All connected is the same as choosing it.") + GAP
+	y = y + GAP
 	y = heading(x, y, "Layer buttons")
 	for _, layer in ipairs(LAYER_BUTTONS) do
 		y = row(x, y, layer[2], choice(ns.KeyOptions(ns.MODIFIER_KEYS), function() return GetCVar(layer[1]) or "none" end,
 			function(key) ns.SetLayerButton(layer[1], key) end))
 	end
 	y = note(x, y, "Hold a layer button to use its layer. Layer buttons fire nothing themselves: a button made one loses its own bindings.") + GAP
-	y = heading(x, y, "Soft targeting")
+	y = heading(x, y, "Play style")
+	y = row(x, y, "Style", choice(playstyleOptions, function() return ns.db.playstyle or "manual" end, function(value)
+		ns.db.playstyle = value ~= "manual" and value or nil
+		ns.ApplyPlaystyle()
+		ns.Saved()
+	end))
 	for i, cvar in ipairs(SOFT_TARGETS) do
 		y = row(x, y, SOFT_TARGET_LABELS[i], cvarChoice(softTargetOptions(), cvar, "0"))
 	end
@@ -141,6 +159,10 @@ local function buildRight(x, y)
 	y = row(x, y, "View", crossbarChoice())
 	y = row(x, y, "Size", choice(SCALES, function() return tostring(ns.db.crossbarScale or 1) end, function(value)
 		ns.SetCrossbarScale(tonumber(value))
+		ns.Saved()
+	end))
+	y = row(x, y, "Opacity", choice(OPACITIES, function() return tostring(ns.db.crossbarAlpha or 1) end, function(value)
+		ns.SetCrossbarOpacity(tonumber(value))
 		ns.Saved()
 	end))
 	y = row(x, y, "Position", lockButton()) + GAP
