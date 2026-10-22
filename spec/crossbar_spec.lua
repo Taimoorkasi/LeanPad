@@ -124,18 +124,22 @@ describe("Crossbar", function()
 				if buttonFor(key):IsShown() then table.insert(shown, key) end
 			end
 			table.sort(shown)
-			-- Bar actions: PAD3 on Base, PAD1 and PADDUP on LT. Faced commands: interact, targeting, the cursor toggle.
-			-- Auto-run and the shoulders' missing bar buttons stay hidden.
-			assert.same({ "PAD1", "PAD2", "PAD3", "PADDLEFT", "PADDRIGHT", "PADDUP", "PADLTRIGGER", "PADRSTICK", "PADRTRIGGER" }, shown)
+			-- Bar actions: PAD3 on Base, PAD1 and PADDUP on LT. Faced commands: interact and targeting.
+			-- The layer buttons, the cursor toggle, auto-run and the shoulders' missing bar buttons stay hidden.
+			assert.same({ "PAD1", "PAD2", "PAD3", "PADDLEFT", "PADDRIGHT", "PADDUP" }, shown)
 		end)
 
 		it("stack the sockets between the diamonds on the diamonds' centre line, only the shown ones", function()
-			-- Left: only the LT hint shows, so it sits level with the D-pad. Right: the RT hint and the stick click straddle the line.
-			assert.same({ "CENTER", clusters()[1], "CENTER", -39, 0 }, buttonFor("PADLTRIGGER").point)
-			assert.same({ "CENTER", clusters()[1], "CENTER", 39, 27 }, buttonFor("PADRTRIGGER").point)
-			assert.same({ "CENTER", clusters()[1], "CENTER", 39, -27 }, buttonFor("PADRSTICK").point)
-			w.bindings["CTRL-PADRSHOULDER"] = "ACTIONBUTTON1" -- a third socket fills the column
+			w.bindings["SHIFT-PADRSHOULDER"] = "ACTIONBUTTON1" -- one socket sits level with the diamonds
 			bar:Fire("OnEvent", "UPDATE_BINDINGS")
+			assert.same({ "CENTER", clusters()[1], "CENTER", 39, 0 }, buttonFor("PADRSHOULDER").point)
+			w.bindings["SHIFT-PADRSTICK"] = "ACTIONBUTTON1" -- two straddle the line
+			bar:Fire("OnEvent", "UPDATE_BINDINGS")
+			assert.same({ "CENTER", clusters()[1], "CENTER", 39, 27 }, buttonFor("PADRSHOULDER").point)
+			assert.same({ "CENTER", clusters()[1], "CENTER", 39, -27 }, buttonFor("PADRSTICK").point)
+			w.cvars.GamePadEmulateCtrl = "none" -- RT is a plain button again: three fill the column
+			w.bindings.PADRTRIGGER = "ACTIONBUTTON1"
+			bar:Fire("OnEvent", "CVAR_UPDATE")
 			assert.same({ "CENTER", clusters()[1], "CENTER", 39, 54 }, buttonFor("PADRSHOULDER").point)
 			assert.same({ "CENTER", clusters()[1], "CENTER", 39, 0 }, buttonFor("PADRTRIGGER").point)
 			assert.same({ "CENTER", clusters()[1], "CENTER", 39, -54 }, buttonFor("PADRSTICK").point)
@@ -148,33 +152,17 @@ describe("Crossbar", function()
 			assert.equal(1, right.alpha)
 			assert.is_nil(right.slot)
 			assert.equal("|A:common-icon-backarrow:12:12|a", buttonFor("PADDLEFT").Count:GetText())
-			assert.equal("common-icon-move", buttonFor("PADRSTICK").Icon.atlas)
+			assert.is_false(buttonFor("PADRSTICK"):IsShown()) -- the cursor toggle and auto-run stay off the bar
 			assert.is_false(buttonFor("PADLSTICK"):IsShown())
 		end)
 
-		it("show a layer button as a hint socket, lit while held, never its stale action", function()
+		it("never show a layer button, even with a stale binding on it", function()
 			w.bindings.PADRTRIGGER = "ACTIONBUTTON1"
-			w.glyphs.PADRTRIGGER = "|A:Gamepad_Shp_RTrigger_64:0:0|a"
 			bar:Fire("OnEvent", "UPDATE_BINDINGS")
-			local rt = buttonFor("PADRTRIGGER")
-			assert.is_true(rt:IsShown())
-			assert.is_nil(rt.Icon.texture)
-			assert.is_true(rt.BigGlyph:IsShown())
-			assert.equal("Gamepad_Shp_RTrigger_64", rt.BigGlyph.atlas)
-			assert.is_false(rt.Glyph:IsShown())
-			assert.equal("Ctrl", rt.Hint:GetText())
-			assert.is_true(rt.Hint:IsShown())
-			assert.equal(1, rt.alpha)
-			assert.same(ns.RIM, rt.Rim.color)
-			w.held.ctrl = true
-			bar:Fire("OnEvent", "MODIFIER_STATE_CHANGED")
-			assert.same(ns.RIM_LIT, rt.Rim.color)
-			w.held.ctrl = false
-			w.cvars.GamePadEmulateCtrl = "none" -- no longer a layer button: its own action shows again
+			assert.is_false(buttonFor("PADRTRIGGER"):IsShown())
+			w.cvars.GamePadEmulateCtrl = "none" -- no longer a layer button: its own action shows
 			bar:Fire("OnEvent", "CVAR_UPDATE")
-			assert.is_true(rt:IsShown())
-			assert.is_false(rt.Hint:IsShown())
-			assert.is_false(rt.BigGlyph:IsShown())
+			assert.is_true(buttonFor("PADRTRIGGER"):IsShown())
 		end)
 
 		it("show a button with nothing on the held layer as a faint empty slot", function()
@@ -479,20 +467,105 @@ describe("Crossbar", function()
 			assert.is_true(ns.CrossbarLocked())
 		end)
 
-		it("fades to the chosen opacity and resets its position from the outline", function()
+		it("fades to the chosen opacity", function()
 			wow.fire("PLAYER_ENTERING_WORLD")
-			local bar = LeanPadCrossbar
 			ns.SetCrossbarOpacity(0.6)
 			assert.equal(0.6, ns.db.crossbarAlpha)
-			assert.equal(0.6, bar.alpha)
-			ns.db.crossbarPoint = { "TOPLEFT", "TOPLEFT", 300, -400 }
-			local reset
-			for _, widget in ipairs(w.widgets) do
-				if widget.parent == bar.Outline and widget.text == "Reset position" then reset = widget end
-			end
-			reset:Fire("OnClick")
-			assert.is_nil(ns.db.crossbarPoint)
-			assert.same({ "BOTTOM", UIParent, "BOTTOM", 0, 60 }, bar.point)
+			assert.equal(0.6, LeanPadCrossbar.alpha)
+		end)
+
+		describe("layout editing", function()
+			local set
+			before_each(function()
+				wow.fire("PLAYER_ENTERING_WORLD")
+				bar = LeanPadCrossbar
+				ns.SetCrossbarLocked(false)
+				set = clusters()[1]
+			end)
+
+			it("takes the mouse on sets and buttons only while unlocked", function()
+				assert.is_true(set.mouse)
+				assert.is_true(set.wheel)
+				assert.is_true(buttonFor("PAD3").mouse)
+				ns.SetCrossbarLocked(true)
+				assert.is_false(set.mouse)
+				assert.is_false(set.wheel)
+				assert.is_false(buttonFor("PAD3").mouse)
+			end)
+
+			it("keeps where a set is dragged to, in the bar's units whatever the scales, on an 8-unit grid", function()
+				set.cx, set.cy, set.effectiveScale = 700, 402, 0.5
+				bar.cx, bar.cy, bar.effectiveScale = 600, 300, 1
+				set:Fire("OnDragStart")
+				set:Fire("OnDragStop")
+				assert.same({ -248, -96 }, ns.db.clusterPoints[1]) -- (-250, -99) snapped
+				assert.same({ "CENTER", bar, "CENTER", -248, -96 }, set.point)
+			end)
+
+			it("pulls a dropped set level with a neighbour on one axis, unless Shift is held", function()
+				set.cx, set.cy = 5, -131 -- near the fourth set's slot at 0, -135: both axes within reach, so neither pulls
+				set:Fire("OnDragStop")
+				assert.same({ 8, -128 }, ns.db.clusterPoints[1])
+				set.cx, set.cy = 5, -70 -- level in x only: pulled onto the fourth set's column
+				set:Fire("OnDragStop")
+				assert.same({ 0, -72 }, ns.db.clusterPoints[1])
+				w.held.shift = true
+				set.cx, set.cy = 5, -70
+				set:Fire("OnDragStop")
+				assert.same({ 5, -70 }, ns.db.clusterPoints[1])
+			end)
+
+			it("sizes a set with the wheel in 5% steps, between half and double", function()
+				set:Fire("OnMouseWheel", 1)
+				assert.near(1.05, ns.db.clusterScales[1], 0.0001)
+				assert.near(1.05, set.scale, 0.0001)
+				assert.near(ns.CROSSBAR_CLUSTERS[1][2] / 1.05, set.point[5], 0.0001)
+				for _ = 1, 30 do set:Fire("OnMouseWheel", -1) end
+				assert.near(0.5, ns.db.clusterScales[1], 0.0001)
+				for _ = 1, 40 do set:Fire("OnMouseWheel", 1) end
+				assert.near(2, ns.db.clusterScales[1], 0.0001)
+			end)
+
+			it("keeps where a button is dragged to, for every set, and resets the whole layout from the outline", function()
+				local x = buttonFor("PAD3")
+				x.cx, x.cy, set.cx, set.cy = 11, 21, 0, 0
+				x:Fire("OnDragStop")
+				assert.same({ 8, 24 }, ns.db.socketPoints.PAD3) -- on the grid; no neighbour near enough to pull
+				assert.same({ "CENTER", set, "CENTER", 8, 24 }, x.point)
+				ns.SetCrossbarStyle("all") -- the other sets, once shown, share the spot
+				assert.same({ "CENTER", clusters()[2], "CENTER", 8, 24 }, buttonFor("PAD3", 2).point)
+				x.cx, x.cy = 158, 10 -- nearly under Y and nearly level with B: pulled into Y's column and B's row
+				x:Fire("OnDragStop")
+				assert.same({ ns.CROSSBAR.PAD4[1], ns.CROSSBAR.PAD2[2] }, ns.db.socketPoints.PAD3)
+				-- A dragged socket between the diamonds leaves the stack.
+				w.bindings["SHIFT-PADRSHOULDER"], w.bindings["SHIFT-PADRSTICK"] = "ACTIONBUTTON1", "ACTIONBUTTON1"
+				ns.db.socketPoints.PADRSTICK = { 90, -90 }
+				bar:Fire("OnEvent", "UPDATE_BINDINGS")
+				assert.same({ "CENTER", set, "CENTER", 39, 0 }, buttonFor("PADRSHOULDER").point)
+				assert.same({ "CENTER", set, "CENTER", 90, -90 }, buttonFor("PADRSTICK").point)
+				ns.db.crossbarPoint = { "TOPLEFT", "TOPLEFT", 300, -400 }
+				local reset
+				for _, widget in ipairs(w.widgets) do
+					if widget.parent == bar.Outline and widget.text == "Reset layout" then reset = widget end
+				end
+				reset:Fire("OnClick")
+				assert.is_nil(ns.db.crossbarPoint)
+				assert.is_nil(ns.db.clusterPoints)
+				assert.is_nil(ns.db.clusterScales)
+				assert.is_nil(ns.db.socketPoints)
+				assert.same({ "BOTTOM", UIParent, "BOTTOM", 0, 60 }, bar.point)
+				assert.same({ "CENTER", set, "CENTER", ns.CROSSBAR.PAD3[1], ns.CROSSBAR.PAD3[2] }, x.point)
+				assert.same({ "CENTER", bar, "CENTER", 0, 60 }, set.point)
+			end)
+
+			it("comes back with the sets and buttons where they were left", function()
+				ns, w = wow.boot({ clusterPoints = { [1] = { 0, -200 } }, clusterScales = { [1] = 0.8 }, socketPoints = { PAD1 = { 5, 5 } } })
+				wow.fire("PLAYER_ENTERING_WORLD")
+				local first = clusters()[1]
+				assert.near(0.8, first.scale, 0.0001)
+				assert.near(-250, first.point[5], 0.0001)
+				assert.same({ "CENTER", first, "CENTER", 5, 5 }, buttonFor("PAD1").point)
+			end)
 		end)
 
 		it("comes back where it was left, at the saved size and opacity", function()

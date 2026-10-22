@@ -81,7 +81,7 @@ local function updateState(button)
 end
 
 -- Pad keys worth a button: those firing a Blizzard bar button, or a command with a face, on some layer.
--- Layer buttons never do; they get a hint socket instead.
+-- Layer buttons never do.
 local function actionKeys(layers)
 	local used, layerButtons = {}, ns.ModifierKeys()
 	for key in pairs(ns.CROSSBAR) do
@@ -102,22 +102,7 @@ local function clearButton(button)
 	button.Cooldown:Clear()
 	button.ChargeCooldown:Clear()
 	button.Count:SetText("")
-	button.BigGlyph:Hide()
-	button.Hint:Hide()
 	setPressed(button, false)
-end
-
--- A layer button's socket is a hint: its glyph large, the modifier it acts as beneath, lit while held.
-local function refreshHint(button, key, modifier, held)
-	clearButton(button)
-	button:SetAlpha(1)
-	button.Glyph:Hide()
-	local glyph = ns.GlyphAtlas(key)
-	button.BigGlyph:SetShown(glyph ~= nil)
-	if glyph then button.BigGlyph:SetAtlas(glyph) end
-	button.Hint:SetText(ns.MODIFIER_NAMES[modifier])
-	button.Hint:Show()
-	setPressed(button, held)
 end
 
 local function refreshButton(button, key, prefix, hideNumbers)
@@ -147,26 +132,37 @@ local function refreshButton(button, key, prefix, hideNumbers)
 	updateState(button)
 end
 
--- Offsets are in the cluster's own scale, so they are divided by it to keep the cluster centred on its slot.
-local function placeCluster(cluster, index, active)
-	local scale = active and 1 or ns.CROSSBAR_IDLE_SCALE
-	local point = ns.CROSSBAR_CLUSTERS[index]
-	cluster.frame:SetScale(scale)
-	cluster.frame:SetAlpha(active and 1 or ns.CROSSBAR_IDLE_ALPHA)
-	cluster.frame:SetPoint("CENTER", bar, "CENTER", point[1] / scale, point[2] / scale)
-end
-
-local function stackInner(cluster)
-	for _, side in ipairs(ns.CROSSBAR_INNER) do
-		local shown = {}
-		for i = 2, #side do
-			local button = cluster.buttons[side[i]]
-			if button:IsShown() then table.insert(shown, button) end
-		end
-		for i, button in ipairs(shown) do
-			button:SetPoint("CENTER", cluster.frame, "CENTER", side[1], ((#shown + 1) / 2 - i) * (ns.CROSSBAR_BUTTON_SIZE + 8))
+-- Drops land on an 8-unit grid and pull level with a neighbour within 12 on one axis, so sets and buttons
+-- line up by hand without landing on top of each other. Shift drops exactly where the mouse let go.
+local SNAP_GRID, SNAP_PULL = 8, 12
+local function snap(x, y, neighbours)
+	if IsShiftKeyDown() then return x, y end
+	x, y = math.floor(x / SNAP_GRID + 0.5) * SNAP_GRID, math.floor(y / SNAP_GRID + 0.5) * SNAP_GRID
+	for _, point in ipairs(neighbours) do
+		local dx, dy = math.abs(x - point[1]), math.abs(y - point[2])
+		if dx <= SNAP_PULL and dy > SNAP_PULL then
+			x = point[1]
+		elseif dy <= SNAP_PULL and dx > SNAP_PULL then
+			y = point[2]
 		end
 	end
+	return x, y
+end
+
+local function clusterPoint(index)
+	return (ns.db.clusterPoints or {})[index] or ns.CROSSBAR_CLUSTERS[index]
+end
+
+local function socketPoint(key)
+	return (ns.db.socketPoints or {})[key] or ns.CROSSBAR[key]
+end
+
+local function otherPoints(points, except)
+	local list = {}
+	for key in pairs(points) do
+		if key ~= except then table.insert(list, points == ns.CROSSBAR and socketPoint(key) or clusterPoint(key)) end
+	end
+	return list
 end
 
 local function heldLayer(layers, held)
@@ -174,6 +170,63 @@ local function heldLayer(layers, held)
 		if layer.prefix == held then return layer end
 	end
 	return { prefix = held, label = "Base" }
+end
+
+-- A set sits where the player dragged it, else on its slot; offsets are in the set's own scale, so they are
+-- divided by it to keep the set centred there. The wheel's per-set size multiplies the idle shrink.
+local function placeCluster(cluster, index, active)
+	local scale = (active and 1 or ns.CROSSBAR_IDLE_SCALE) * ((ns.db.clusterScales or {})[index] or 1)
+	local point = clusterPoint(index)
+	cluster.frame:SetScale(scale)
+	cluster.frame:SetAlpha(active and 1 or ns.CROSSBAR_IDLE_ALPHA)
+	cluster.frame:ClearAllPoints()
+	cluster.frame:SetPoint("CENTER", bar, "CENTER", point[1] / scale, point[2] / scale)
+end
+
+-- Every button sits where the player dragged it, else on its spot; the sockets between the diamonds that
+-- were not dragged stack on the diamonds' line.
+local function placeSockets(cluster)
+	local dragged = ns.db.socketPoints or {}
+	for key, button in pairs(cluster.buttons) do
+		local point = socketPoint(key)
+		button:ClearAllPoints()
+		button:SetPoint("CENTER", cluster.frame, "CENTER", point[1], point[2])
+	end
+	for _, side in ipairs(ns.CROSSBAR_INNER) do
+		local shown = {}
+		for i = 2, #side do
+			local button = cluster.buttons[side[i]]
+			if button:IsShown() and not dragged[side[i]] then table.insert(shown, button) end
+		end
+		for i, button in ipairs(shown) do
+			button:ClearAllPoints()
+			button:SetPoint("CENTER", cluster.frame, "CENTER", side[1], ((#shown + 1) / 2 - i) * (ns.CROSSBAR_BUTTON_SIZE + 8))
+		end
+	end
+end
+
+-- Where a dragged frame's centre landed, from its parent's centre, in the parent's units.
+local function droppedOffset(frame, parent)
+	local x, y = frame:GetCenter()
+	local px, py = parent:GetCenter()
+	local scale, parentScale = frame:GetEffectiveScale(), parent:GetEffectiveScale()
+	return (x * scale - px * parentScale) / parentScale, (y * scale - py * parentScale) / parentScale
+end
+
+local function draggable(frame, onDrop)
+	frame:SetMovable(true)
+	frame:RegisterForDrag("LeftButton")
+	frame:SetScript("OnDragStart", frame.StartMoving)
+	frame:SetScript("OnDragStop", function(self)
+		self:StopMovingOrSizing()
+		onDrop(self)
+	end)
+end
+
+local function remember(field, key, value)
+	ns.db[field] = ns.db[field] or {}
+	ns.db[field][key] = value
+	ns.RefreshCrossbar()
 end
 
 -- Held layer only (default): one cluster that switches as modifiers are held, labelled with them.
@@ -184,7 +237,7 @@ function ns.RefreshCrossbar()
 	local held = ns.HeldPrefix()
 	local allLayers = ns.db.crossbarStyle == "all"
 	local hideNumbers = not GetCVarBool("countdownForCooldowns")
-	local used, layerButtons, heldKeys = actionKeys(layers), ns.ModifierKeys(), ns.HeldModifierKeys()
+	local used = actionKeys(layers)
 	for index, cluster in ipairs(clusters) do
 		local layer = allLayers and layers[index] or (index == 1 and heldLayer(layers, held)) or nil
 		cluster.frame:SetShown(layer ~= nil)
@@ -192,15 +245,10 @@ function ns.RefreshCrossbar()
 			placeCluster(cluster, index, not allLayers or layer.prefix == held)
 			cluster.Label:SetText(layer.prefix ~= "" and layer.label or "")
 			for key, button in pairs(cluster.buttons) do
-				local modifier = layerButtons[key]
-				button:SetShown(used[key] == true or modifier ~= nil)
-				if modifier then
-					securecallfunction(refreshHint, button, key, modifier, heldKeys[key] == true)
-				else
-					securecallfunction(refreshButton, button, key, layer.prefix, hideNumbers)
-				end
+				button:SetShown(used[key] == true)
+				securecallfunction(refreshButton, button, key, layer.prefix, hideNumbers)
 			end
-			stackInner(cluster)
+			placeSockets(cluster)
 		end
 	end
 end
@@ -270,9 +318,13 @@ function ns.SetGlyph(button, key)
 	if glyph then button.Glyph:SetAtlas(glyph) end
 end
 
-local function makeButton(parent, point)
+local function makeButton(parent, key)
 	local button = ns.MakeSocket("Frame", parent, ns.CROSSBAR_BUTTON_SIZE)
-	button:SetPoint("CENTER", parent, "CENTER", point[1], point[2])
+	-- Unlocked, a button can be dragged to a new spot, shared by every set.
+	draggable(button, function(self)
+		local x, y = droppedOffset(self, parent)
+		remember("socketPoints", key, { snap(x, y, otherPoints(ns.CROSSBAR, key)) })
+	end)
 	button.Cooldown = makeCooldown(button.Face)
 	button.ChargeCooldown = makeCooldown(button.Face)
 	button.ChargeCooldown:SetDrawSwipe(false)
@@ -288,21 +340,24 @@ local function makeButton(parent, point)
 	button.Flash:Hide()
 	button.Count = overlay:CreateFontString(nil, "OVERLAY", "NumberFontNormal")
 	button.Count:SetPoint("BOTTOMRIGHT", -2, 2)
-	-- For a layer button's hint socket: the glyph in the middle and the modifier's name beneath.
-	button.BigGlyph = overlay:CreateTexture(nil, "OVERLAY")
-	button.BigGlyph:SetSize(28, 28)
-	button.BigGlyph:SetPoint("CENTER")
-	button.Hint = ns.Text(overlay, 11, ns.COLORS.text2, "CENTER")
-	button.Hint:SetPoint("TOP", button, "BOTTOM", 0, -2)
 	return button
 end
 
-local function makeCluster()
+local function makeCluster(index)
 	local frame = CreateFrame("Frame", nil, bar)
 	frame:SetSize(unpack(ns.CROSSBAR_CLUSTER_SIZE))
 	local cluster = { frame = frame, buttons = {} }
 	frame.buttons = cluster.buttons
-	for key, point in pairs(ns.CROSSBAR) do cluster.buttons[key] = makeButton(frame, point) end
+	-- Unlocked, a set can be dragged anywhere on the bar and sized with the wheel, in steps of 5%.
+	draggable(frame, function(self)
+		local x, y = droppedOffset(self, bar)
+		remember("clusterPoints", index, { snap(x, y, otherPoints(ns.CROSSBAR_CLUSTERS, index)) })
+	end)
+	frame:SetScript("OnMouseWheel", function(_, delta)
+		local scale = (ns.db.clusterScales or {})[index] or 1
+		remember("clusterScales", index, math.max(0.5, math.min(2, scale + delta * 0.05)))
+	end)
+	for key in pairs(ns.CROSSBAR) do cluster.buttons[key] = makeButton(frame, key) end
 	cluster.Label = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
 	cluster.Label:SetPoint("CENTER", frame, "CENTER", 0, 92)
 	return cluster
@@ -322,16 +377,12 @@ local function build()
 	anchor()
 	bar:SetScale(ns.db.crossbarScale or 1)
 	bar:SetAlpha(ns.db.crossbarAlpha or 1)
-	for index = 1, #ns.CROSSBAR_CLUSTERS do clusters[index] = makeCluster() end
+	for index = 1, #ns.CROSSBAR_CLUSTERS do clusters[index] = makeCluster(index) end
 	-- Unlocked from the settings page, the bar takes the mouse and can be dragged; the spot is kept.
-	bar:SetMovable(true)
 	bar:SetClampedToScreen(true)
-	bar:RegisterForDrag("LeftButton")
-	bar:SetScript("OnDragStart", bar.StartMoving)
-	bar:SetScript("OnDragStop", function()
-		bar:StopMovingOrSizing()
-		local anchor, _, relativePoint, x, y = bar:GetPoint(1)
-		ns.db.crossbarPoint = { anchor, relativePoint, x, y }
+	draggable(bar, function()
+		local point, _, relativePoint, x, y = bar:GetPoint(1)
+		ns.db.crossbarPoint = { point, relativePoint, x, y }
 	end)
 	bar.Outline = CreateFrame("Frame", nil, bar, "BackdropTemplate")
 	bar.Outline:SetAllPoints()
@@ -339,10 +390,11 @@ local function build()
 	bar.Outline:SetBackdropBorderColor(unpack(ns.COLORS.accent))
 	local hint = ns.Text(bar.Outline, 14, ns.COLORS.accent, "CENTER")
 	hint:SetPoint("TOP", 0, -8)
-	hint:SetText("Drag the crossbar, then lock it on the settings page")
-	local reset = ns.Button(bar.Outline, "Reset position", 140, function()
-		ns.db.crossbarPoint = nil
+	hint:SetText("Drag the bar, a set or a single button; they snap to a grid and line up with neighbours, Shift drags freely. Scroll over a set to size it. Lock it on the settings page.")
+	local reset = ns.Button(bar.Outline, "Reset layout", 140, function()
+		ns.db.crossbarPoint, ns.db.clusterPoints, ns.db.clusterScales, ns.db.socketPoints = nil, nil, nil, nil
 		anchor()
+		ns.RefreshCrossbar()
 	end)
 	reset:SetPoint("TOP", hint, "BOTTOM", 0, -8)
 	bar.Outline:Hide()
@@ -388,6 +440,11 @@ function ns.SetCrossbarLocked(lock)
 	if not bar then build() end
 	bar:EnableMouse(not locked)
 	bar.Outline:SetShown(not locked)
+	for _, cluster in ipairs(clusters) do
+		cluster.frame:EnableMouse(not locked)
+		cluster.frame:EnableMouseWheel(not locked)
+		for _, button in pairs(cluster.buttons) do button:EnableMouse(not locked) end
+	end
 end
 
 function ns.CrossbarLocked() return locked end

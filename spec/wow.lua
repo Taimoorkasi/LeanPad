@@ -36,6 +36,9 @@ function Widget:SetPoint(...) self.point = { ... } end
 function Widget:ClearAllPoints() self.point = nil end
 function Widget:GetPoint() return unpack(self.point) end
 function Widget:EnableMouse(enabled) self.mouse = enabled end
+function Widget:EnableMouseWheel(enabled) self.wheel = enabled end
+function Widget:GetCenter() return self.cx or 0, self.cy or 0 end
+function Widget:GetEffectiveScale() return self.effectiveScale or 1 end
 function Widget:SetText(text) self.text = text end
 function Widget:GetText() return self.text end
 function Widget:SetTexture(texture) self.texture, self.color = texture, nil end

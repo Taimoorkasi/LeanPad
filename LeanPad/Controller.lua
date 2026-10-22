@@ -136,7 +136,7 @@ ns.COMMAND_ICONS = {
 	TARGETNEARESTENEMY = { "Crosshair_Attack_64", NEXT }, TARGETPREVIOUSENEMY = { "Crosshair_Attack_64", PREVIOUS },
 	TARGETNEARESTFRIEND = { FRIEND, NEXT }, TARGETPREVIOUSFRIEND = { FRIEND, PREVIOUS }, TARGETSELF = { FRIEND },
 	TARGETPARTYMEMBER1 = { FRIEND, "1" }, TARGETPARTYMEMBER2 = { FRIEND, "2" }, TARGETPARTYMEMBER3 = { FRIEND, "3" }, TARGETPARTYMEMBER4 = { FRIEND, "4" },
-	INTERACTTARGET = { "Crosshair_GrabbingHand_64" }, OPENALLBAGS = { "bag-main" }, LEANPAD_TOGGLE_CURSOR = { "common-icon-move" },
+	INTERACTTARGET = { "Crosshair_GrabbingHand_64" }, OPENALLBAGS = { "bag-main" },
 	TOGGLEGAMEMENU = { "UI-HUD-MicroMenu-GameMenu-Up" }, TOGGLESPELLBOOK = { "UI-HUD-MicroMenu-SpellbookAbilities-Up" },
 	TOGGLETALENTS = { "UI-HUD-MicroMenu-SpecTalents-Up" }, TOGGLEQUESTLOG = { "UI-HUD-MicroMenu-Questlog-Up" },
 	TOGGLECOLLECTIONS = { "UI-HUD-MicroMenu-Collections-Up" }, TOGGLEACHIEVEMENT = { "UI-HUD-MicroMenu-Achievements-Up" },
