@@ -114,7 +114,20 @@ function M.reset()
 		cvars = {}, bindings = {}, saved = {}, printed = {}, popups = {}, opened = {},
 		onLoaded = {}, onceEvents = {}, metricCalls = {}, controls = {}, layout = {},
 		combat = false, widgets = {}, held = {}, placed = {}, actions = {}, nextFrame = {},
-		glyphs = {}, devices = {}, deviceIDs = {}, power = 5, timers = {}, callbacks = {},
+		glyphs = {}, devices = {}, deviceIDs = {}, power = 5, timers = {}, callbacks = {}, pickups = {}, cleared = 0,
+		-- A paladin's spellbook: General and the active spec's tab show; an off-spec tab and a hidden one don't.
+		skillLines = {
+			{ name = "General", iconID = 1, itemIndexOffset = 0, numSpellBookItems = 2 },
+			{ name = "Retribution", iconID = 2, itemIndexOffset = 2, numSpellBookItems = 3, specID = 70 },
+			{ name = "Holy", iconID = 3, itemIndexOffset = 5, numSpellBookItems = 1, offSpecID = 65 },
+			{ name = "Hidden", iconID = 4, itemIndexOffset = 6, numSpellBookItems = 0, shouldHide = true },
+		},
+		spellBook = {
+			{ name = "Divine Shield", iconID = 135896, itemType = 1 }, { name = "Plate Specialization", iconID = 5, itemType = 1, isPassive = true },
+			{ name = "Judgment", iconID = 135959, itemType = 1 }, { name = "Blessings", iconID = 6, itemType = 4 },
+			{ name = "Beacon of Light", iconID = 7, itemType = 1, isOffSpec = true }, { name = "Holy Shock", iconID = 8, itemType = 1 },
+		},
+		macros = { { name = "Mount up", icon = 9 } }, characterMacros = { { name = "Focus", icon = 10 } },
 		bindingList = {
 			{ "HEADER_BLANK", "BINDING_HEADER_MOVEMENT" },
 			{ "JUMP", "BINDING_HEADER_MOVEMENT" },
@@ -196,6 +209,34 @@ function M.reset()
 		if not ok then table.insert(w.errors, err) end
 	end
 	GetCursorInfo = function() return w.cursor end
+	ClearCursor = function()
+		w.cursor = nil
+		w.cleared = w.cleared + 1
+	end
+	C_SpellBook = {
+		GetNumSpellBookSkillLines = function() return #w.skillLines end,
+		GetSpellBookSkillLineInfo = function(index) return w.skillLines[index] end,
+		GetSpellBookItemInfo = function(index) return w.spellBook[index] end,
+		PickupSpellBookItem = function(index, bank)
+			w.cursor = "spell"
+			table.insert(w.pickups, { "spell", index, bank })
+		end,
+	}
+	Constants = { MacroConsts = { MAX_ACCOUNT_MACROS = 120 } }
+	GetNumMacros = function() return #w.macros, #w.characterMacros end
+	GetMacroInfo = function(index)
+		local macro = index > 120 and w.characterMacros[index - 120] or w.macros[index]
+		return macro.name, macro.icon
+	end
+	PickupMacro = function(index)
+		w.cursor = "macro"
+		table.insert(w.pickups, { "macro", index })
+	end
+	GetBindingKey = function(command)
+		for key, action in pairs(w.bindings) do
+			if action == command then return key end
+		end
+	end
 	GameTooltip = {
 		SetOwner = function(_, owner, anchor) w.tooltip = { owner = owner, anchor = anchor } end,
 		SetAction = function(_, slot) w.tooltip.slot = slot end,
@@ -232,6 +273,8 @@ function M.reset()
 		SoftTargetEnableFlags = { None = 0, Gamepad = 1, Kbm = 2, Any = 3 },
 		AddOnProfilerMetric = { SessionAverageTime = 0, RecentAverageTime = 1, EncounterAverageTime = 2, LastTime = 3, PeakTime = 4 },
 		BindingSet = { Default = 0, Account = 1, Character = 2, Current = 3 },
+		SpellBookSpellBank = { Player = 0, Pet = 1 },
+		SpellBookItemType = { None = 0, Spell = 1, FutureSpell = 2, PetAction = 3, Flyout = 4 },
 	}
 	w.bindingSet = Enum.BindingSet.Account
 

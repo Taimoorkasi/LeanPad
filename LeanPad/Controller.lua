@@ -206,12 +206,92 @@ local function commandLabel(action)
 	return (icon and ("|T%s:16|t "):format(icon) or "") .. GetBindingName(action)
 end
 
--- Every Blizzard binding command, grouped by the categories of Blizzard's own key binding list.
+-- The bar slot a binding fires, binding the button to the first free slot of its layer's own bar when it has none.
+function ns.EnsureSlot(binding)
+	local slot = ns.SlotForCommand(GetBindingAction(binding))
+	if slot then return slot end
+	local prefix = binding:match("^(.-)PAD[%u%d]+$")
+	local bar = prefix and ns.LAYER_BARS[prefix]
+	if not bar then return print("LeanPad: this layer has no bar of its own; bind the button to a bar slot first.") end
+	for i = 1, NUM_ACTIONBAR_BUTTONS do
+		local command = bar .. i
+		slot = ns.SlotForCommand(command)
+		if slot and not C_ActionBar.HasAction(slot) and not GetBindingKey(command) then
+			SetBinding(binding, command)
+			SaveBindings(GetCurrentBindingSet())
+			return slot
+		end
+	end
+	print(("LeanPad: %s has no free slot left; clear one or bind the button to a slot by hand."):format(ns.ActionPlace(bar .. "1"):match("^Action Bar %d+")))
+end
+
+-- Puts what pickup leaves on the cursor into the button's slot, out of combat, dropping whatever was there.
+local function put(binding, pickup)
+	ns.OutOfCombat(function()
+		local slot = ns.EnsureSlot(binding)
+		if not slot then return end
+		ClearCursor()
+		pickup()
+		PlaceAction(slot)
+		ClearCursor()
+		ns.Saved()
+	end)
+end
+
+function ns.PutSpell(binding, index)
+	put(binding, function() C_SpellBook.PickupSpellBookItem(index, Enum.SpellBookSpellBank.Player) end)
+end
+
+function ns.PutMacro(binding, index)
+	put(binding, function() PickupMacro(index) end)
+end
+
+local function iconLabel(icon, name)
+	return (icon and ("|T%s:16|t "):format(icon) or "") .. name
+end
+
+-- The spellbook's tabs for this spec, each with its castable spells.
+local function spellMenu(root, binding)
+	for line = 1, C_SpellBook.GetNumSpellBookSkillLines() do
+		local tab = C_SpellBook.GetSpellBookSkillLineInfo(line)
+		if not tab.shouldHide and not tab.offSpecID then
+			local submenu = root:CreateButton(iconLabel(tab.iconID, tab.name))
+			submenu:SetScrollMode(400)
+			for index = tab.itemIndexOffset + 1, tab.itemIndexOffset + tab.numSpellBookItems do
+				local item = C_SpellBook.GetSpellBookItemInfo(index, Enum.SpellBookSpellBank.Player)
+				if item.itemType == Enum.SpellBookItemType.Spell and not item.isPassive and not item.isOffSpec then
+					submenu:CreateButton(iconLabel(item.iconID, item.name), function() ns.PutSpell(binding, index) end)
+				end
+			end
+		end
+	end
+end
+
+-- Account macros, then this character's, which the client numbers after the account's full set.
+local function macroMenu(root, binding)
+	local account, character = GetNumMacros()
+	local function add(index)
+		local name, icon = GetMacroInfo(index)
+		root:CreateButton(iconLabel(icon, name), function() ns.PutMacro(binding, index) end)
+	end
+	for index = 1, account do add(index) end
+	for index = 1, character do add(Constants.MacroConsts.MAX_ACCOUNT_MACROS + index) end
+end
+
+local function isBarSlot(action)
+	return action:find("^ACTIONBUTTON%d+$") or action:find("^MULTIACTIONBAR%dBUTTON%d+$")
+end
+
+-- Spells and macros land on the button directly. Bar slots and Blizzard's other commands keep their own lists,
+-- grouped by the categories of Blizzard's key binding list.
 function ns.BuildAssignMenu(root, binding)
 	root:CreateTitle(GetBindingText(binding))
 	if GetBindingAction(binding) ~= "" then
 		root:CreateButton(UNBIND, function() ns.Assign(binding, nil) end)
 	end
+	spellMenu(root:CreateButton("Spells"), binding)
+	macroMenu(root:CreateButton("Macros"), binding)
+	local slots, commands = root:CreateButton("Bar slots"), root:CreateButton("Commands")
 	local categories, order = {}, {}
 	for i = 1, GetNumBindings() do
 		local action, category = GetBinding(i)
@@ -225,9 +305,10 @@ function ns.BuildAssignMenu(root, binding)
 		end
 	end
 	for _, category in ipairs(order) do
-		local submenu = root:CreateButton(_G[category] or category)
+		local actions = categories[category]
+		local submenu = (isBarSlot(actions[1]) and slots or commands):CreateButton(_G[category] or category)
 		submenu:SetScrollMode(400)
-		for _, action in ipairs(categories[category]) do
+		for _, action in ipairs(actions) do
 			submenu:CreateButton(commandLabel(action), function() ns.Assign(binding, action) end)
 		end
 	end

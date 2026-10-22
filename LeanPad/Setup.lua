@@ -39,14 +39,18 @@ ns.BINDINGS = {
 -- Each trigger layer puts the D-pad and face buttons, clockwise from the top, onto slots 1-8 of one Blizzard bar,
 -- so the bar placed in Edit Mode is that layer's crossbar and Blizzard draws cooldowns, glows and range.
 local CROSS = { "PADDUP", "PADDRIGHT", "PADDDOWN", "PADDLEFT", "PAD4", "PAD2", "PAD1", "PAD3" }
-local LAYERS = {
+-- Each layer's own bar, where the editor finds a free slot for a button that fires none yet.
+ns.LAYER_BARS = {
+	[""] = "ACTIONBUTTON", -- Action Bar 1
 	["SHIFT-"] = "MULTIACTIONBAR1BUTTON", -- Action Bar 2
 	["CTRL-"] = "MULTIACTIONBAR2BUTTON", -- Action Bar 3
 	["CTRL-SHIFT-"] = "MULTIACTIONBAR3BUTTON", -- Action Bar 4
 }
-for prefix, bar in pairs(LAYERS) do
-	for slot, key in ipairs(CROSS) do
-		ns.BINDINGS[prefix .. key] = bar .. slot
+for prefix, bar in pairs(ns.LAYER_BARS) do
+	if prefix ~= "" then
+		for slot, key in ipairs(CROSS) do
+			ns.BINDINGS[prefix .. key] = bar .. slot
+		end
 	end
 end
 

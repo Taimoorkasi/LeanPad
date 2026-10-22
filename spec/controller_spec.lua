@@ -216,26 +216,85 @@ describe("Controller", function()
 			return w.menu.root
 		end
 
-		it("titles the menu with the button and groups commands by Blizzard's categories", function()
+		local function labels(description)
+			local list = {}
+			for _, entry in ipairs(description.entries) do table.insert(list, entry.text) end
+			return list
+		end
+
+		it("titles the menu with the button; spells and macros first, then bar slots and commands by Blizzard's categories", function()
 			local root = menuFor("SHIFT-PAD1")
 			assert.equal("text:SHIFT-PAD1", root.title)
-			local labels = {}
-			for _, entry in ipairs(root.entries) do table.insert(labels, entry.text) end
-			assert.same({ "Movement", "Action Bar", "BINDING_HEADER_MULTIACTIONBAR", "Other" }, labels)
+			assert.same({ "Spells", "Macros", "Bar slots", "Commands" }, labels(root))
+			assert.same({ "Action Bar", "BINDING_HEADER_MULTIACTIONBAR" }, labels(wow.entry(root, "Bar slots")))
+			assert.same({ "Movement", "Other" }, labels(wow.entry(root, "Commands")))
+		end)
+
+		it("lists the spellbook by tab for this spec, castable spells only, with icons, and both kinds of macro", function()
+			local root = menuFor("PAD1")
+			local spells = wow.entry(root, "Spells")
+			assert.same({ "|T1:16|t General", "|T2:16|t Retribution" }, labels(spells))
+			assert.same({ "|T135896:16|t Divine Shield" }, labels(spells.entries[1]))
+			assert.same({ "|T135959:16|t Judgment" }, labels(spells.entries[2]))
+			assert.equal(400, spells.entries[1].scrollExtent)
+			assert.same({ "|T9:16|t Mount up", "|T10:16|t Focus" }, labels(wow.entry(root, "Macros")))
 		end)
 
 		it("skips headers and prefaces, scrolls long lists, and shows slot icons", function()
 			local root = menuFor("PAD1")
-			assert.same({ "name:JUMP" }, { wow.entry(root, "Movement").entries[1].text })
-			assert.equal(1, #wow.entry(root, "Action Bar").entries)
-			assert.equal("name:ACTIONBUTTON1", wow.entry(root, "Action Bar").entries[1].text)
-			assert.equal("|T135808:16|t name:MULTIACTIONBAR1BUTTON1", wow.entry(root, "BINDING_HEADER_MULTIACTIONBAR").entries[1].text)
-			assert.equal(400, wow.entry(root, "Movement").scrollExtent)
+			local commands, slots = wow.entry(root, "Commands"), wow.entry(root, "Bar slots")
+			assert.same({ "name:JUMP" }, { wow.entry(commands, "Movement").entries[1].text })
+			assert.equal(1, #wow.entry(slots, "Action Bar").entries)
+			assert.equal("name:ACTIONBUTTON1", wow.entry(slots, "Action Bar").entries[1].text)
+			assert.equal("|T135808:16|t name:MULTIACTIONBAR1BUTTON1", wow.entry(slots, "BINDING_HEADER_MULTIACTIONBAR").entries[1].text)
+			assert.equal(400, wow.entry(commands, "Movement").scrollExtent)
 		end)
 
 		it("assigns the picked command to the button", function()
-			wow.entry(menuFor("SHIFT-PAD1"), "Movement").entries[1].callback()
+			wow.entry(wow.entry(menuFor("SHIFT-PAD1"), "Commands"), "Movement").entries[1].callback()
 			assert.equal("JUMP", w.bindings["SHIFT-PAD1"])
+		end)
+
+		it("puts a picked spell into the slot the button already fires, dropping what was there", function()
+			w.bindings["SHIFT-PAD1"] = "MULTIACTIONBAR1BUTTON1"
+			wow.entry(menuFor("SHIFT-PAD1"), "Spells").entries[1].entries[1].callback()
+			assert.same({ { "spell", 1, Enum.SpellBookSpellBank.Player } }, w.pickups)
+			assert.same({ 61 }, w.placed)
+			assert.equal(2, w.cleared) -- once before the pickup, once after the drop
+			assert.is_nil(w.cursor)
+		end)
+
+		it("binds a button with no slot to the first free slot of its layer's bar, then places", function()
+			_G.ActionButton2 = { bindingAction = "ACTIONBUTTON2", action = 2 } -- busted sandboxes spec globals; the addon reads _G
+			w.bindings.PAD3 = "ACTIONBUTTON1" -- slot 1 is X's
+			w.bindings.PAD2 = "INTERACTTARGET"
+			wow.entry(menuFor("PAD2"), "Macros").entries[2].callback() -- the character macro, numbered after the account's 120
+			assert.equal("ACTIONBUTTON2", w.bindings.PAD2)
+			assert.equal(Enum.BindingSet.Account, w.saved[#w.saved])
+			assert.same({ { "macro", 121 } }, w.pickups)
+			assert.same({ 2 }, w.placed)
+			_G.ActionButton2 = nil
+		end)
+
+		it("says so when the layer's bar has no free slot, or the layer no bar", function()
+			w.bindings.PAD3 = "ACTIONBUTTON1"
+			w.bindings.PAD2 = "INTERACTTARGET"
+			ns.PutSpell("PAD2", 1)
+			assert.same({}, w.placed)
+			assert.equal("INTERACTTARGET", w.bindings.PAD2)
+			assert.equal("LeanPad: Action Bar 1 has no free slot left; clear one or bind the button to a slot by hand.", w.printed[#w.printed])
+			ns.PutSpell("ALT-PAD1", 1)
+			assert.matches("no bar of its own", w.printed[#w.printed])
+		end)
+
+		it("waits for combat to end before placing", function()
+			w.bindings["SHIFT-PAD1"] = "MULTIACTIONBAR1BUTTON1"
+			w.combat = true
+			ns.PutSpell("SHIFT-PAD1", 3)
+			assert.same({}, w.placed)
+			w.combat = false
+			wow.fire("PLAYER_REGEN_ENABLED")
+			assert.same({ 61 }, w.placed)
 		end)
 
 		it("offers Unbind only for bound buttons", function()
