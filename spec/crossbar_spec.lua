@@ -47,15 +47,23 @@ describe("Crossbar", function()
 			end
 		end)
 
+		it("spaces the centre line evenly: D-pad, socket, socket, face buttons, 32 apart", function()
+			local size, gap = ns.CROSSBAR_BUTTON_SIZE, 32
+			local row = { ns.CROSSBAR.PADDRIGHT[1], ns.CROSSBAR_INNER[1][1], ns.CROSSBAR_INNER[2][1], ns.CROSSBAR.PAD3[1] }
+			for i = 2, #row do assert.equal(size + gap, row[i] - row[i - 1]) end
+			assert.equal(0, ns.CROSSBAR.PADDRIGHT[2])
+			assert.equal(0, ns.CROSSBAR.PAD3[2])
+		end)
+
 		it("fits every button inside its cluster", function()
 			for key, point in pairs(ns.CROSSBAR) do
-				assert.is_true(math.abs(point[1]) + ns.CROSSBAR_BUTTON_SIZE / 2 <= 230, key)
+				assert.is_true(math.abs(point[1]) + ns.CROSSBAR_BUTTON_SIZE / 2 <= ns.CROSSBAR_CLUSTER_SIZE[1] / 2, key)
 				assert.is_true(math.abs(point[2]) + ns.CROSSBAR_BUTTON_SIZE / 2 <= 110, key)
 			end
 		end)
 
 		it("keeps clusters apart even when one is held at full size", function()
-			local half = { 230, 110 }
+			local half = { ns.CROSSBAR_CLUSTER_SIZE[1] / 2, ns.CROSSBAR_CLUSTER_SIZE[2] / 2 }
 			for a, pa in ipairs(ns.CROSSBAR_CLUSTERS) do
 				for b, pb in ipairs(ns.CROSSBAR_CLUSTERS) do
 					if a ~= b then
@@ -123,14 +131,14 @@ describe("Crossbar", function()
 
 		it("stack the sockets between the diamonds on the diamonds' centre line, only the shown ones", function()
 			-- Left: only the LT hint shows, so it sits level with the D-pad. Right: the RT hint and the stick click straddle the line.
-			assert.same({ "CENTER", clusters()[1], "CENTER", -50, 0 }, buttonFor("PADLTRIGGER").point)
-			assert.same({ "CENTER", clusters()[1], "CENTER", 50, 27 }, buttonFor("PADRTRIGGER").point)
-			assert.same({ "CENTER", clusters()[1], "CENTER", 50, -27 }, buttonFor("PADRSTICK").point)
+			assert.same({ "CENTER", clusters()[1], "CENTER", -39, 0 }, buttonFor("PADLTRIGGER").point)
+			assert.same({ "CENTER", clusters()[1], "CENTER", 39, 27 }, buttonFor("PADRTRIGGER").point)
+			assert.same({ "CENTER", clusters()[1], "CENTER", 39, -27 }, buttonFor("PADRSTICK").point)
 			w.bindings["CTRL-PADRSHOULDER"] = "ACTIONBUTTON1" -- a third socket fills the column
 			bar:Fire("OnEvent", "UPDATE_BINDINGS")
-			assert.same({ "CENTER", clusters()[1], "CENTER", 50, 54 }, buttonFor("PADRSHOULDER").point)
-			assert.same({ "CENTER", clusters()[1], "CENTER", 50, 0 }, buttonFor("PADRTRIGGER").point)
-			assert.same({ "CENTER", clusters()[1], "CENTER", 50, -54 }, buttonFor("PADRSTICK").point)
+			assert.same({ "CENTER", clusters()[1], "CENTER", 39, 54 }, buttonFor("PADRSHOULDER").point)
+			assert.same({ "CENTER", clusters()[1], "CENTER", 39, 0 }, buttonFor("PADRTRIGGER").point)
+			assert.same({ "CENTER", clusters()[1], "CENTER", 39, -54 }, buttonFor("PADRSTICK").point)
 		end)
 
 		it("give commands off the bars a Blizzard face with a badge, and no cooldown or press", function()

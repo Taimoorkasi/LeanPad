@@ -2,15 +2,18 @@ local _, ns = ...
 
 -- Button centres from a cluster's centre: D-pad and face diamonds on the outside,
 -- shoulder, trigger and stick click columns between them.
+-- Along the centre line the gaps are even: 32 from the D-pad's right button to the first socket, between the two
+-- sockets, and from the second socket to the face diamond.
 ns.CROSSBAR = {
-	PADDUP = { -150, 46 }, PADDLEFT = { -196, 0 }, PADDRIGHT = { -104, 0 }, PADDDOWN = { -150, -46 },
-	PADLSHOULDER = { -50, 54 }, PADLTRIGGER = { -50, 0 }, PADLSTICK = { -50, -54 },
-	PADRSHOULDER = { 50, 54 }, PADRTRIGGER = { 50, 0 }, PADRSTICK = { 50, -54 },
-	PAD4 = { 150, 46 }, PAD3 = { 104, 0 }, PAD2 = { 196, 0 }, PAD1 = { 150, -46 },
+	PADDUP = { -163, 46 }, PADDLEFT = { -209, 0 }, PADDRIGHT = { -117, 0 }, PADDDOWN = { -163, -46 },
+	PADLSHOULDER = { -39, 54 }, PADLTRIGGER = { -39, 0 }, PADLSTICK = { -39, -54 },
+	PADRSHOULDER = { 39, 54 }, PADRTRIGGER = { 39, 0 }, PADRSTICK = { 39, -54 },
+	PAD4 = { 163, 46 }, PAD3 = { 117, 0 }, PAD2 = { 209, 0 }, PAD1 = { 163, -46 },
 }
 -- Between the diamonds each side stacks only the sockets it shows, centred on the diamonds' line: one socket
 -- sits level with the D-pad and face buttons, two straddle that line, three fill the column.
-ns.CROSSBAR_INNER = { { -50, "PADLSHOULDER", "PADLTRIGGER", "PADLSTICK" }, { 50, "PADRSHOULDER", "PADRTRIGGER", "PADRSTICK" } }
+ns.CROSSBAR_INNER = { { -39, "PADLSHOULDER", "PADLTRIGGER", "PADLSTICK" }, { 39, "PADRSHOULDER", "PADRTRIGGER", "PADRSTICK" } }
+ns.CROSSBAR_CLUSTER_SIZE = { 470, 220 }
 -- Cluster centres from the bar's centre, in ns.Layers() order: Base on top, then the first modifier left,
 -- the second right and both together below, as WoW: Forever lays out its controller bars.
 -- shortcut: only the first four layers get a cluster, so Alt layers are not drawn in the all-layers view; add slots if Alt is used.
@@ -296,7 +299,7 @@ end
 
 local function makeCluster()
 	local frame = CreateFrame("Frame", nil, bar)
-	frame:SetSize(460, 220)
+	frame:SetSize(unpack(ns.CROSSBAR_CLUSTER_SIZE))
 	local cluster = { frame = frame, buttons = {} }
 	frame.buttons = cluster.buttons
 	for key, point in pairs(ns.CROSSBAR) do cluster.buttons[key] = makeButton(frame, point) end
@@ -315,7 +318,7 @@ end
 
 local function build()
 	bar = CreateFrame("Frame", "LeanPadCrossbar", UIParent)
-	bar:SetSize(1140, 420)
+	bar:SetSize(1200, 420)
 	anchor()
 	bar:SetScale(ns.db.crossbarScale or 1)
 	bar:SetAlpha(ns.db.crossbarAlpha or 1)
