@@ -1,4 +1,4 @@
-// Draws LeanPad's controller art: gold-brown line art on a dark bronze body, in WoW's palette.
+// Draws LeanPad's controller art: steel line art on a slate body, the editor's own palette.
 // Writes LeanPad/Art/*.tga (32-bit, power-of-two sizes, as the client wants) and an SVG + PNG preview of each pad.
 // Button positions here are mirrored in ns.PADS in LeanPad/Controller.lua; change both together.
 // Proportions were taken from the CC0 "8th gen console vector gamepad collection" by TheHoodieGuy02;
@@ -11,7 +11,7 @@ const { Resvg } = require("@resvg/resvg-js");
 const OUT = path.join(__dirname, "..", "LeanPad", "Art");
 const PREVIEW = path.join(__dirname, "preview");
 const C = 1024; // symmetry axis
-const INK = "#b39563", INK_SOFT = "#7d6a4a", BODY = "#272017", CORE = "#17130e", PART = "#1d1812";
+const INK = "#8fa6bd", INK_SOFT = "#4f6377", BODY = "#151b24", CORE = "#0e1218", PART = "#111720";
 const GLYPH = { tri: "#3ccfa4", sq: "#e58ad8", cir: "#ff7a7a", x: "#8fb2ff", a: "#6fcf6f", b: "#f06a6a", xb: "#6f9cff", y: "#f2cf3a" };
 
 // Mirrors a left-half outline (from the axis at the top to the axis at the bottom) into one closed path.
@@ -90,7 +90,7 @@ const pads = {
 				[760, 572], [728, 572, 712, 596, 708, 630], [700, 760, 690, 880, 660, 980], [630, 1080, 640, 1200, 720, 1250], [800, 1296, 900, 1262, C, 1262],
 			]), fill: CORE, stroke: INK_SOFT, "stroke-width": 4, "stroke-linejoin": "round" }),
 			el("rect", { x: 772, y: 596, width: 504, height: 300, rx: 44, fill: PART, stroke: INK, "stroke-width": 6 }),
-			el("path", { d: "M748 640 L742 860 M1300 640 L1306 860", fill: "none", stroke: "#c9a227", "stroke-width": 5, "stroke-linecap": "round", opacity: 0.6 }),
+			el("path", { d: "M748 640 L742 860 M1300 640 L1306 860", fill: "none", stroke: "#f6b73c", "stroke-width": 5, "stroke-linecap": "round", opacity: 0.6 }),
 			pill(712, 650, 30, 62), pill(mirrorX(712), 650, 30, 62),
 			dpad(468, 830, 130, 80),
 			faceButton(1580, 708, "tri", 56), faceButton(1458, 830, "sq", 56), faceButton(1702, 830, "cir", 56), faceButton(1580, 952, "x", 56),
@@ -157,7 +157,7 @@ for (const [name, pad] of Object.entries(pads)) {
 	// 1024x512 canvas; the drawing is centred at full height, so the game crops it with SetTexCoord.
 	render(name, svg(pad.viewBox, body, ' width="1024" height="512" preserveAspectRatio="xMidYMid meet"'), 1024, 512);
 	fs.writeFileSync(path.join(PREVIEW, name + ".svg"), svg(pad.viewBox, body));
-	const png = new Resvg(svg(pad.viewBox, body), { fitTo: { mode: "width", value: 900 }, background: "#13110e", font: { loadSystemFonts: true } }).render().asPng();
+	const png = new Resvg(svg(pad.viewBox, body), { fitTo: { mode: "width", value: 900 }, background: "#10151c", font: { loadSystemFonts: true } }).render().asPng();
 	fs.writeFileSync(path.join(PREVIEW, name + ".png"), png);
 }
 for (const [name, shape] of Object.entries(rings)) render(name, svg("0 0 128 128", shape), 128, 128);
