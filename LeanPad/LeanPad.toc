@@ -5,6 +5,7 @@
 ## Version: 0.1.0
 ## SavedVariables: LeanPadDB
 ## Category: Action Bars
+## AddonCompartmentFunc: LeanPad_OnCompartmentClick
 
 Core.lua
 Setup.lua

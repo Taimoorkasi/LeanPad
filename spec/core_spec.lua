@@ -51,6 +51,13 @@ describe("Core", function()
 		assert.is_false(LeanPadControllerFrame.Editor:IsShown())
 	end)
 
+	it("opens the editor from the minimap's addon compartment", function()
+		wow.boot(nil)
+		assert.is_truthy(wow.tocHeader("AddonCompartmentFunc"))
+		_G[wow.tocHeader("AddonCompartmentFunc")]()
+		assert.is_true(LeanPadControllerFrame:IsShown())
+	end)
+
 	it("/lp toggles the controller editor", function()
 		wow.boot(nil)
 		SlashCmdList.LEANPAD("")
