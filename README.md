@@ -127,6 +127,10 @@ node draw-pads.js
 
 It writes the textures to `LeanPad/Art/` (32-bit TGA, the format the game loads), and a preview of each pad, a sheet of the icons and the 400 px logo for the store pages to `tools/preview/`. If you move a button in the drawing, update its position in `ns.PADS` in `LeanPad/Controller.lua` too; if you add an icon, give it an entry in `ns.COMMAND_ICONS`. The drawings are original; their proportions follow the CC0 [vector gamepad collection](https://opengameart.org/content/8th-gen-console-vector-gamepad-collection) by TheHoodieGuy02.
 
+### Releasing
+
+Push a version tag, such as `v0.2.0`. The release workflow in `.github/workflows/release.yml` runs the tests, then the [BigWigs packager](https://github.com/BigWigsMods/packager) zips the `LeanPad/` folder, stamps the tag into the TOC's version and uploads the zip to GitHub Releases and CurseForge. It needs the `CF_API_KEY` repository secret, and `WAGO_API_TOKEN` once a Wago ID is in the TOC.
+
 The reasoning behind the design is in [docs/WoW controller addon design.md](docs/WoW%20controller%20addon%20design.md).
 
 ## Changelog

@@ -1,0 +1,3 @@
+# The packager runs with LeanPad/ as its top directory (see .github/workflows/release.yml),
+# so the zip holds only the addon; spec/, tools/ and docs/ never reach it.
+package-as: LeanPad

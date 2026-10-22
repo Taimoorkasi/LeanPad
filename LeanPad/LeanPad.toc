@@ -2,11 +2,12 @@
 ## Title: LeanPad
 ## Notes: Lean controller play on WoW's native gamepad layer.
 ## Author: tamui
-## Version: 0.1.0
+## Version: @project-version@
 ## SavedVariables: LeanPadDB
 ## Category: Action Bars
 ## AddonCompartmentFunc: LeanPad_OnCompartmentClick
 ## IconTexture: Interface\AddOns\LeanPad\Art\Logo
+## X-Curse-Project-ID: 1759710
 
 Core.lua
 Setup.lua

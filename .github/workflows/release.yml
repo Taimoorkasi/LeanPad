@@ -1,0 +1,32 @@
+# Pushing a version tag such as v0.2.0 runs the tests, then packages LeanPad/ and uploads the zip
+# to GitHub Releases and CurseForge (project ID in the TOC). Needs the CF_API_KEY repository secret.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t leanpad-test spec
+      - run: docker run --rm -v "$PWD:/src" leanpad-test
+
+  release:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      CF_API_TOKEN: ${{ secrets.CF_API_KEY }}
+      WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }}
+      GH_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # the packager builds the changelog and version from the tag history
+      - uses: BigWigsMods/packager@v2
+        with:
+          args: -t LeanPad
