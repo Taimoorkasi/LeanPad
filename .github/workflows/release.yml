@@ -1,7 +1,8 @@
 # Releasing is one step: add a dated version section to CHANGELOG.md, such as "## [0.3.0] - 2026-11-01", and push
 # to main. This workflow sees a version with no tag yet, runs the tests, tags it v0.3.0 and has the BigWigs packager
 # zip LeanPad/ and upload it to GitHub Releases and CurseForge (project ID in the TOC). Pushing a v* tag by hand
-# releases that tag the same way. Needs the CF_API_KEY repository secret; WAGO_API_TOKEN once a Wago ID is in the TOC.
+# releases that tag the same way, and Run workflow on GitHub re-releases the newest changelog version.
+# Needs the CF_API_KEY repository secret; WAGO_API_TOKEN once a Wago ID is in the TOC.
 name: Release
 
 on:
@@ -31,7 +32,11 @@ jobs:
           else
             # The newest released version is the first "## [x.y.z]" heading; [Unreleased] is skipped.
             version=$(grep -m1 -oP '^## \[\K[0-9]+\.[0-9]+\.[0-9]+(?=\])' CHANGELOG.md || true)
-            if [ -z "$version" ] || git rev-parse -q --verify "refs/tags/v$version" > /dev/null; then
+            if [ -z "$version" ]; then
+              release=false
+            elif [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+              release=true # a manual run re-releases the newest version, tagged or not
+            elif git rev-parse -q --verify "refs/tags/v$version" > /dev/null; then
               release=false
             else
               release=true
@@ -68,8 +73,11 @@ jobs:
       - name: Tag the version
         if: github.ref_type != 'tag'
         run: |
-          git tag "v$VERSION"
-          git push origin "v$VERSION"
+          if ! git rev-parse -q --verify "refs/tags/v$VERSION" > /dev/null; then
+            git tag "v$VERSION"
+            git push origin "v$VERSION"
+          fi
+          git checkout -q "v$VERSION" # package exactly the tagged commit
       # The packager skips a branch push whose commit carries a tag, expecting that tag's own push to start a run.
       # Our tag was pushed with GITHUB_TOKEN, which starts none, so the packager is told this is the tag's run.
       - name: Package and upload
