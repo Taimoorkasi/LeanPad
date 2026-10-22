@@ -7,9 +7,10 @@ local realPrint = print
 -- Widget methods LeanPad may call. Any other PascalCase name errors, so a misspelt method fails the
 -- specs; lowercase data fields read as nil, as on real frames.
 local NO_OP_METHODS = {
-	"SetSize", "SetHighlightTexture", "SetJustifyH", "SetTitle", "SetToplevel",
-	"SetClampedToScreen", "SetMovable", "EnableMouse", "RegisterForDrag", "SetThickness", "AddMaskTexture", "SetBlendMode",
-	"SetBackdrop", "SetBackdropColor", "SetBackdropBorderColor", "StartMoving", "StopMovingOrSizing", "SetAllPoints", "SetDrawSwipe",
+	"SetSize", "SetWidth", "SetHeight", "SetJustifyH", "SetToplevel", "SetClampedToScreen", "SetMovable", "EnableMouse", "RegisterForDrag",
+	"SetThickness", "AddMaskTexture", "SetBlendMode", "SetBackdrop", "SetBackdropBorderColor", "StartMoving", "StopMovingOrSizing",
+	"SetAllPoints", "SetDrawSwipe", "SetFont", "SetTextColor", "SetNormalFontObject", "SetHighlightFontObject", "SetDisabledFontObject",
+	"SetNormalAtlas", "SetHighlightAtlas",
 }
 
 local Widget = {}
@@ -69,6 +70,18 @@ function Widget:Hide() self:SetShown(false) end
 function Widget:CreateTexture() return newWidget("Texture", nil, self) end
 function Widget:CreateFontString() return newWidget("FontString", nil, self) end
 function Widget:CreateLine() return newWidget("Line", nil, self) end
+function Widget:SetBackdropColor(...) self.backdropColor = { ... } end
+function Widget:SetFontObject(font) self.font = font end
+function Widget:GetTextWidth() return 40 end
+function Widget:SetHighlightTexture(texture) self:GetHighlightTexture().texture = texture end
+function Widget:GetHighlightTexture()
+	self.highlight = self.highlight or newWidget("Texture", nil, self)
+	return self.highlight
+end
+function Widget:GetFontString()
+	self.fontString = self.fontString or newWidget("FontString", nil, self)
+	return self.fontString
+end
 -- Runs a script the way the client would, with the widget as self.
 function Widget:Fire(script, ...) return self.scripts[script](self, ...) end
 
@@ -82,6 +95,12 @@ local function newMenuDescription(text, callback)
 		return entry
 	end
 	function description:SetScrollMode(extent) self.scrollExtent = extent end
+	function description:CreateRadio(label, isSelected, setSelected, data)
+		local entry = newMenuDescription(label, function() setSelected(data) end)
+		entry.selected = function() return isSelected(data) end
+		table.insert(self.entries, entry)
+		return entry
+	end
 	return description
 end
 
@@ -90,6 +109,7 @@ function M.reset()
 		cvars = {}, bindings = {}, saved = {}, printed = {}, popups = {}, opened = {},
 		onLoaded = {}, onceEvents = {}, metricCalls = {}, controls = {}, layout = {},
 		combat = false, widgets = {}, held = {}, placed = {}, actions = {}, nextFrame = {},
+		glyphs = {}, devices = {}, deviceIDs = {}, power = 5,
 		bindingList = {
 			{ "HEADER_BLANK", "BINDING_HEADER_MOVEMENT" },
 			{ "JUMP", "BINDING_HEADER_MOVEMENT" },
@@ -113,8 +133,11 @@ function M.reset()
 	BINDING_HEADER_MOVEMENT, BINDING_HEADER_ACTIONBAR, BINDING_HEADER_OTHER = "Movement", "Action Bar", "Other"
 	BINDING_HEADER_MULTIACTIONBAR = nil
 	NUM_ACTIONBAR_BUTTONS = 12
+	SETTINGS = "Settings"
+	GameFontHighlightMedium = {}
 
 	CreateFrame = function(kind, name, parent, template) return newWidget(kind, name, parent, template) end
+	CreateFont = function(name) return newWidget("Font", name) end
 	ButtonFrameTemplate_HidePortrait = function(frame) frame.portraitHidden = true end
 	PanelTemplates_SetNumTabs = function(frame, count) frame.numTabs = count end
 	PanelTemplates_SetTab = function(frame, index) frame.selectedTab = index end
@@ -133,7 +156,7 @@ function M.reset()
 	local function getButtonState(self) return self.state or "NORMAL" end
 	ActionButton1 = { bindingAction = "ACTIONBUTTON1", action = 1, SetButtonState = setButtonState, GetButtonState = getButtonState }
 	MultiBarBottomLeftButton1 = { bindingAction = "MULTIACTIONBAR1BUTTON1", action = 61, SetButtonState = setButtonState, GetButtonState = getButtonState }
-	w.actions[61] = { texture = 135808, cooldown = "cooldown:61", charge = "charge:61", count = "2", usable = true }
+	w.actions[61] = { texture = 135808, kind = "spell", id = 1953, cooldown = "cooldown:61", charge = "charge:61", count = "2", usable = true }
 
 	GetNumBindings = function() return #w.bindingList end
 	GetBinding = function(index) return w.bindingList[index][1], w.bindingList[index][2] end
@@ -147,7 +170,11 @@ function M.reset()
 		GetActionChargeDuration = function(slot) return action(slot).charge end,
 		GetActionDisplayCount = function(slot) return action(slot).count end,
 		IsUsableAction = function(slot) return action(slot).usable end,
+		GetActionText = function(slot) return action(slot).text end,
 	}
+	GetActionInfo = function(slot) return action(slot).kind, action(slot).id end
+	C_Spell = { GetSpellName = function(id) return "spell:" .. id end }
+	C_Item = { GetItemNameByID = function(id) return "item:" .. id end }
 	GetCVarBool = function(name) return w.cvars[name] == "1" end
 	RunNextFrame = function(callback) table.insert(w.nextFrame, callback) end
 	-- Like the client's: an error goes to the error handler and the caller carries on.
@@ -161,7 +188,14 @@ function M.reset()
 	IsAltKeyDown = function() return w.held.alt end
 	IsControlKeyDown = function() return w.held.ctrl end
 	IsShiftKeyDown = function() return w.held.shift end
-	C_GamePad = { GetDeviceMappedState = function() return w.padState end }
+	C_GamePad = {
+		GetDeviceMappedState = function(id)
+			if id then return w.devices[id] end
+			return w.padState
+		end,
+		GetAllDeviceIDs = function() return w.deviceIDs end,
+		GetPowerLevel = function() return w.power end,
+	}
 	w.cursorControl = false
 	SetGamePadCursorControl = function(enabled) w.cursorControl = enabled end
 	IsGamePadCursorControlEnabled = function() return w.cursorControl end
@@ -190,7 +224,7 @@ function M.reset()
 	SetBinding = function(key, action) w.bindings[key] = action end
 	SaveBindings = function(set) table.insert(w.saved, set) end
 	GetCurrentBindingSet = function() return w.bindingSet end
-	GetBindingText = function(key) return "text:" .. key end
+	GetBindingText = function(key) return w.glyphs[key] or ("text:" .. key) end
 	StaticPopup_Show = function(which) table.insert(w.popups, which) end
 
 	C_AddOnProfiler = {

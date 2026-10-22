@@ -8,6 +8,8 @@
 
 Core.lua
 Setup.lua
+Theme.lua
 Controller.lua
+Options.lua
 Crossbar.lua
 Settings.lua

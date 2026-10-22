@@ -17,12 +17,13 @@ describe("Settings", function()
 		assert.equal(w.category, ns.category)
 	end)
 
-	it("lays out Setup, Crossbar, Gamepad and Soft targeting sections", function()
+	it("is one Setup section of buttons; the options live on the window's own settings page", function()
 		local headers = {}
 		for _, item in ipairs(w.layout) do
 			if item.kind == "header" then table.insert(headers, item.text) end
 		end
-		assert.same({ "Setup", "Crossbar", "Gamepad", "Soft targeting" }, headers)
+		assert.same({ "Setup" }, headers)
+		assert.same({}, w.controls)
 	end)
 
 	describe("buttons", function()
@@ -37,6 +38,13 @@ describe("Settings", function()
 		it("Open shows the controller editor", function()
 			click("Controller layout")
 			assert.is_true(LeanPadControllerFrame:IsShown())
+			assert.is_true(LeanPadControllerFrame.Editor:IsShown())
+		end)
+
+		it("Settings shows the window's settings page", function()
+			click("Settings")
+			assert.is_true(LeanPadControllerFrame:IsShown())
+			assert.is_true(LeanPadControllerFrame.Options:IsShown())
 		end)
 
 		it("Set up shows the confirm dialog", function()
@@ -68,52 +76,6 @@ describe("Settings", function()
 		it("Key Bindings opens Blizzard's key binding editor", function()
 			click("Edit bindings")
 			assert.same({ Settings.KEYBINDINGS_CATEGORY_ID }, w.opened)
-		end)
-	end)
-
-	describe("controls", function()
-		it("has a gamepad on/off checkbox", function()
-			local control = find(w.controls, "variable", "GamePadEnable")
-			assert.equal("checkbox", control.kind)
-		end)
-
-		it("picks modifier buttons by pad key, with None to turn one off", function()
-			for _, cvar in ipairs({ "GamePadEmulateShift", "GamePadEmulateCtrl", "GamePadEmulateAlt" }) do
-				local control = find(w.controls, "variable", cvar)
-				assert.equal("string", control.type)
-				local options = control.options()
-				assert.same({ value = "none", label = NONE }, options[1])
-				assert.same({ value = "PADLTRIGGER", label = "text:PADLTRIGGER" }, find(options, "value", "PADLTRIGGER"))
-				assert.is_truthy(find(options, "value", "PADPADDLE4"))
-			end
-		end)
-
-		it("offers every button the setup preset assigns to a cursor click", function()
-			for _, cvar in ipairs({ "GamePadCursorLeftClick", "GamePadCursorRightClick" }) do
-				local options = find(w.controls, "variable", cvar).options()
-				assert.is_truthy(find(options, "value", ns.CVARS[cvar]), cvar)
-				assert.is_truthy(find(options, "value", "PADRTRIGGER"), "Blizzard's default")
-			end
-		end)
-
-		it("offers every modifier button the setup preset assigns", function()
-			for _, cvar in ipairs({ "GamePadEmulateShift", "GamePadEmulateCtrl" }) do
-				assert.is_truthy(find(find(w.controls, "variable", cvar).options(), "value", ns.CVARS[cvar]), cvar)
-			end
-		end)
-
-		it("sets soft targeting per target type with Blizzard's enable flags", function()
-			local flags = Enum.SoftTargetEnableFlags
-			for _, cvar in ipairs({ "SoftTargetEnemy", "SoftTargetFriend", "SoftTargetInteract" }) do
-				local control = find(w.controls, "variable", cvar)
-				assert.equal("number", control.type)
-				assert.same({
-					{ value = flags.None, label = OFF },
-					{ value = flags.Gamepad, label = "Gamepad" },
-					{ value = flags.Kbm, label = "Keyboard and mouse" },
-					{ value = flags.Any, label = ALWAYS },
-				}, control.options())
-			end
 		end)
 	end)
 end)

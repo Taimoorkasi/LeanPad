@@ -358,49 +358,24 @@ describe("Crossbar", function()
 	end)
 
 	describe("settings", function()
-		local function setting(variable)
-			for _, control in ipairs(w.controls) do
-				if control.variable == variable then return control.setting, control end
-			end
-		end
-
-		it("Show crossbar is a checkbox, on by default", function()
-			local show = setting("LEANPAD_SHOW_CROSSBAR")
-			assert.equal("boolean", show.type)
-			assert.is_true(show.default)
-			assert.is_true(show.getValue())
-		end)
-
 		it("Show crossbar hides and shows the bar and remembers the choice", function()
-			local show = setting("LEANPAD_SHOW_CROSSBAR")
-			show.setValue(false)
+			ns.SetCrossbarShown(false)
 			assert.is_false(ns.db.crossbar)
-			assert.is_false(show.getValue())
 			assert.is_false(LeanPadCrossbar:IsShown())
 			assert.same({}, LeanPadCrossbar.events)
-			show.setValue(true)
+			ns.SetCrossbarShown(true)
 			assert.is_true(LeanPadCrossbar:IsShown())
-		end)
-
-		it("Crossbar layers picks held layer only or all layers, held layer only by default", function()
-			local style, control = setting("LEANPAD_CROSSBAR_STYLE")
-			assert.equal("string", style.type)
-			assert.equal("active", style.default)
-			assert.equal("active", style.getValue())
-			assert.same({ { value = "active", label = "Held layer only" }, { value = "all", label = "All layers" } }, control.options())
 		end)
 
 		it("Crossbar layers redraws the shown bar straight away", function()
 			wow.fire("PLAYER_ENTERING_WORLD")
-			local style = setting("LEANPAD_CROSSBAR_STYLE")
-			style.setValue("all")
+			ns.SetCrossbarStyle("all")
 			assert.equal("all", ns.db.crossbarStyle)
-			assert.equal("all", style.getValue())
 			assert.is_true(clusters()[4]:IsShown())
 		end)
 
 		it("Crossbar layers is remembered while the bar is hidden", function()
-			setting("LEANPAD_CROSSBAR_STYLE").setValue("all")
+			ns.SetCrossbarStyle("all")
 			assert.equal("all", ns.db.crossbarStyle)
 			assert.is_nil(LeanPadCrossbar)
 		end)

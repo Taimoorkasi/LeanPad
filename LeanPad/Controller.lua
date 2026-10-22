@@ -4,6 +4,11 @@ local addonName, ns = ...
 local TAB_ORDER = { "SHIFT-", "CTRL-", "ALT-" }
 local CANONICAL = { "ALT-", "CTRL-", "SHIFT-" }
 local MODIFIER_CVARS = { ["SHIFT-"] = "GamePadEmulateShift", ["CTRL-"] = "GamePadEmulateCtrl", ["ALT-"] = "GamePadEmulateAlt" }
+local MODIFIER_NAMES = { ["SHIFT-"] = "Shift", ["CTRL-"] = "Ctrl", ["ALT-"] = "Alt" }
+
+-- Pad keys that can be a layer button, and keys that can be the cursor's clicks.
+ns.MODIFIER_KEYS = { "none", "PADLTRIGGER", "PADRTRIGGER", "PADLSHOULDER", "PADRSHOULDER", "PADPADDLE1", "PADPADDLE2", "PADPADDLE3", "PADPADDLE4" }
+ns.CLICK_KEYS = { "none", "PAD1", "PAD2", "PAD3", "PAD4", "PADLSTICK", "PADRSTICK", "PADLSHOULDER", "PADRSHOULDER", "PADRTRIGGER" }
 
 local function prefixOf(held)
 	local prefix = ""
@@ -67,9 +72,16 @@ function ns.HeldPrefix()
 	return prefixOf({ ["ALT-"] = IsAltKeyDown(), ["CTRL-"] = IsControlKeyDown(), ["SHIFT-"] = IsShiftKeyDown() })
 end
 
-function ns.ControllerStyle()
+-- The drawing and names the connected pad asks for; the Button labels setting can override it.
+function ns.DetectedStyle()
 	local state = C_GamePad.GetDeviceMappedState()
 	return state and state.labelStyle == "Shapes" and "playstation" or "xbox"
+end
+
+function ns.ControllerStyle()
+	local forced = ns.db and ns.db.padStyle
+	if forced and forced ~= "auto" then return forced end
+	return ns.DetectedStyle()
 end
 
 -- The pad keys whose emulated modifier is held right now.
@@ -98,11 +110,22 @@ function ns.SlotForCommand(command)
 	return button and button.action
 end
 
+-- What a bar slot holds, by name, so the editor says Blink rather than Action Button 2.
+local function slotName(slot)
+	local kind, id = GetActionInfo(slot)
+	if kind == "spell" then return C_Spell.GetSpellName(id) end
+	if kind == "item" then return C_Item.GetItemNameByID(id) end
+	if kind == "macro" then return C_ActionBar.GetActionText(slot) end
+end
+
+-- A binding's action as the player knows it, and its icon: the slot's spell, an empty slot, or the command itself.
 function ns.ActionInfo(binding)
 	local action = GetBindingAction(binding)
 	if action == "" then return end
 	local slot = ns.SlotForCommand(action)
-	return GetBindingName(action), slot and C_ActionBar.GetActionTexture(slot)
+	if not slot then return GetBindingName(action) end
+	if not C_ActionBar.HasAction(slot) then return ns.MUTED_HEX .. "Empty slot|r" end
+	return slotName(slot) or GetBindingName(action), C_ActionBar.GetActionTexture(slot)
 end
 
 function ns.Assign(binding, action)
@@ -110,6 +133,10 @@ function ns.Assign(binding, action)
 		SetBinding(binding, action)
 		SaveBindings(GetCurrentBindingSet())
 	end)
+end
+
+function ns.WriteCVar(cvar, value)
+	ns.OutOfCombat(function() SetCVar(cvar, value) end)
 end
 
 -- Drops what is on the cursor into the Blizzard bar slot this button fires, so the action stays in WoW's slots.
@@ -154,33 +181,34 @@ function ns.BuildAssignMenu(root, binding)
 end
 
 -- The controller drawings in Art/, made by tools/draw-pads.js, and where each button sits on them in the
--- drawing's own units: centre x, centre y, width, height. Keep in step with draw-pads.js.
+-- drawing's own units: centre x, centre y, width, height, then the callout column (L or R) and row. Keep in
+-- step with draw-pads.js.
 local ART = "Interface\\AddOns\\" .. addonName .. "\\Art\\"
 ns.PADS = {
 	playstation = {
 		texture = ART .. "PadPlayStation",
 		viewBox = { 150, 420, 1748, 1200 },
 		keys = {
-			PADLTRIGGER = { 497, 496, 210, 36 }, PADRTRIGGER = { 1551, 496, 210, 36 },
-			PADLSHOULDER = { 512, 524, 240, 30 }, PADRSHOULDER = { 1536, 524, 240, 30 },
-			PADBACK = { 712, 650, 30, 62 }, PADFORWARD = { 1336, 650, 30, 62 },
-			PADDUP = { 468, 752, 80, 104 }, PADDDOWN = { 468, 908, 80, 104 },
-			PADDLEFT = { 390, 830, 104, 80 }, PADDRIGHT = { 546, 830, 104, 80 },
-			PAD4 = { 1580, 708, 112, 112 }, PAD3 = { 1458, 830, 112, 112 }, PAD2 = { 1702, 830, 112, 112 }, PAD1 = { 1580, 952, 112, 112 },
-			PADLSTICK = { 772, 1112, 224, 224 }, PADRSTICK = { 1276, 1112, 224, 224 }, PADSYSTEM = { 1024, 1108, 68, 68 },
+			PADLTRIGGER = { 497, 496, 210, 36, "L", 1 }, PADRTRIGGER = { 1551, 496, 210, 36, "R", 1 },
+			PADLSHOULDER = { 512, 524, 240, 30, "L", 2 }, PADRSHOULDER = { 1536, 524, 240, 30, "R", 2 },
+			PADBACK = { 712, 650, 30, 62, "L", 3 }, PADFORWARD = { 1336, 650, 30, 62, "R", 3 },
+			PADDUP = { 468, 752, 80, 104, "L", 4 }, PADDDOWN = { 468, 908, 80, 104, "L", 7 },
+			PADDLEFT = { 390, 830, 104, 80, "L", 5 }, PADDRIGHT = { 546, 830, 104, 80, "L", 6 },
+			PAD4 = { 1580, 708, 112, 112, "R", 4 }, PAD3 = { 1458, 830, 112, 112, "R", 6 }, PAD2 = { 1702, 830, 112, 112, "R", 5 }, PAD1 = { 1580, 952, 112, 112, "R", 7 },
+			PADLSTICK = { 772, 1112, 224, 224, "L", 8 }, PADRSTICK = { 1276, 1112, 224, 224, "R", 8 }, PADSYSTEM = { 1024, 1108, 68, 68 },
 		},
 	},
 	xbox = {
 		texture = ART .. "PadXbox",
 		viewBox = { 200, 470, 1648, 1150 },
 		keys = {
-			PADLTRIGGER = { 520, 560, 200, 34 }, PADRTRIGGER = { 1528, 560, 200, 34 },
-			PADLSHOULDER = { 535, 588, 230, 30 }, PADRSHOULDER = { 1513, 588, 230, 30 },
-			PADBACK = { 900, 830, 52, 52 }, PADFORWARD = { 1148, 830, 52, 52 }, PADSYSTEM = { 1024, 700, 104, 104 },
-			PADDUP = { 830, 1025, 70, 78 }, PADDDOWN = { 830, 1155, 70, 78 },
-			PADDLEFT = { 765, 1090, 78, 70 }, PADDRIGHT = { 895, 1090, 78, 70 },
-			PAD4 = { 1410, 720, 100, 100 }, PAD3 = { 1300, 830, 100, 100 }, PAD2 = { 1520, 830, 100, 100 }, PAD1 = { 1410, 940, 100, 100 },
-			PADLSTICK = { 640, 830, 224, 224 }, PADRSTICK = { 1218, 1090, 224, 224 },
+			PADLTRIGGER = { 520, 560, 200, 34, "L", 1 }, PADRTRIGGER = { 1528, 560, 200, 34, "R", 1 },
+			PADLSHOULDER = { 535, 588, 230, 30, "L", 2 }, PADRSHOULDER = { 1513, 588, 230, 30, "R", 2 },
+			PADBACK = { 900, 830, 52, 52, "L", 4 }, PADFORWARD = { 1148, 830, 52, 52, "R", 6 }, PADSYSTEM = { 1024, 700, 104, 104 },
+			PADDUP = { 830, 1025, 70, 78, "L", 5 }, PADDDOWN = { 830, 1155, 70, 78, "L", 8 },
+			PADDLEFT = { 765, 1090, 78, 70, "L", 6 }, PADDRIGHT = { 895, 1090, 78, 70, "L", 7 },
+			PAD4 = { 1410, 720, 100, 100, "R", 3 }, PAD3 = { 1300, 830, 100, 100, "R", 5 }, PAD2 = { 1520, 830, 100, 100, "R", 4 }, PAD1 = { 1410, 940, 100, 100, "R", 7 },
+			PADLSTICK = { 640, 830, 224, 224, "L", 3 }, PADRSTICK = { 1218, 1090, 224, 224, "R", 8 },
 		},
 	},
 }
@@ -205,16 +233,43 @@ function ns.KeyName(key)
 	return KEY_NAMES[ns.ControllerStyle()][key] or SHARED_NAMES[key] or key
 end
 
-local ART_HEIGHT, ART_Y = 250, 30
-local FRAME_WIDTH, FRAME_HEIGHT = 820, 540
-local CARD_WIDTH, CARD_HEIGHT, GAP = 320, 300, 40
-local MAX_TABS, MAX_OTHER_LAYERS = 8, 3
+-- The pad glyph atlas behind a key's binding text, or nil when the key has none.
+function ns.GlyphAtlas(key)
+	return GetBindingText(key):match("|A:([^:|]+)")
+end
+
+-- Text with the key's glyph before it, or after it when the glyph should sit nearest the drawing.
+function ns.Glyphed(key, text, size, after)
+	local atlas = ns.GlyphAtlas(key)
+	if not atlas then return text end
+	local glyph = ("|A:%s:%d:%d|a"):format(atlas, size, size)
+	return after and (text .. " " .. glyph) or (glyph .. " " .. text)
+end
+
+-- Menu options for a list of pad keys: the glyph and printed name, or None.
+function ns.KeyOptions(keys)
+	local options = {}
+	for _, key in ipairs(keys) do
+		table.insert(options, { key, key == "none" and NONE or ns.Glyphed(key, ns.KeyName(key), 16) })
+	end
+	return options
+end
+
+-- The window: title bar, then a page. The editor page is the map, the strip and the footer; Options.lua adds the other.
+local WIDTH, HEIGHT = 920, 664
+local MARGIN, COL, ROW, ROW_TOP = 16, 200, 32, 186
+local ART_HEIGHT, ART_CX, ART_CY = 300, WIDTH / 2, 298
+local TITLE_HEIGHT, TOOLBAR_Y, DIVIDER_Y, STRIP_Y, FOOTER_Y = 36, 107, 480, 496, 616
+local SEGMENTS = 6 -- straight pieces per leader curve
+local MAX_TABS = 8
 local MENU_KEY = "PADFORWARD" -- closes the editor, as it opens and closes Blizzard's own panels
-local MODIFIER_NAMES = { ["SHIFT-"] = "Shift", ["CTRL-"] = "Ctrl", ["ALT-"] = "Alt" }
+local POWER = { "battery critical", "battery low", "battery medium", "battery high", "wired" } -- Enum.GamePadPowerLevel + 1
 local SHOWN_EVENTS = {
 	"UPDATE_BINDINGS", "ACTIONBAR_SLOT_CHANGED", "CVAR_UPDATE", "GAME_PAD_ACTIVE_CHANGED", "GAME_PAD_CONNECTED",
-	"MODIFIER_STATE_CHANGED", "PLAYER_REGEN_DISABLED",
+	"GAME_PAD_DISCONNECTED", "GAME_PAD_POWER_CHANGED", "MODIFIER_STATE_CHANGED", "PLAYER_REGEN_DISABLED",
 }
+local C = ns.COLORS
+local NOT_BOUND = ns.MUTED_HEX .. "Not bound|r"
 
 -- Where a key sits on the drawing, as an offset from the drawing's centre in UI units, and its size.
 function ns.KeyGeometry(pad, key)
@@ -234,15 +289,24 @@ function ns.ActionPlace(action)
 	return "Key binding command"
 end
 
--- A button's other job, so the player doesn't rebind their way out of the cursor.
-local function reservedNote(key, action)
+-- A button's other job, so the player doesn't rebind their way out of the cursor or a layer.
+local function note(key, action)
+	local modifier = ns.ModifierKeys()[key]
+	if modifier then
+		local text = "Works as " .. MODIFIER_NAMES[modifier] .. " while held, opening its layer."
+		if action ~= "" then
+			text = text .. (" A tap under %s ms still does the action above."):format(GetCVar("GamePadEmulateTapWindowMs") or 350)
+		end
+		return text
+	end
 	if action == "LEANPAD_TOGGLE_CURSOR" then return "Keeps the gamepad cursor reachable." end
 	if GetCVar("GamePadCursorLeftClick") == key then return "Also the cursor's left-click." end
 	if GetCVar("GamePadCursorRightClick") == key then return "Also the cursor's right-click." end
+	return ""
 end
 
-local frame, art, ring, line, card, prompt, hint, status, layers, tabIndex, selected
-local hits, tabs = {}, {}
+local frame, editor, art, ring, strip, prompt, toolbar, status, layers, tabIndex, selected
+local hits, tabs, callouts = {}, {}, {}
 
 local function currentPrefix() return layers[tabIndex].prefix end
 
@@ -252,39 +316,98 @@ local function layerIndexFor(prefix)
 	end
 end
 
-local function fillCard()
+local function deviceLine()
+	local state = C_GamePad.GetDeviceMappedState()
+	if not state then return "No controller detected" end
+	local level = POWER[C_GamePad.GetPowerLevel() + 1]
+	return state.name .. (level and (" · " .. level) or "")
+end
+
+local function promptText()
+	local keys = {}
+	for key in pairs(ns.ModifierKeys()) do table.insert(keys, ns.KeyName(key)) end
+	table.sort(keys)
+	local hold = #keys > 0 and ("Hold %s first to see that layer. "):format(table.concat(keys, " or ")) or ""
+	return hold .. ns.KeyName(MENU_KEY) .. " closes this window. Using the cursor? Click a button on the picture."
+end
+
+-- What a key's callout says on the current layer: its action, or that it opens a layer; nil leaves it blank.
+local function calloutName(key)
+	local name = ns.ActionInfo(currentPrefix() .. key)
+	if name then return name end
+	if ns.ModifierKeys()[key] then return "Opens the " .. ns.KeyName(key) .. " layer" end
+end
+
+-- The label at its row, and a leader that leaves it flat then bends into the button along the line between them.
+local function placeCallout(key, spot, pad)
+	local callout = callouts[key]
+	local side, row = spot[5], spot[6]
+	local name = side and calloutName(key)
+	callout.text:SetShown(name ~= nil)
+	for _, line in ipairs(callout.lines) do line:SetShown(name ~= nil) end
+	if not name then return end
+	local picked = key == selected
+	local y = ROW_TOP + ROW * (row - 1)
+	local lx
+	callout.text:SetFontObject(ns.Font(13, picked and C.accent or C.text))
+	callout.text:ClearAllPoints()
+	if side == "L" then
+		callout.text:SetText(ns.Glyphed(key, name, 18, true))
+		callout.text:SetJustifyH("RIGHT")
+		callout.text:SetPoint("RIGHT", editor, "TOPLEFT", MARGIN + COL, -y)
+		lx = MARGIN + COL + 6
+	else
+		callout.text:SetText(ns.Glyphed(key, name, 18))
+		callout.text:SetJustifyH("LEFT")
+		callout.text:SetPoint("LEFT", editor, "TOPLEFT", WIDTH - MARGIN - COL, -y)
+		lx = WIDTH - MARGIN - COL - 6
+	end
+	local kx, ky, kw, kh = ns.KeyGeometry(pad, key)
+	local ex, ey = ART_CX + kx, ART_CY - ky
+	local dx, dy = ex - lx, ey - y
+	local len = math.sqrt(dx * dx + dy * dy)
+	local r = math.max(kw, kh) / 2 + 6
+	ex, ey = ex - dx / len * r, ey - dy / len * r
+	dx, dy = ex - lx, ey - y
+	local c1x, c2x, c2y = lx + dx * 0.5, ex - dx * 0.3, ey - dy * 0.3
+	local color = picked and C.accent or C.leader
+	local px, py = lx, y
+	for i, line in ipairs(callout.lines) do
+		local t = i / SEGMENTS
+		local u = 1 - t
+		local nx = u * u * u * lx + 3 * u * u * t * c1x + 3 * u * t * t * c2x + t * t * t * ex
+		local ny = u * u * u * y + 3 * u * u * t * y + 3 * u * t * t * c2y + t * t * t * ey
+		line:SetStartPoint("TOPLEFT", editor, px, -py)
+		line:SetEndPoint("TOPLEFT", editor, nx, -ny)
+		line:SetColorTexture(color[1], color[2], color[3], 1)
+		line:SetThickness(picked and 2 or 1.5)
+		px, py = nx, ny
+	end
+end
+
+local function fillStrip()
 	local key = selected
 	local binding = currentPrefix() .. key
 	local action = GetBindingAction(binding)
-	ns.SetGlyph(card, key)
-	card.Key:SetText(ns.KeyName(key))
-	card.Layer:SetText(layers[tabIndex].label .. " layer")
+	ns.SetGlyph(strip, key)
+	strip.Key:SetText(ns.KeyName(key))
+	strip.Layer:SetText(layers[tabIndex].label .. " layer")
 	local name, icon = ns.ActionInfo(binding)
-	card.Icon:SetTexture(icon)
-	card.Icon:SetShown(icon ~= nil)
-	card.Name:SetText(name or "|cff808080Not bound|r")
-	card.Place:SetText(name and ns.ActionPlace(action) or "Pick an action, or drop a spell here.")
-	local modifier = ns.ModifierKeys()[key]
-	card.Note:SetText(modifier and ("Works as " .. MODIFIER_NAMES[modifier] .. " while held, opening its layer.") or reservedNote(key, action) or "")
-	card.Clear:SetEnabled(action ~= "")
-
-	local shown = 0
+	strip.Icon:SetTexture(icon)
+	strip.Icon:SetShown(icon ~= nil)
+	strip.Name:SetText(name or NOT_BOUND)
+	strip.Place:SetText(name and ns.ActionPlace(action) or "Pick an action, or drop a spell here.")
+	strip.Note:SetText(note(key, action))
+	strip.Clear:SetEnabled(action ~= "")
+	local others = {}
 	for index, layer in ipairs(layers) do
-		if index ~= tabIndex and shown < MAX_OTHER_LAYERS then -- shortcut: Alt layers past the first three are left out; list them if Alt gets used
-			shown = shown + 1
-			local row = card.rows[shown]
-			local otherName, otherIcon = ns.ActionInfo(layer.prefix .. key)
-			row.index = index
-			row.Layer:SetText(layer.label)
-			row.Icon:SetTexture(otherIcon)
-			row.Name:SetText(otherName or "|cff808080Not bound|r")
-			row:Show()
+		if index ~= tabIndex then
+			table.insert(others, layer.label .. " " .. (ns.ActionInfo(layer.prefix .. key) or NOT_BOUND))
 		end
 	end
-	for i = shown + 1, MAX_OTHER_LAYERS do card.rows[i]:Hide() end
+	strip.Others:SetText(#others > 0 and (ns.MUTED_HEX .. "Other layers|r   " .. table.concat(others, "   ")) or "")
 end
 
--- Idle: the pad in the middle. A button picked: the card on that button's side, the pad beside it, one line between.
 local function place()
 	local pad = ns.PADS[ns.ControllerStyle()]
 	local _, _, vw, vh = unpack(pad.viewBox)
@@ -296,35 +419,24 @@ local function place()
 
 	local x, y, w, h
 	if selected then x, y, w, h = ns.KeyGeometry(pad, selected) end
-	local side = (x or 1) < 0 and -1 or 1
-	local cardX = side * (FRAME_WIDTH / 2 - 20 - CARD_WIDTH / 2)
-	local artX = selected and cardX - side * (CARD_WIDTH / 2 + GAP + width / 2) or 0
-	art:SetPoint("CENTER", frame, "CENTER", artX, ART_Y)
-
-	card:SetShown(selected ~= nil)
+	strip:SetShown(selected ~= nil)
 	prompt:SetShown(selected == nil)
-	hint:SetShown(selected ~= nil)
 	ring:SetShown(x ~= nil)
-	line:SetShown(x ~= nil)
-	if selected then
-		local cardY = y and math.max(-60, math.min(60, ART_Y + y)) or 0
-		card:SetPoint("CENTER", frame, "CENTER", cardX, cardY)
-		hint:SetPoint("TOP", art, "BOTTOM", 0, -16)
-		fillCard()
-	end
+	if selected then fillStrip() end
 	if x then
 		ring:SetTexture(ART .. (w == h and "Ring" or "RingSquare"))
 		ring:SetSize(w + 12, h + 12)
-		ring:SetPoint("CENTER", frame, "CENTER", artX + x, ART_Y + y)
-		line:SetStartPoint("CENTER", frame, cardX - side * CARD_WIDTH / 2, ART_Y + y)
-		line:SetEndPoint("CENTER", frame, artX + x + side * (w / 2 + 6), ART_Y + y)
+		ring:SetPoint("CENTER", editor, "TOPLEFT", ART_CX + x, -(ART_CY - y))
 	end
 	for key, hit in pairs(hits) do
 		local hx, hy, hw, hh = ns.KeyGeometry(pad, key)
 		hit:SetShown(hx ~= nil)
 		if hx then
-			hit:SetSize(math.max(hw, 20), math.max(hh, 20))
-			hit:SetPoint("CENTER", frame, "CENTER", artX + hx, ART_Y + hy)
+			hit:SetSize(math.max(hw, 20) + 12, math.max(hh, 20) + 12)
+			hit:SetPoint("CENTER", editor, "TOPLEFT", ART_CX + hx, -(ART_CY - hy))
+			hit:SetHighlightTexture(ART .. (hw == hh and "Ring" or "RingSquare"))
+			hit:GetHighlightTexture():SetVertexColor(C.accent[1], C.accent[2], C.accent[3], 0.6)
+			placeCallout(key, pad.keys[key], pad)
 		end
 	end
 end
@@ -332,20 +444,33 @@ end
 local function refresh()
 	layers = ns.Layers()
 	if not layers[tabIndex] then tabIndex = 1 end
+	local x = 12
 	for i = 1, MAX_TABS do
-		local layer = layers[i]
-		tabs[i]:SetShown(layer ~= nil)
+		local layer, tab = layers[i], tabs[i]
+		tab:SetShown(layer ~= nil)
 		if layer then
-			tabs[i]:SetText(layer.label)
-			PanelTemplates_TabResize(tabs[i], 0)
+			local on = i == tabIndex
+			tab:SetNormalFontObject(ns.Font(13, on and C.text or C.text2))
+			tab:SetText(layer.label)
+			tab:SetWidth(tab:GetTextWidth() + 28)
+			tab:SetPoint("TOPLEFT", editor, "TOPLEFT", x, -TITLE_HEIGHT)
+			tab.Underline:SetShown(on)
+			x = x + tab:GetTextWidth() + 28
 		end
 	end
-	PanelTemplates_SetNumTabs(frame, #layers)
-	PanelTemplates_SetTab(frame, tabIndex)
+	local modifiers = {}
+	for _, entry in ipairs(emulatedModifiers()) do
+		table.insert(modifiers, ns.Glyphed(entry.key, MODIFIER_NAMES[entry.modifier], 18))
+	end
+	toolbar.Modifiers:SetText(#modifiers > 0 and table.concat(modifiers, "   ") or "none")
+	toolbar.Device:SetText(deviceLine())
+	prompt.Text:SetText(promptText())
 	status:SetText(GetCurrentBindingSet() == Enum.BindingSet.Character
 		and "Changes save to this character's key bindings" or "Changes save to your account's key bindings")
 	place()
+	if ns.RefreshOptions then ns.RefreshOptions() end
 end
+ns.RefreshController = refresh
 
 local function selectTab(index)
 	tabIndex = index
@@ -361,6 +486,7 @@ end
 
 local function onGamePadButtonDown(_, key)
 	if key == MENU_KEY then return frame:Hide() end
+	if not editor:IsShown() then return end -- the settings page takes no picks
 	if ns.ModifierKeys()[key] then return end -- the modifier on its own only switches layer
 	pick(key)
 end
@@ -377,75 +503,144 @@ local function placeHere()
 	if selected then ns.PlaceOnButton(currentPrefix() .. selected) end
 end
 
-local function makeText(parent, template, ...)
-	local text = parent:CreateFontString(nil, "ARTWORK", template)
-	text:SetPoint(...)
-	text:SetJustifyH("LEFT")
-	return text
-end
-
-local function makeButton(parent, text, width, onClick, ...)
-	local button = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
-	button:SetSize(width, 24)
-	button:SetText(text)
-	button:SetScript("OnClick", onClick)
-	button:SetPoint(...)
-	return button
-end
-
-local function buildCard()
-	card = CreateFrame("Frame", nil, frame, "BackdropTemplate")
-	card:SetSize(CARD_WIDTH, CARD_HEIGHT)
-	card:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1 })
-	card:SetBackdropColor(0.1, 0.086, 0.067, 0.95)
-	card:SetBackdropBorderColor(0.48, 0.41, 0.31, 1)
-	-- A spell dropped anywhere on the card goes into the bar slot this button fires.
-	card:EnableMouse(true)
-	card:SetScript("OnReceiveDrag", placeHere)
-	card:SetScript("OnMouseUp", function() if GetCursorInfo() then placeHere() end end)
-
-	card.Glyph = card:CreateTexture(nil, "ARTWORK")
-	card.Glyph:SetSize(26, 26)
-	card.Glyph:SetPoint("TOPLEFT", 16, -16)
-	card.Key = makeText(card, "GameFontHighlightLarge", "LEFT", card.Glyph, "RIGHT", 8, 0)
-	card.Layer = makeText(card, "GameFontNormalSmall", "TOPRIGHT", -16, -22)
-	makeText(card, "GameFontDisableSmall", "TOPLEFT", 16, -58):SetText("Does now")
-	card.Icon = card:CreateTexture(nil, "ARTWORK")
-	card.Icon:SetSize(40, 40)
-	card.Icon:SetPoint("TOPLEFT", 16, -76)
-	card.Name = makeText(card, "GameFontNormalHuge", "TOPLEFT", 66, -78)
-	card.Name:SetPoint("RIGHT", -16, 0)
-	card.Place = makeText(card, "GameFontHighlightSmall", "TOPLEFT", card.Name, "BOTTOMLEFT", 0, -4)
-	card.Note = makeText(card, "GameFontNormalSmall", "TOPLEFT", 16, -126)
-
-	makeButton(card, "Change action...", 140, function(self)
-		MenuUtil.CreateContextMenu(self, function(_, root) ns.BuildAssignMenu(root, currentPrefix() .. selected) end)
-	end, "TOPLEFT", 16, -146)
-	card.Clear = makeButton(card, "Clear", 80, function() ns.Assign(currentPrefix() .. selected, nil) end, "TOPLEFT", 164, -146)
-	makeText(card, "GameFontHighlightSmall", "TOPLEFT", 16, -178):SetText("Or drag a spell from your spellbook onto this card.")
-
-	makeText(card, "GameFontDisableSmall", "TOPLEFT", 16, -204):SetText("Same button on other layers")
-	card.rows = {}
-	for i = 1, MAX_OTHER_LAYERS do
-		local row = CreateFrame("Button", nil, card)
-		row:SetSize(CARD_WIDTH - 24, 24)
-		row:SetPoint("TOPLEFT", 12, -218 - (i - 1) * 24)
-		row:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
-		row:SetScript("OnClick", function(self) selectTab(self.index) end)
-		row.Layer = makeText(row, "GameFontHighlightSmall", "LEFT", 4, 0)
-		row.Icon = row:CreateTexture(nil, "ARTWORK")
-		row.Icon:SetSize(18, 18)
-		row.Icon:SetPoint("LEFT", 72, 0)
-		row.Name = makeText(row, "GameFontNormal", "LEFT", 96, 0)
-		card.rows[i] = row
+-- The Change... menu beside the tabs: which pad button acts as Shift, Ctrl and Alt.
+local function layerMenu(_, root)
+	for _, modifier in ipairs(TAB_ORDER) do
+		local submenu = root:CreateButton(MODIFIER_NAMES[modifier] .. " button")
+		ns.Radios(submenu, ns.KeyOptions(ns.MODIFIER_KEYS), function() return GetCVar(MODIFIER_CVARS[modifier]) or "none" end,
+			function(key) ns.WriteCVar(MODIFIER_CVARS[modifier], key) end)
 	end
 end
 
+local function makeTab(index)
+	local tab = CreateFrame("Button", nil, editor)
+	tab:SetHeight(40)
+	tab:SetHighlightFontObject(ns.Font(13, C.text))
+	tab.Underline = tab:CreateTexture(nil, "ARTWORK")
+	tab.Underline:SetColorTexture(unpack(C.accent))
+	tab.Underline:SetHeight(2)
+	tab.Underline:SetPoint("BOTTOMLEFT")
+	tab.Underline:SetPoint("BOTTOMRIGHT")
+	tab:SetScript("OnClick", function() selectTab(index) end)
+	return tab
+end
+
+local function buildStrip()
+	strip = CreateFrame("Frame", nil, editor)
+	strip:SetPoint("TOPLEFT", MARGIN, -STRIP_Y)
+	strip:SetSize(WIDTH - 2 * MARGIN, FOOTER_Y - STRIP_Y)
+	-- A spell dropped anywhere on the strip goes into the bar slot this button fires.
+	strip:EnableMouse(true)
+	strip:SetScript("OnReceiveDrag", placeHere)
+	strip:SetScript("OnMouseUp", function() if GetCursorInfo() then placeHere() end end)
+
+	strip.Glyph = strip:CreateTexture(nil, "ARTWORK")
+	strip.Glyph:SetSize(30, 30)
+	strip.Glyph:SetPoint("TOPLEFT")
+	strip.Key = ns.Text(strip, 18, C.text)
+	strip.Key:SetPoint("LEFT", strip.Glyph, "RIGHT", 10, 0)
+	strip.Layer = ns.Text(strip, 12, C.accent)
+	strip.Layer:SetPoint("TOPLEFT", 40, -36)
+
+	strip.Icon = strip:CreateTexture(nil, "ARTWORK")
+	strip.Icon:SetSize(40, 40)
+	strip.Icon:SetPoint("TOPLEFT", COL + 24, 0)
+	strip.Name = ns.Text(strip, 15, C.text)
+	strip.Name:SetPoint("TOPLEFT", COL + 76, -4)
+	strip.Place = ns.Text(strip, 12, C.muted)
+	strip.Place:SetPoint("TOPLEFT", strip.Name, "BOTTOMLEFT", 0, -3)
+	strip.Others = ns.Text(strip, 12, C.text)
+	strip.Others:SetPoint("TOPLEFT", COL + 24, -52)
+	strip.Others:SetWidth(440)
+	strip.Note = ns.Text(strip, 12, C.muted)
+	strip.Note:SetPoint("TOPLEFT", strip.Others, "BOTTOMLEFT", 0, -6)
+	strip.Note:SetWidth(440)
+
+	local change = ns.Button(strip, "Change action...", COL, function(self)
+		MenuUtil.CreateContextMenu(self, function(_, root) ns.BuildAssignMenu(root, currentPrefix() .. selected) end)
+	end, true)
+	change:SetPoint("TOPRIGHT")
+	strip.Clear = ns.Button(strip, "Clear", COL, function() ns.Assign(currentPrefix() .. selected, nil) end)
+	strip.Clear:SetPoint("TOP", change, "BOTTOM", 0, -8)
+	local hint = ns.Text(strip, 12, C.muted, "CENTER")
+	hint:SetPoint("TOP", strip.Clear, "BOTTOM", 0, -8)
+	hint:SetText("or drag a spell from your spellbook here")
+end
+
+local function buildEditor()
+	editor = CreateFrame("Frame", nil, frame)
+	editor:SetAllPoints()
+	for i = 1, MAX_TABS do tabs[i] = makeTab(i) end
+	editor.Tabs, editor.Hits, editor.Callouts = tabs, hits, callouts
+
+	toolbar = {}
+	editor.Toolbar = toolbar
+	toolbar.Device = ns.Text(editor, 13, C.muted)
+	toolbar.Device:SetPoint("LEFT", editor, "TOPLEFT", MARGIN, -TOOLBAR_Y)
+	local change = ns.Button(editor, "Change...", 84, function(self) MenuUtil.CreateContextMenu(self, layerMenu) end)
+	change:SetHeight(28)
+	change:SetPoint("RIGHT", editor, "TOPRIGHT", -MARGIN, -TOOLBAR_Y)
+	toolbar.Modifiers = ns.Text(editor, 13, C.text)
+	toolbar.Modifiers:SetPoint("RIGHT", change, "LEFT", -10, 0)
+	local label = ns.Text(editor, 13, C.text2)
+	label:SetPoint("RIGHT", toolbar.Modifiers, "LEFT", -10, 0)
+	label:SetText("Layer buttons")
+
+	art = editor:CreateTexture(nil, "ARTWORK")
+	art:SetPoint("CENTER", editor, "TOPLEFT", ART_CX, -ART_CY)
+	ring = editor:CreateTexture(nil, "OVERLAY")
+	ring:SetVertexColor(unpack(C.accent))
+	editor.Art, editor.Ring = art, ring
+	-- Cursor users click the drawing; a spell dropped on a button goes into its bar slot.
+	for key in pairs(ns.PADS.playstation.keys) do
+		local hit = CreateFrame("Button", nil, editor)
+		hit.key = key
+		hit:SetScript("OnClick", function(self) pick(self.key) end)
+		hit:SetScript("OnReceiveDrag", function(self)
+			pick(self.key)
+			placeHere()
+		end)
+		hits[key] = hit
+		local callout = { text = ns.Text(editor, 13, C.text), lines = {} }
+		for i = 1, SEGMENTS do
+			callout.lines[i] = editor:CreateLine(nil, "ARTWORK")
+		end
+		callouts[key] = callout
+	end
+	local divider = ns.Rule(editor)
+	divider:SetPoint("TOPLEFT", MARGIN, -DIVIDER_Y)
+	divider:SetPoint("TOPRIGHT", -MARGIN, -DIVIDER_Y)
+	buildStrip()
+	editor.Strip = strip
+
+	prompt = CreateFrame("Frame", nil, editor)
+	editor.Prompt = prompt
+	prompt:SetPoint("TOPLEFT", MARGIN, -DIVIDER_Y)
+	prompt:SetSize(WIDTH - 2 * MARGIN, FOOTER_Y - DIVIDER_Y)
+	prompt.Title = ns.Text(prompt, 20, C.text, "CENTER")
+	prompt.Title:SetPoint("CENTER", 0, 14)
+	prompt.Title:SetText("Press any button on your controller")
+	prompt.Text = ns.Text(prompt, 13, C.text2, "CENTER")
+	prompt.Text:SetPoint("TOP", prompt.Title, "BOTTOM", 0, -8)
+
+	local footer = ns.Rule(editor)
+	footer:SetPoint("TOPLEFT", 0, -FOOTER_Y)
+	footer:SetPoint("TOPRIGHT", 0, -FOOTER_Y)
+	local reset = ns.Button(editor, "Reset to default layout...", 190, function() StaticPopup_Show("LEANPAD_SETUP") end)
+	reset:SetPoint("TOPLEFT", MARGIN, -(FOOTER_Y + 8))
+	status = ns.Text(editor, 12, C.muted, "CENTER")
+	editor.Status = status
+	status:SetPoint("TOP", editor, "TOP", 0, -(FOOTER_Y + 17))
+	local bindings = ns.Button(editor, KEY_BINDINGS, 120, function() Settings.OpenToCategory(Settings.KEYBINDINGS_CATEGORY_ID) end)
+	bindings:SetPoint("TOPRIGHT", -MARGIN, -(FOOTER_Y + 8))
+	local settings = ns.Button(editor, SETTINGS, 100, function() ns.ShowPage("options") end)
+	settings:SetPoint("RIGHT", bindings, "LEFT", -8, 0)
+end
+
 local function build()
-	frame = CreateFrame("Frame", "LeanPadControllerFrame", UIParent, "ButtonFrameTemplate")
-	ButtonFrameTemplate_HidePortrait(frame)
-	frame:SetTitle("LeanPad Controller")
-	frame:SetSize(FRAME_WIDTH, FRAME_HEIGHT)
+	frame = CreateFrame("Frame", "LeanPadControllerFrame", UIParent, "BackdropTemplate")
+	ns.Backdrop(frame, C.bg, C.line)
+	frame:SetSize(WIDTH, HEIGHT)
 	frame:SetPoint("CENTER")
 	frame:SetToplevel(true)
 	frame:SetClampedToScreen(true)
@@ -455,51 +650,25 @@ local function build()
 	frame:SetScript("OnDragStart", frame.StartMoving)
 	frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
 	table.insert(UISpecialFrames, frame:GetName())
+	ns.window = frame
 
-	-- Layer tabs sit along the top, on the inset's edge, as in Blizzard's macro and appearance windows.
-	frame.Tabs = tabs
-	for i = 1, MAX_TABS do
-		local tab = CreateFrame("Button", nil, frame, "PanelTopTabButtonTemplate")
-		tab:SetScript("OnClick", function() selectTab(i) end)
-		tabs[i] = tab
-	end
-	tabs[1]:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, -28)
-
-	art = frame:CreateTexture(nil, "ARTWORK")
-	ring = frame:CreateTexture(nil, "OVERLAY")
-	ring:SetVertexColor(1, 0.82, 0)
-	line = frame:CreateLine(nil, "OVERLAY")
-	line:SetThickness(2)
-	line:SetColorTexture(1, 0.82, 0, 0.9)
-	-- Cursor users click the drawing; a spell dropped on a button goes into its bar slot.
-	for key in pairs(ns.PADS.playstation.keys) do
-		local hit = CreateFrame("Button", nil, frame)
-		hit.key = key
-		hit:SetScript("OnClick", function(self) pick(self.key) end)
-		hit:SetScript("OnReceiveDrag", function(self)
-			pick(self.key)
-			placeHere()
-		end)
-		hits[key] = hit
-	end
-	buildCard()
-
-	prompt = CreateFrame("Frame", nil, frame)
-	prompt:SetSize(FRAME_WIDTH - 40, 50)
-	prompt:SetPoint("TOP", frame, "CENTER", 0, ART_Y - ART_HEIGHT / 2 - 20)
-	prompt.Title = prompt:CreateFontString(nil, "ARTWORK", "GameFontNormalHuge")
-	prompt.Title:SetPoint("TOP")
-	prompt.Title:SetText("Press any button on your controller")
-	prompt.Text = prompt:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
-	prompt.Text:SetPoint("TOP", prompt.Title, "BOTTOM", 0, -6)
-	prompt.Text:SetText("Hold a trigger first to see that layer. Using the cursor? Click a button on the picture.")
-	hint = frame:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
-	hint:SetText("Press another button to look at it. Hold a trigger to switch layer. Menu closes this window.")
-
-	makeButton(frame, "Reset to default layout...", 190, function() StaticPopup_Show("LEANPAD_SETUP") end, "BOTTOMLEFT", 12, 6)
-	makeButton(frame, KEY_BINDINGS, 150, function() Settings.OpenToCategory(Settings.KEYBINDINGS_CATEGORY_ID) end, "BOTTOMRIGHT", -12, 6)
-	status = frame:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
-	status:SetPoint("BOTTOM", 0, 12)
+	local title = frame:CreateFontString(nil, "ARTWORK", "GameFontHighlightMedium")
+	title:SetPoint("LEFT", frame, "TOPLEFT", MARGIN, -TITLE_HEIGHT / 2)
+	title:SetText("LeanPad Controller")
+	local close = CreateFrame("Button", nil, frame)
+	close:SetSize(20, 20)
+	close:SetPoint("TOPRIGHT", -10, -8)
+	close:SetNormalAtlas("common-icon-redx")
+	close:SetHighlightAtlas("common-icon-redx", "ADD")
+	close:SetScript("OnClick", function() frame:Hide() end)
+	local content = ns.Panel(frame, C.panel)
+	content:SetPoint("TOPLEFT", 0, -(TITLE_HEIGHT + 41))
+	content:SetPoint("BOTTOMRIGHT", 0, HEIGHT - FOOTER_Y)
+	local rule = ns.Rule(frame)
+	rule:SetPoint("TOPLEFT", 0, -(TITLE_HEIGHT + 40))
+	rule:SetPoint("TOPRIGHT", 0, -(TITLE_HEIGHT + 40))
+	buildEditor()
+	frame.Editor = editor
 
 	-- Listen only while open, so the editor costs nothing when closed. While open, pad presses pick buttons
 	-- instead of firing their actions.
@@ -514,14 +683,33 @@ local function build()
 		frame:EnableGamePadButton(false)
 		frame:SetScript("OnGamePadButtonDown", nil)
 		selected = nil
+		ns.ShowPage("editor")
 	end)
 	frame:SetScript("OnEvent", onEvent)
 	frame:Hide()
 	tabIndex = 1
 end
 
-function ns.ToggleController()
+-- Pages share the title bar; Options.lua builds the other one on first use.
+local options
+function ns.ShowPage(page)
+	editor:SetShown(page == "editor")
+	if page == "options" then options = ns.BuildOptions(frame) end
+	if options then options:SetShown(page == "options") end
+end
+
+local function open(page)
 	if InCombatLockdown() then return print("LeanPad: the controller editor opens out of combat.") end
 	if not frame then build() end
-	frame:SetShown(not frame:IsShown())
+	ns.ShowPage(page)
+	frame:Show()
+end
+
+function ns.ToggleController()
+	if frame and frame:IsShown() then return frame:Hide() end
+	open("editor")
+end
+
+function ns.OpenOptions()
+	open("options")
 end

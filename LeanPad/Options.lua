@@ -1,0 +1,166 @@
+local _, ns = ...
+
+-- LeanPad's own settings page inside the controller window. Blizzard's Settings panel stays the way in.
+local C = ns.COLORS
+local MARGIN, GAP, COLUMN, ROW = 16, 24, 432, 36
+local SOFT_TARGETS = { "SoftTargetEnemy", "SoftTargetFriend", "SoftTargetInteract" }
+local SOFT_TARGET_LABELS = { "Enemies", "Friends", "Interact" }
+local STYLES = { { "auto", "Auto" }, { "xbox", "Xbox" }, { "playstation", "PlayStation" } }
+local CROSSBAR_STYLES = { { "active", "Held layer only" }, { "all", "All layers" } }
+local LAYER_BUTTONS = {
+	{ "GamePadEmulateShift", "Layer 1, acts as Shift" }, { "GamePadEmulateCtrl", "Layer 2, acts as Ctrl" }, { "GamePadEmulateAlt", "Layer 3, acts as Alt" },
+}
+local CLICKS = { { "GamePadCursorLeftClick", "Left click" }, { "GamePadCursorRightClick", "Right click" } }
+
+local page, controls
+
+local function softTargetOptions()
+	local flags = Enum.SoftTargetEnableFlags
+	return { { tostring(flags.None), OFF }, { tostring(flags.Gamepad), "Gamepad" }, { tostring(flags.Kbm), "Keyboard and mouse" }, { tostring(flags.Any), ALWAYS } }
+end
+
+-- Every pad the client sees, after All connected, which is Blizzard's combined input.
+local function deviceOptions()
+	local options = { { "0", "All connected" } }
+	for _, id in ipairs(C_GamePad.GetAllDeviceIDs()) do
+		local state = C_GamePad.GetDeviceMappedState(id)
+		table.insert(options, { tostring(id), state and state.name or ("Controller " .. id) })
+	end
+	return options
+end
+
+local function styleOptions()
+	local options = {}
+	for _, style in ipairs(STYLES) do
+		local label = style[2]
+		if style[1] == "auto" then label = ("Auto (%s)"):format(ns.LabelOf(STYLES, ns.DetectedStyle())) end
+		table.insert(options, { style[1], label })
+	end
+	return options
+end
+
+-- A dropdown over value/label options; options may be a function when the choices depend on the pads connected.
+local function choice(options, current, set)
+	local function list() return type(options) == "function" and options() or options end
+	local dropdown = ns.Dropdown(page, 200, function() return ns.LabelOf(list(), current()) end,
+		function(root) ns.Radios(root, list(), current, set) end)
+	table.insert(controls, dropdown)
+	return dropdown
+end
+
+local function cvarChoice(options, cvar, default)
+	return choice(options, function() return GetCVar(cvar) or default end, function(value) ns.WriteCVar(cvar, value) end)
+end
+
+local function keyChoice(keys, cvar)
+	return choice(ns.KeyOptions(keys), function() return GetCVar(cvar) or "none" end, function(value) ns.WriteCVar(cvar, value) end)
+end
+
+local function heading(x, y, text)
+	local title = ns.Text(page, 13, C.text)
+	title:SetPoint("TOPLEFT", x, -y)
+	title:SetText(text)
+	return y + 20
+end
+
+local function row(x, y, label, control)
+	local text = ns.Text(page, 13, C.text2)
+	text:SetPoint("LEFT", page, "TOPLEFT", x, -(y + ROW / 2))
+	text:SetText(label)
+	control:SetPoint("RIGHT", page, "TOPLEFT", x + COLUMN, -(y + ROW / 2))
+	return y + ROW
+end
+
+local function note(x, y, text)
+	local line = ns.Text(page, 12, C.muted)
+	line:SetPoint("TOPLEFT", x, -y)
+	line:SetWidth(COLUMN)
+	line:SetText(text)
+	return y + 34
+end
+
+local function action(x, y, label, onClick, text)
+	local button = ns.Button(page, label, 190, onClick)
+	button:SetPoint("TOPLEFT", x, -y)
+	return note(x, y + 38, text) + 4
+end
+
+local function buildLeft(x, y)
+	y = heading(x, y, "Controller")
+	local enable = ns.Checkbox(page, function() return GetCVar("GamePadEnable") == "1" end,
+		function(on) ns.WriteCVar("GamePadEnable", on and "1" or "0") end)
+	table.insert(controls, enable)
+	y = row(x, y, "Gamepad input", enable)
+	y = row(x, y, "Active pad", cvarChoice(deviceOptions, "GamePadSingleActiveID", "0"))
+	y = row(x, y, "Button labels", choice(styleOptions, function() return ns.db.padStyle or "auto" end, function(value)
+		ns.db.padStyle = value
+		ns.RefreshController()
+	end))
+	y = note(x, y, "With one pad connected, All connected is the same as choosing it.") + GAP
+	y = heading(x, y, "Layer buttons")
+	for _, layer in ipairs(LAYER_BUTTONS) do
+		y = row(x, y, layer[2], keyChoice(ns.MODIFIER_KEYS, layer[1]))
+	end
+	y = note(x, y, ("Hold a layer button to open its layer. A tap under %s ms still presses the button's own binding, so clear it or keep it as a tap action."):format(
+		GetCVar("GamePadEmulateTapWindowMs") or 350)) + GAP
+	y = heading(x, y, "Cursor clicks")
+	for _, click in ipairs(CLICKS) do
+		y = row(x, y, click[2], keyChoice(ns.CLICK_KEYS, click[1]))
+	end
+end
+
+local function buildRight(x, y)
+	y = heading(x, y, "Crossbar")
+	local show = ns.Checkbox(page, function() return ns.db.crossbar ~= false end, ns.SetCrossbarShown)
+	table.insert(controls, show)
+	y = row(x, y, "Show crossbar", show)
+	y = row(x, y, "Layers shown", choice(CROSSBAR_STYLES, function() return ns.db.crossbarStyle or "active" end, ns.SetCrossbarStyle)) + GAP
+	y = heading(x, y, "Soft targeting")
+	for i, cvar in ipairs(SOFT_TARGETS) do
+		y = row(x, y, SOFT_TARGET_LABELS[i], cvarChoice(softTargetOptions(), cvar, "0"))
+	end
+	y = y + GAP
+	y = heading(x, y, "Setup") + 4
+	y = action(x, y, "Reset to default layout...", function() StaticPopup_Show("LEANPAD_SETUP") end,
+		"Rebinds the controller to LeanPad's layout. Your current bindings are saved first.")
+	action(x, y, "Undo setup", function() ns.OutOfCombat(ns.Restore) end, "Puts back the settings and bindings from before setup.")
+end
+
+function ns.BuildOptions(frame)
+	if page then return page end
+	page = CreateFrame("Frame", nil, frame)
+	page:SetAllPoints()
+	frame.Options = page
+	controls = {}
+
+	local back = ns.Button(page, "Controller", 110, function() ns.ShowPage("editor") end)
+	back:SetHeight(28)
+	back:SetPoint("TOPLEFT", MARGIN, -42)
+	local arrow = back:CreateTexture(nil, "ARTWORK")
+	arrow:SetAtlas("common-icon-backarrow")
+	arrow:SetSize(12, 12)
+	arrow:SetPoint("LEFT", 10, 0)
+	back:GetFontString():SetPoint("LEFT", 28, 0)
+	local title = ns.Text(page, 14, C.text)
+	title:SetPoint("LEFT", back, "RIGHT", 12, 0)
+	title:SetText(SETTINGS)
+
+	buildLeft(MARGIN, 97)
+	buildRight(MARGIN + COLUMN + GAP, 97)
+
+	local footer = ns.Rule(page)
+	footer:SetPoint("TOPLEFT", 0, -616)
+	footer:SetPoint("TOPRIGHT", 0, -616)
+	local hint = ns.Text(page, 12, C.muted)
+	hint:SetPoint("LEFT", page, "TOPLEFT", MARGIN, -640)
+	hint:SetText("Settings apply as you change them")
+	local bindings = ns.Button(page, KEY_BINDINGS, 120, function() Settings.OpenToCategory(Settings.KEYBINDINGS_CATEGORY_ID) end)
+	bindings:SetPoint("TOPRIGHT", -MARGIN, -624)
+	return page
+end
+
+-- Re-reads every control, after a CVar or saved-variable change.
+function ns.RefreshOptions()
+	if not page then return end
+	for _, control in ipairs(controls) do control:Refresh() end
+end

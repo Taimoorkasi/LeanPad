@@ -209,7 +209,7 @@ end
 
 -- Shows the pad glyph atlas from the key's binding text, or nothing when the key has no glyph.
 function ns.SetGlyph(button, key)
-	local glyph = GetBindingText(key):match("|A:([^:|]+)")
+	local glyph = ns.GlyphAtlas(key)
 	button.Glyph:SetShown(glyph ~= nil)
 	if glyph then button.Glyph:SetAtlas(glyph) end
 end

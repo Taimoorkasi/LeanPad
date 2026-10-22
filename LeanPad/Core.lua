@@ -19,7 +19,7 @@ SlashCmdList.LEANPAD = function(msg)
 	elseif msg == "restore" then
 		ns.OutOfCombat(ns.Restore)
 	elseif msg == "settings" then
-		Settings.OpenToCategory(ns.category:GetID())
+		ns.OpenOptions()
 	else
 		ns.ToggleController()
 	end

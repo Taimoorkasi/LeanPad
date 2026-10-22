@@ -1,39 +1,20 @@
 local addonName, ns = ...
 
-local MODIFIER_KEYS = { "none", "PADLTRIGGER", "PADRTRIGGER", "PADLSHOULDER", "PADRSHOULDER", "PADPADDLE1", "PADPADDLE2", "PADPADDLE3", "PADPADDLE4" }
-local CLICK_KEYS = { "none", "PAD1", "PAD2", "PAD3", "PAD4", "PADLSTICK", "PADRSTICK", "PADLSHOULDER", "PADRSHOULDER", "PADRTRIGGER" }
-
-local function keyOptions(keys)
-	return function()
-		local container = Settings.CreateControlTextContainer()
-		for _, key in ipairs(keys) do
-			container:Add(key, key == "none" and NONE or GetBindingText(key))
-		end
-		return container:GetData()
-	end
-end
-
-local function softTargetOptions()
-	local flags, container = Enum.SoftTargetEnableFlags, Settings.CreateControlTextContainer()
-	container:Add(flags.None, OFF)
-	container:Add(flags.Gamepad, "Gamepad")
-	container:Add(flags.Kbm, "Keyboard and mouse")
-	container:Add(flags.Any, ALWAYS)
-	return container:GetData()
-end
-
+-- Blizzard's Settings panel is the way in: it opens LeanPad's window, runs setup and links to Key Bindings.
+-- The options themselves live on the window's Settings page, in Options.lua.
 EventUtil.ContinueOnAddOnLoaded(addonName, function()
 	local category, layout = Settings.RegisterVerticalLayoutCategory("LeanPad")
 	ns.category = category
 
-	local function header(text) layout:AddInitializer(CreateSettingsListSectionHeaderInitializer(text)) end
 	local function button(name, text, click, tooltip)
 		layout:AddInitializer(CreateSettingsButtonInitializer(name, text, click, tooltip, true))
 	end
 
-	header("Setup")
+	layout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Setup"))
 	button("Controller layout", "Open", function() ns.ToggleController() end,
-		"See and change what every controller button does, per trigger layer. Also /lp.")
+		"See and change what every controller button does, per layer. Also /lp.")
+	button("Settings", "Open", function() ns.OpenOptions() end,
+		"Layer buttons, controller, cursor clicks, crossbar and soft targeting. Also /lp settings.")
 	button("Controller setup", "Set up", ns.ShowSetup,
 		"Turn on the gamepad. If you have no layout yet, also set the trigger modifiers and soft targeting and bind the controller to Action Bars 1-4; an existing layout is kept unless you choose otherwise.")
 	button("Undo setup", "Restore", function() ns.OutOfCombat(ns.Restore) end,
@@ -42,35 +23,6 @@ EventUtil.ContinueOnAddOnLoaded(addonName, function()
 		"LT, RT and LT+RT use Action Bars 2, 3 and 4. Show them here, then place them in Edit Mode.")
 	button("Edit bindings", "Key Bindings", function() Settings.OpenToCategory(Settings.KEYBINDINGS_CATEGORY_ID) end,
 		"Change any binding in Blizzard's key binding editor.")
-
-	header("Crossbar")
-	local showCrossbar = Settings.RegisterProxySetting(category, "LEANPAD_SHOW_CROSSBAR", Settings.VarType.Boolean, "Show crossbar", true,
-		function() return ns.db.crossbar ~= false end, ns.SetCrossbarShown)
-	Settings.CreateCheckbox(category, showCrossbar,
-		"Show your controller actions, with cooldowns and charges, in controller-shaped clusters.")
-	local style = Settings.RegisterProxySetting(category, "LEANPAD_CROSSBAR_STYLE", Settings.VarType.String, "Crossbar layers", "active",
-		function() return ns.db.crossbarStyle or "active" end, ns.SetCrossbarStyle)
-	Settings.CreateDropdown(category, style, function()
-		local container = Settings.CreateControlTextContainer()
-		container:Add("active", "Held layer only")
-		container:Add("all", "All layers")
-		return container:GetData()
-	end, "Held layer only shows one set that switches as you hold modifiers. All layers shows every modifier layer at once, the held one full size, like WoW: Forever.")
-
-	header("Gamepad")
-	Settings.SetupCVarCheckbox(category, "GamePadEnable", "Enable gamepad")
-	local S = Settings.VarType.String
-	Settings.SetupCVarDropdown(category, "GamePadEmulateShift", S, keyOptions(MODIFIER_KEYS), "Shift button")
-	Settings.SetupCVarDropdown(category, "GamePadEmulateCtrl", S, keyOptions(MODIFIER_KEYS), "Ctrl button")
-	Settings.SetupCVarDropdown(category, "GamePadEmulateAlt", S, keyOptions(MODIFIER_KEYS), "Alt button")
-	Settings.SetupCVarDropdown(category, "GamePadCursorLeftClick", S, keyOptions(CLICK_KEYS), "Cursor left click")
-	Settings.SetupCVarDropdown(category, "GamePadCursorRightClick", S, keyOptions(CLICK_KEYS), "Cursor right click")
-
-	header("Soft targeting")
-	local N = Settings.VarType.Number
-	Settings.SetupCVarDropdown(category, "SoftTargetEnemy", N, softTargetOptions, "Enemies")
-	Settings.SetupCVarDropdown(category, "SoftTargetFriend", N, softTargetOptions, "Friends")
-	Settings.SetupCVarDropdown(category, "SoftTargetInteract", N, softTargetOptions, "Interact")
 
 	Settings.RegisterAddOnCategory(category)
 end)
