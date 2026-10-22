@@ -1,0 +1,11 @@
+{
+  "name": "leanpad-tools",
+  "private": true,
+  "description": "Generates LeanPad's controller art. Not part of the addon.",
+  "scripts": {
+    "art": "node draw-pads.js"
+  },
+  "devDependencies": {
+    "@resvg/resvg-js": "2.6.2"
+  }
+}
