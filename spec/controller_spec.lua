@@ -505,6 +505,33 @@ describe("Controller", function()
 			assert.is_false(frame:IsShown())
 		end)
 
+		it("flashes Saved in the footer for two seconds once a change is written", function()
+			ns.Saved() -- nothing to flash on before the window exists
+			open()
+			press("PAD1")
+			button("Clear"):Fire("OnClick")
+			assert.is_true(editor.Saved:IsShown())
+			assert.is_false(editor.Status:IsShown())
+			assert.equal("|A:common-icon-checkmark:12:12|a Saved to your account's key bindings", editor.Saved:GetText())
+			assert.equal(2, w.timers[1].seconds)
+			wow.tick()
+			assert.is_false(editor.Saved:IsShown())
+			assert.is_true(editor.Status:IsShown())
+			-- A change made in combat flashes when it is actually written.
+			w.combat = true
+			button("Change..."):Fire("OnClick")
+			wow.entry(w.menu.root.entries[1], "LB").callback()
+			assert.is_false(editor.Saved:IsShown())
+			w.combat = false
+			wow.fire("PLAYER_REGEN_ENABLED")
+			assert.is_true(editor.Saved:IsShown())
+			-- On the settings page the flash is plain Saved.
+			button(SETTINGS):Fire("OnClick")
+			ns.Saved()
+			assert.equal("|A:common-icon-checkmark:12:12|a Saved", frame.Options.Saved:GetText())
+			assert.is_false(frame.Options.Status:IsShown())
+		end)
+
 		it("refreshes the strip when bindings change", function()
 			open()
 			press("PAD1")

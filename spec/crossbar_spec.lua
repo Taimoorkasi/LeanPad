@@ -408,6 +408,20 @@ describe("Crossbar", function()
 			assert.is_false(bar.Outline:IsShown())
 		end)
 
+		it("unlocks with Blizzard's Edit Mode and locks again when it closes", function()
+			wow.fire("PLAYER_ENTERING_WORLD")
+			wow.trigger("EditMode.Enter")
+			assert.is_false(ns.CrossbarLocked())
+			assert.is_true(LeanPadCrossbar.Outline:IsShown())
+			wow.trigger("EditMode.Exit")
+			assert.is_true(ns.CrossbarLocked())
+			wow.trigger("EditMode.Exit") -- already locked: nothing to do
+			assert.is_true(ns.CrossbarLocked())
+			ns.SetCrossbarShown(false)
+			wow.trigger("EditMode.Enter") -- a crossbar that is off stays locked
+			assert.is_true(ns.CrossbarLocked())
+		end)
+
 		it("comes back where it was left, at the saved size", function()
 			ns, w = wow.boot({ crossbarPoint = { "TOPLEFT", "TOPLEFT", 300, -400 }, crossbarScale = 0.6 })
 			wow.fire("PLAYER_ENTERING_WORLD")

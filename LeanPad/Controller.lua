@@ -132,11 +132,15 @@ function ns.Assign(binding, action)
 	ns.OutOfCombat(function()
 		SetBinding(binding, action)
 		SaveBindings(GetCurrentBindingSet())
+		ns.Saved()
 	end)
 end
 
 function ns.WriteCVar(cvar, value)
-	ns.OutOfCombat(function() SetCVar(cvar, value) end)
+	ns.OutOfCombat(function()
+		SetCVar(cvar, value)
+		ns.Saved()
+	end)
 end
 
 -- Drops what is on the cursor into the Blizzard bar slot this button fires, so the action stays in WoW's slots.
@@ -631,6 +635,9 @@ local function buildEditor()
 	status = ns.Text(editor, 12, C.muted, "CENTER")
 	editor.Status = status
 	status:SetPoint("TOP", editor, "TOP", 0, -(FOOTER_Y + 17))
+	editor.Saved = ns.Text(editor, 12, C.accent, "CENTER")
+	editor.Saved:SetPoint("TOP", editor, "TOP", 0, -(FOOTER_Y + 17))
+	editor.Saved:Hide()
 	local bindings = ns.Button(editor, KEY_BINDINGS, 120, function() Settings.OpenToCategory(Settings.KEYBINDINGS_CATEGORY_ID) end)
 	bindings:SetPoint("TOPRIGHT", -MARGIN, -(FOOTER_Y + 8))
 	local settings = ns.Button(editor, SETTINGS, 100, function() ns.ShowPage("options") end)
@@ -690,8 +697,23 @@ local function build()
 	tabIndex = 1
 end
 
--- Pages share the title bar; Options.lua builds the other one on first use.
+-- Two seconds of Saved in the open page's footer, once a binding, CVar or setting has really been written.
+local SAVED_FOR = 2
 local options
+function ns.Saved()
+	if not (frame and frame:IsShown()) then return end
+	local page = editor:IsShown() and editor or options
+	local idle, saved = page.Status, page.Saved
+	saved:SetText("|A:common-icon-checkmark:12:12|a " .. (page == editor and idle:GetText():gsub("^Changes save", "Saved") or "Saved"))
+	idle:Hide()
+	saved:Show()
+	C_Timer.After(SAVED_FOR, function()
+		saved:Hide()
+		idle:Show()
+	end)
+end
+
+-- Pages share the title bar; Options.lua builds the other one on first use.
 function ns.ShowPage(page)
 	editor:SetShown(page == "editor")
 	if page == "options" then options = ns.BuildOptions(frame) end

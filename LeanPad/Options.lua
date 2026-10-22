@@ -100,6 +100,7 @@ local function buildLeft(x, y)
 	y = row(x, y, "Button labels", choice(styleOptions, function() return ns.db.padStyle or "auto" end, function(value)
 		ns.db.padStyle = value
 		ns.RefreshController()
+		ns.Saved()
 	end))
 	y = note(x, y, "With one pad connected, All connected is the same as choosing it.") + GAP
 	y = heading(x, y, "Layer buttons")
@@ -118,6 +119,7 @@ local function crossbarChoice()
 	return choice(CROSSBARS, function() return ns.db.crossbar == false and "off" or (ns.db.crossbarStyle or "active") end, function(value)
 		if value ~= "off" then ns.SetCrossbarStyle(value) end
 		ns.SetCrossbarShown(value ~= "off")
+		ns.Saved()
 	end)
 end
 
@@ -137,7 +139,10 @@ end
 local function buildRight(x, y)
 	y = heading(x, y, "Crossbar")
 	y = row(x, y, "View", crossbarChoice())
-	y = row(x, y, "Size", choice(SCALES, function() return tostring(ns.db.crossbarScale or 1) end, function(value) ns.SetCrossbarScale(tonumber(value)) end))
+	y = row(x, y, "Size", choice(SCALES, function() return tostring(ns.db.crossbarScale or 1) end, function(value)
+		ns.SetCrossbarScale(tonumber(value))
+		ns.Saved()
+	end))
 	y = row(x, y, "Position", lockButton()) + GAP
 	y = heading(x, y, "Cursor")
 	for _, click in ipairs(CLICKS) do
@@ -180,9 +185,12 @@ function ns.BuildOptions(frame)
 	local footer = ns.Rule(page)
 	footer:SetPoint("TOPLEFT", 0, -616)
 	footer:SetPoint("TOPRIGHT", 0, -616)
-	local hint = ns.Text(page, 12, C.muted)
-	hint:SetPoint("LEFT", page, "TOPLEFT", MARGIN, -640)
-	hint:SetText("Settings apply as you change them")
+	page.Status = ns.Text(page, 12, C.muted)
+	page.Status:SetPoint("LEFT", page, "TOPLEFT", MARGIN, -640)
+	page.Status:SetText("Settings apply as you change them")
+	page.Saved = ns.Text(page, 12, C.accent)
+	page.Saved:SetPoint("LEFT", page, "TOPLEFT", MARGIN, -640)
+	page.Saved:Hide()
 	local bindings = ns.Button(page, KEY_BINDINGS, 120, function() Settings.OpenToCategory(Settings.KEYBINDINGS_CATEGORY_ID) end)
 	bindings:SetPoint("TOPRIGHT", -MARGIN, -624)
 	return page

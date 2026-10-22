@@ -111,7 +111,7 @@ function M.reset()
 		cvars = {}, bindings = {}, saved = {}, printed = {}, popups = {}, opened = {},
 		onLoaded = {}, onceEvents = {}, metricCalls = {}, controls = {}, layout = {},
 		combat = false, widgets = {}, held = {}, placed = {}, actions = {}, nextFrame = {},
-		glyphs = {}, devices = {}, deviceIDs = {}, power = 5,
+		glyphs = {}, devices = {}, deviceIDs = {}, power = 5, timers = {}, callbacks = {},
 		bindingList = {
 			{ "HEADER_BLANK", "BINDING_HEADER_MOVEMENT" },
 			{ "JUMP", "BINDING_HEADER_MOVEMENT" },
@@ -179,6 +179,8 @@ function M.reset()
 	C_Item = { GetItemNameByID = function(id) return "item:" .. id end }
 	GetCVarBool = function(name) return w.cvars[name] == "1" end
 	RunNextFrame = function(callback) table.insert(w.nextFrame, callback) end
+	C_Timer = { After = function(seconds, callback) table.insert(w.timers, { seconds = seconds, callback = callback }) end }
+	EventRegistry = { RegisterCallback = function(_, event, callback) w.callbacks[event] = callback end }
 	-- Like the client's: an error goes to the error handler and the caller carries on.
 	w.errors = {}
 	securecallfunction = function(fn, ...)
@@ -295,6 +297,18 @@ function M.nextFrame()
 	local queued = M.state.nextFrame
 	M.state.nextFrame = {}
 	for _, callback in ipairs(queued) do callback() end
+end
+
+-- Fires every timer queued with C_Timer.After, as if their time had passed.
+function M.tick()
+	local due = M.state.timers
+	M.state.timers = {}
+	for _, timer in ipairs(due) do timer.callback() end
+end
+
+-- Fires an EventRegistry callback, as Blizzard's UI would.
+function M.trigger(event)
+	M.state.callbacks[event]()
 end
 
 -- Finds a menu entry by its exact label.

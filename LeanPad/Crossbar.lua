@@ -312,6 +312,14 @@ end
 
 function ns.CrossbarLocked() return locked end
 
+-- Blizzard's Edit Mode unlocks the crossbar too, so it moves along with the rest of the HUD.
+EventRegistry:RegisterCallback("EditMode.Enter", function()
+	if ns.db.crossbar ~= false then ns.SetCrossbarLocked(false) end
+end)
+EventRegistry:RegisterCallback("EditMode.Exit", function()
+	if not locked then ns.SetCrossbarLocked(true) end
+end)
+
 EventUtil.RegisterOnceFrameEventAndCallback("PLAYER_ENTERING_WORLD", function()
 	ns.SetCrossbarShown(ns.db.crossbar ~= false)
 end)
