@@ -136,6 +136,25 @@ const icons = {
 };
 const icon = (parts) => el("circle", { cx: 32, cy: 32, r: 31, fill: ICON_FILL, stroke: ICON_RIM, "stroke-width": 2 }) + parts.join("");
 
+// LeanPad's logo: a slate tile with the pad in steel and the crossbar's amber D-pad. Shown in the addon list,
+// the minimap compartment (TOC IconTexture) and on the store pages.
+function logo() {
+	const body = "M128 84 H94 C72 84 58 89 50 104 C40 122 33 150 35 171 C37 188 53 194 66 185 C78 177 85 161 99 158 H157 C171 161 178 177 190 185 C203 194 219 188 221 171 C223 150 216 122 206 104 C198 89 184 84 162 84 Z";
+	const face = [[172, 108], [158, 124], [186, 124], [172, 140]].map(([cx, cy]) => el("circle", { cx, cy, r: 8, fill: ICON_INK }));
+	return [
+		"<defs><linearGradient id=\"tile\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#1f2a38\"/><stop offset=\"1\" stop-color=\"#0c1016\"/></linearGradient></defs>",
+		el("rect", { x: 8, y: 8, width: 240, height: 240, rx: 54, fill: "url(#tile)", stroke: ICON_RIM, "stroke-width": 4 }),
+		"<g transform=\"translate(128 130) scale(1.14) translate(-128 -139)\">",
+		el("path", { d: body, fill: "#151b24", stroke: INK, "stroke-width": 8, "stroke-linejoin": "round" }),
+		el("rect", { x: 72, y: 106, width: 18, height: 36, rx: 4, fill: ICON_ACCENT }),
+		el("rect", { x: 63, y: 115, width: 36, height: 18, rx: 4, fill: ICON_ACCENT }),
+		...face,
+		el("circle", { cx: 106, cy: 152, r: 10, fill: "none", stroke: INK_SOFT, "stroke-width": 5 }),
+		el("circle", { cx: 150, cy: 152, r: 10, fill: "none", stroke: INK_SOFT, "stroke-width": 5 }),
+		"</g>",
+	].join("");
+}
+
 // White strokes, tinted in game with SetVertexColor.
 const rings = {
 	Ring: el("circle", { cx: 64, cy: 64, r: 58, fill: "none", stroke: "#fff", "stroke-width": 7 }),
@@ -181,6 +200,9 @@ for (const [name, pad] of Object.entries(pads)) {
 }
 for (const [name, shape] of Object.entries(rings)) render(name, svg("0 0 128 128", shape), 128, 128);
 for (const [name, parts] of Object.entries(icons)) render(name, svg("0 0 64 64", icon(parts)), 64, 64);
+render("Logo", svg("0 0 256 256", logo()), 64, 64);
+fs.writeFileSync(path.join(PREVIEW, "Logo.png"), new Resvg(svg("0 0 256 256", logo()), { fitTo: { mode: "width", value: 400 } }).render().asPng());
+
 // A contact sheet of the command icons for the README.
 const sheet = Object.values(icons).map((parts, i) => `<g transform="translate(${i * 72 + 4} 4)">${icon(parts)}</g>`).join("");
 const sheetWidth = Object.keys(icons).length * 72 + 4;

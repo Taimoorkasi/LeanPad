@@ -12,7 +12,7 @@ All notable changes to LeanPad are documented here. The format is based on [Keep
 - **Crossbar layout editing.** Unlock the crossbar from the settings page or Blizzard's Edit Mode, then drag the whole bar, any one set or any single button, and scroll over a set to size it. Drops snap to a grid and line up with neighbours; Shift drops freely; *Reset layout* puts everything back. Positions and sizes are saved.
 - **Crossbar mouse mode**, off by default: drop a spell from the spellbook or talents onto a socket to put it in that button's bar slot, and hover a socket for its tooltip.
 - **Command icons** in LeanPad's own style for targeting (with next, previous and party-number badges), interact, jump, auto-run, the cursor toggle, bags, game menu, map, spellbook and character pane; Blizzard's micro-menu atlases for the other panels. They show on the crossbar and in the editor.
-- LeanPad is listed in the minimap's addon compartment, and `/leanpad` works as well as `/lp`.
+- LeanPad has a logo, shown in the addon list and the minimap's addon compartment, where LeanPad is now listed; `/leanpad` works as well as `/lp`.
 
 ### Changed
 

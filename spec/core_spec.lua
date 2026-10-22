@@ -72,6 +72,12 @@ describe("Core", function()
 		assert.is_false(LeanPadControllerFrame.Editor:IsShown())
 	end)
 
+	it("shows its logo in the addon list and the compartment, from a texture it ships", function()
+		local icon = wow.tocHeader("IconTexture")
+		assert.equal("Interface\\AddOns\\LeanPad\\Art\\Logo", icon)
+		assert.is_truthy(io.open("LeanPad/Art/Logo.tga", "rb"))
+	end)
+
 	it("opens the editor from the minimap's addon compartment", function()
 		wow.boot(nil)
 		assert.is_truthy(wow.tocHeader("AddonCompartmentFunc"))

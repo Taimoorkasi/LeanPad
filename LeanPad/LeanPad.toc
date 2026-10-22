@@ -6,6 +6,7 @@
 ## SavedVariables: LeanPadDB
 ## Category: Action Bars
 ## AddonCompartmentFunc: LeanPad_OnCompartmentClick
+## IconTexture: Interface\AddOns\LeanPad\Art\Logo
 
 Core.lua
 Setup.lua

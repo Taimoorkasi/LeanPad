@@ -1,3 +1,5 @@
+<p align="center"><img src="tools/preview/Logo.png" alt="LeanPad logo" width="128"></p>
+
 # LeanPad
 
 A lean controller addon for retail World of Warcraft (Midnight, 12.1.5).
@@ -115,7 +117,7 @@ Ground rules for changes:
 
 ### Controller art
 
-The controller drawings and command icons are generated, not hand-edited. To change them, edit `tools/draw-pads.js` and run:
+The controller drawings, command icons and logo are generated, not hand-edited. To change them, edit `tools/draw-pads.js` and run:
 
 ```sh
 cd tools
@@ -123,7 +125,7 @@ npm install
 node draw-pads.js
 ```
 
-It writes the textures to `LeanPad/Art/` (32-bit TGA, the format the game loads), and a preview of each pad and a sheet of the icons to `tools/preview/`. If you move a button in the drawing, update its position in `ns.PADS` in `LeanPad/Controller.lua` too; if you add an icon, give it an entry in `ns.COMMAND_ICONS`. The drawings are original; their proportions follow the CC0 [vector gamepad collection](https://opengameart.org/content/8th-gen-console-vector-gamepad-collection) by TheHoodieGuy02.
+It writes the textures to `LeanPad/Art/` (32-bit TGA, the format the game loads), and a preview of each pad, a sheet of the icons and the 400 px logo for the store pages to `tools/preview/`. If you move a button in the drawing, update its position in `ns.PADS` in `LeanPad/Controller.lua` too; if you add an icon, give it an entry in `ns.COMMAND_ICONS`. The drawings are original; their proportions follow the CC0 [vector gamepad collection](https://opengameart.org/content/8th-gen-console-vector-gamepad-collection) by TheHoodieGuy02.
 
 The reasoning behind the design is in [docs/WoW controller addon design.md](docs/WoW%20controller%20addon%20design.md).
 
