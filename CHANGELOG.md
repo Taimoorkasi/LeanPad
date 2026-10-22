@@ -18,6 +18,7 @@ All notable changes to LeanPad are documented here. The format is based on [Keep
 - Every change flashes a Saved line in the window's footer for two seconds once it is written, including changes queued until combat ends.
 - Entering Blizzard's Edit Mode unlocks the crossbar for dragging; leaving it locks the bar again. While unlocked, the bar carries a Reset position button, and the settings page adds an Opacity choice.
 - The crossbar shows each layer button as a hint socket: its glyph large with the modifier it acts as beneath, lit while held, as in the single-set view's picture.
+- The sockets between the two diamonds now sit on the diamonds' centre line: one socket a side is level with the D-pad and face buttons, two straddle the line, three fill the column.
 - Commands that sit on no bar slot get a Blizzard face on the crossbar and in the editor: targeting (with a next or previous arrow), interact, bags, the game menu and the other panels, party members by number, and the cursor toggle.
 - Play style on the settings page: Tank, Melee, Ranged, Healer or Auto by spec. It sets how the body answers the stick in combat (tanks never show their back, melee and ranged strafe but spin to run, healers run free) and whom soft targeting looks for. Off until chosen.
 - Editor copy follows the pad: PlayStation users read L2, R2 and Options, not LT, RT and Menu.

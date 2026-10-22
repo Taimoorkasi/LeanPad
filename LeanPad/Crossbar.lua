@@ -4,10 +4,13 @@ local _, ns = ...
 -- shoulder, trigger and stick click columns between them.
 ns.CROSSBAR = {
 	PADDUP = { -150, 46 }, PADDLEFT = { -196, 0 }, PADDRIGHT = { -104, 0 }, PADDDOWN = { -150, -46 },
-	PADLSHOULDER = { -50, 28 }, PADLTRIGGER = { -50, -28 }, PADLSTICK = { -50, -84 },
-	PADRSHOULDER = { 50, 28 }, PADRTRIGGER = { 50, -28 }, PADRSTICK = { 50, -84 },
+	PADLSHOULDER = { -50, 54 }, PADLTRIGGER = { -50, 0 }, PADLSTICK = { -50, -54 },
+	PADRSHOULDER = { 50, 54 }, PADRTRIGGER = { 50, 0 }, PADRSTICK = { 50, -54 },
 	PAD4 = { 150, 46 }, PAD3 = { 104, 0 }, PAD2 = { 196, 0 }, PAD1 = { 150, -46 },
 }
+-- Between the diamonds each side stacks only the sockets it shows, centred on the diamonds' line: one socket
+-- sits level with the D-pad and face buttons, two straddle that line, three fill the column.
+ns.CROSSBAR_INNER = { { -50, "PADLSHOULDER", "PADLTRIGGER", "PADLSTICK" }, { 50, "PADRSHOULDER", "PADRTRIGGER", "PADRSTICK" } }
 -- Cluster centres from the bar's centre, in ns.Layers() order: Base on top, then the first modifier left,
 -- the second right and both together below, as WoW: Forever lays out its controller bars.
 -- shortcut: only the first four layers get a cluster, so Alt layers are not drawn in the all-layers view; add slots if Alt is used.
@@ -150,6 +153,19 @@ local function placeCluster(cluster, index, active)
 	cluster.frame:SetPoint("CENTER", bar, "CENTER", point[1] / scale, point[2] / scale)
 end
 
+local function stackInner(cluster)
+	for _, side in ipairs(ns.CROSSBAR_INNER) do
+		local shown = {}
+		for i = 2, #side do
+			local button = cluster.buttons[side[i]]
+			if button:IsShown() then table.insert(shown, button) end
+		end
+		for i, button in ipairs(shown) do
+			button:SetPoint("CENTER", cluster.frame, "CENTER", side[1], ((#shown + 1) / 2 - i) * (ns.CROSSBAR_BUTTON_SIZE + 8))
+		end
+	end
+end
+
 local function heldLayer(layers, held)
 	for _, layer in ipairs(layers) do
 		if layer.prefix == held then return layer end
@@ -181,6 +197,7 @@ function ns.RefreshCrossbar()
 					securecallfunction(refreshButton, button, key, layer.prefix, hideNumbers)
 				end
 			end
+			stackInner(cluster)
 		end
 	end
 end

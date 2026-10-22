@@ -121,6 +121,18 @@ describe("Crossbar", function()
 			assert.same({ "PAD1", "PAD2", "PAD3", "PADDLEFT", "PADDRIGHT", "PADDUP", "PADLTRIGGER", "PADRSTICK", "PADRTRIGGER" }, shown)
 		end)
 
+		it("stack the sockets between the diamonds on the diamonds' centre line, only the shown ones", function()
+			-- Left: only the LT hint shows, so it sits level with the D-pad. Right: the RT hint and the stick click straddle the line.
+			assert.same({ "CENTER", clusters()[1], "CENTER", -50, 0 }, buttonFor("PADLTRIGGER").point)
+			assert.same({ "CENTER", clusters()[1], "CENTER", 50, 27 }, buttonFor("PADRTRIGGER").point)
+			assert.same({ "CENTER", clusters()[1], "CENTER", 50, -27 }, buttonFor("PADRSTICK").point)
+			w.bindings["CTRL-PADRSHOULDER"] = "ACTIONBUTTON1" -- a third socket fills the column
+			bar:Fire("OnEvent", "UPDATE_BINDINGS")
+			assert.same({ "CENTER", clusters()[1], "CENTER", 50, 54 }, buttonFor("PADRSHOULDER").point)
+			assert.same({ "CENTER", clusters()[1], "CENTER", 50, 0 }, buttonFor("PADRTRIGGER").point)
+			assert.same({ "CENTER", clusters()[1], "CENTER", 50, -54 }, buttonFor("PADRSTICK").point)
+		end)
+
 		it("give commands off the bars a Blizzard face with a badge, and no cooldown or press", function()
 			local right = buttonFor("PADDRIGHT") -- Target nearest enemy in the preset
 			assert.equal("Crosshair_Attack_64", right.Icon.atlas)
