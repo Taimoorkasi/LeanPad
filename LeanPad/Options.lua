@@ -12,12 +12,6 @@ local OPACITIES = { { "1", "100%" }, { "0.8", "80%" }, { "0.6", "60%" }, { "0.4"
 local PLAYSTYLES = { { "manual", "Keep my own settings" }, { "auto", "Auto" }, { "tank", "Tank" }, { "melee", "Melee" }, { "ranged", "Ranged" }, { "healer", "Healer" } }
 local SPEEDS = { { "0.6", "Slow" }, { "1", "Normal" }, { "1.5", "Fast" } }
 local STICK_HIDES = { { "0", "Never" }, { "1", "When the character moves" }, { "2", "When either stick moves" } }
--- Where Toggle gamepad cursor puts the cursor: where it was, or a spot as fractions of the screen from bottom left.
-local CURSOR_STARTS = {
-	{ "last", "Where it was" }, { "0.5 0.5", "Screen centre" }, { "0.5 0.75", "Above centre" }, { "0.5 0.25", "Below centre" },
-	{ "0.25 0.5", "Left" }, { "0.75 0.5", "Right" }, { "0.25 0.75", "Top left" }, { "0.75 0.75", "Top right" },
-	{ "0.25 0.25", "Bottom left" }, { "0.75 0.25", "Bottom right" },
-}
 local LAYER_BUTTONS = {
 	{ "GamePadEmulateShift", "Layer 1, acts as Shift" }, { "GamePadEmulateCtrl", "Layer 2, acts as Ctrl" }, { "GamePadEmulateAlt", "Layer 3, acts as Alt" },
 }
@@ -81,6 +75,33 @@ end
 
 local function keyChoice(keys, cvar)
 	return choice(ns.KeyOptions(keys), function() return GetCVar(cvar) or "none" end, function(value) ns.WriteCVar(cvar, value) end)
+end
+
+-- Where Toggle gamepad cursor puts the cursor, as an x, y offset from the screen's centre in UI units, the way
+-- frames are placed. Both blank leaves it where it was; one blank reads as 0.
+local function cursorStartInput()
+	local holder = CreateFrame("Frame", nil, page)
+	holder:SetSize(144, 28)
+	local boxes = {}
+	local function commit()
+		local x, y = tonumber(boxes[1]:GetText()), tonumber(boxes[2]:GetText())
+		ns.db.cursorStart = (x or y) and { x or 0, y or 0 } or nil
+		holder:Refresh()
+		ns.Saved()
+	end
+	function holder:Refresh()
+		for _, box in ipairs(boxes) do box:Refresh() end
+	end
+	for axis = 1, 2 do
+		boxes[axis] = ns.Input(holder, 64, function()
+			local spot = ns.db.cursorStart
+			return spot and tostring(spot[axis]) or ""
+		end, commit)
+		boxes[axis]:SetPoint("RIGHT", holder, "RIGHT", (axis - 2) * 80, 0)
+	end
+	holder.X, holder.Y = boxes[1], boxes[2]
+	table.insert(controls, holder)
+	return holder
 end
 
 local function cvarCheckbox(cvar)
@@ -193,10 +214,7 @@ local function buildRight(x, y)
 		y = row(x, y, click[2], keyChoice(ns.CLICK_KEYS, click[1]))
 	end
 	y = row(x, y, "Speed", cvarChoice(SPEEDS, "GamePadCursorSpeedMax", "1"))
-	y = row(x, y, "Toggle cursor starts it at", choice(CURSOR_STARTS, function() return ns.db.cursorStart or "last" end, function(value)
-		ns.db.cursorStart = value ~= "last" and value or nil
-		ns.Saved()
-	end))
+	y = row(x, y, "Toggle starts it at x, y from centre", cursorStartInput())
 	y = row(x, y, "Show it when a window opens", cvarCheckbox("GamePadCursorAutoEnable"))
 	y = row(x, y, "Hide it", cvarChoice(STICK_HIDES, "GamePadCursorAutoDisableSticks", "2"))
 	y = row(x, y, "Touchpad moves it", cvarCheckbox("GamePadTouchCursorEnable")) + 4

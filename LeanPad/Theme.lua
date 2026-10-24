@@ -97,6 +97,26 @@ function ns.LabelOf(options, value)
 	return value
 end
 
+-- A flat one-line text box. It commits on Enter or when it loses focus; Escape puts back what was there.
+function ns.Input(parent, width, getText, onCommit)
+	local box = CreateFrame("EditBox", nil, parent, "BackdropTemplate")
+	box:SetSize(width, 28)
+	ns.Backdrop(box, C.raised, C.edge)
+	box:SetFontObject(ns.Font(13, C.text))
+	box:SetTextInsets(8, 8, 0, 0)
+	box:SetAutoFocus(false)
+	box:SetMaxLetters(6)
+	function box:Refresh() self:SetText(getText()) end
+	box:SetScript("OnEnterPressed", function(self) self:ClearFocus() end)
+	box:SetScript("OnEscapePressed", function(self)
+		self:Refresh()
+		self:ClearFocus()
+	end)
+	box:SetScript("OnEditFocusLost", function(self) onCommit(self:GetText()) end)
+	box:Refresh()
+	return box
+end
+
 -- A flat checkbox: amber with a check while on.
 function ns.Checkbox(parent, isChecked, onToggle)
 	local box = CreateFrame("Button", nil, parent, "BackdropTemplate")

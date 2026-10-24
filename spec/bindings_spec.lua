@@ -42,7 +42,7 @@ describe("Bindings.xml", function()
 
 	it("puts the cursor on the chosen start spot when turning it on, not when turning it off", function()
 		local run = assert(loadstring(bindings().LEANPAD_TOGGLE_CURSOR.body))
-		LeanPadDB.cursorStart = "0.5 0.25"
+		LeanPadDB.cursorStart = { 0, -270 } -- below centre
 		UIParent.width, UIParent.height = 1920, 1080
 		run()
 		assert.same({ 960, 270 }, w.cursorPosition)
