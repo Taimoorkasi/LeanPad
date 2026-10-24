@@ -59,6 +59,23 @@ function Widget:RegisterEvent(event) self.events[event] = true end
 function Widget:UnregisterAllEvents() self.events = {} end
 function Widget:EnableGamePadButton(enable) self.gamePadButton = enable end
 function Widget:SetPropagateKeyboardInput(propagate) self.propagate = propagate end
+-- Animation groups and their animations record their settings, plays and stops.
+function Widget:CreateAnimationGroup()
+	local group = newWidget("AnimationGroup", nil, self)
+	group.plays, group.stops = 0, 0
+	return group
+end
+function Widget:CreateAnimation(type)
+	local animation = newWidget("Animation", nil, self)
+	animation.animationType = type
+	return animation
+end
+function Widget:Play() self.plays = self.plays + 1 end
+function Widget:Stop() self.stops = self.stops + 1 end
+function Widget:SetFromAlpha(alpha) self.fromAlpha = alpha end
+function Widget:SetToAlpha(alpha) self.toAlpha = alpha end
+function Widget:SetDuration(seconds) self.seconds = seconds end
+function Widget:SetTarget(target) self.target = target end
 function Widget:SetDesaturated(desaturated) self.desaturated = desaturated end
 function Widget:SetCooldownFromDurationObject(duration) self.duration = duration end
 function Widget:SetHideCountdownNumbers(hide) self.hideNumbers = hide end

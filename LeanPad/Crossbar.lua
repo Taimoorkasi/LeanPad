@@ -19,15 +19,15 @@ ns.CROSSBAR_CLUSTER_SIZE = { 470, 220 }
 -- shortcut: only the first four layers get a cluster, so Alt layers are not drawn in the all-layers view; add slots if Alt is used.
 ns.CROSSBAR_CLUSTERS = { { 0, 60 }, { -420, 60 }, { 420, 60 }, { 0, -135 } }
 ns.CROSSBAR_BUTTON_SIZE = 46
-ns.CROSSBAR_PRESSED_SCALE = 0.88
+ns.CROSSBAR_BLINK = 0.25 -- seconds a press blink takes to fade
 ns.CROSSBAR_IDLE_SCALE = 0.75
 ns.CROSSBAR_IDLE_ALPHA = 0.6
 ns.CROSSBAR_EMPTY_ALPHA = 0.35
 
 -- Blizzard's circular alpha mask makes icons, sweeps and the rim round without any art of LeanPad's own.
 local CIRCLE = "Interface\\CharacterFrame\\TempPortraitAlphaMask"
--- Rim colours: dark at rest, gold while pressed or, in the editor, hovered.
-ns.RIM, ns.RIM_LIT = { 0.05, 0.05, 0.05, 0.9 }, { 1, 0.82, 0, 1 }
+-- The rim: a dark ring around the icon.
+ns.RIM = { 0.05, 0.05, 0.05, 0.9 }
 -- Icon tints: plain, or red while the target is out of the action's range.
 ns.IN_RANGE, ns.OUT_OF_RANGE = { 1, 1, 1 }, { 1, 0.25, 0.25 }
 
@@ -47,7 +47,6 @@ local locked = true -- unlocked from the settings page or Edit Mode, the bar, it
 local HUD_SKIP = { LEANPAD_TOGGLE_CURSOR = true, TOGGLEAUTORUN = true }
 local NOT_BOUND = "Not bound"
 local clusters = {}
-local down = {} -- pad keys held right now
 
 local function eachButton(fn)
 	for _, cluster in ipairs(clusters) do
@@ -55,20 +54,16 @@ local function eachButton(fn)
 	end
 end
 
--- A faint empty socket lights up fully while pressed, so a press always shows.
-local function setPressed(button, pressed)
-	button:SetAlpha(pressed and 1 or button.restAlpha)
-	button.Face:SetScale(pressed and ns.CROSSBAR_PRESSED_SCALE or 1)
-	button.Rim:SetColorTexture(unpack(pressed and ns.RIM_LIT or ns.RIM))
-	button.Flash:SetShown(pressed)
-end
-
--- A key's socket looks pressed while the pad holds it, on the set of the layer held now. Every press blinks,
--- whatever the button does: an empty slot, a spell on cooldown or a command.
-local function showPress(key)
+-- Each press blinks the key's socket on the set of the layer held now, whatever the button does: an empty slot, a
+-- spell on cooldown or a command. A blink ends on its own, since a bound button's release never reaches addons.
+local function blink(key)
 	local prefix = ns.HeldPrefix()
 	for _, cluster in ipairs(clusters) do
-		setPressed(cluster.buttons[key], down[key] == true and cluster.frame.prefix == prefix)
+		if cluster.frame.prefix == prefix then
+			local button = cluster.buttons[key]
+			button.Blink:Stop()
+			button.Blink:Play()
+		end
 	end
 end
 
@@ -79,13 +74,9 @@ local function listen()
 	local pad = CreateFrame("Frame", nil, bar)
 	pad:EnableGamePadButton(true)
 	pad:SetPropagateKeyboardInput(true)
-	local function track(_, key, isDown)
-		if not ns.CROSSBAR[key] then return end
-		down[key] = isDown
-		showPress(key)
-	end
-	pad:SetScript("OnGamePadButtonDown", function(self, key) track(self, key, true) end)
-	pad:SetScript("OnGamePadButtonUp", function(self, key) track(self, key, nil) end)
+	pad:SetScript("OnGamePadButtonDown", function(_, key)
+		if ns.CROSSBAR[key] then blink(key) end
+	end)
 	bar.Pad = pad
 end
 
@@ -130,14 +121,13 @@ end
 -- A faint empty slot, which is also what a button whose action can't be read keeps showing.
 local function clearButton(button)
 	button.slot = nil
-	button.restAlpha = ns.CROSSBAR_EMPTY_ALPHA
+	button:SetAlpha(ns.CROSSBAR_EMPTY_ALPHA)
 	button.Icon:SetDesaturated(false)
 	button.Icon:SetVertexColor(unpack(ns.IN_RANGE))
 	button.Icon:SetColorTexture(0, 0, 0, 0.5)
 	button.Cooldown:Clear()
 	button.ChargeCooldown:Clear()
 	button.Count:SetText("")
-	setPressed(button, false)
 end
 
 local function refreshButton(button, key, prefix, hideNumbers)
@@ -147,7 +137,8 @@ local function refreshButton(button, key, prefix, hideNumbers)
 	local action = GetBindingAction(prefix .. key)
 	local slot = ns.SlotForCommand(action)
 	if slot and C_ActionBar.HasAction(slot) then
-		button.slot, button.restAlpha = slot, 1
+		button.slot = slot
+		button:SetAlpha(1)
 		button.Icon:SetTexture(C_ActionBar.GetActionTexture(slot))
 		button.Cooldown:SetHideCountdownNumbers(hideNumbers)
 		updateState(button)
@@ -155,13 +146,11 @@ local function refreshButton(button, key, prefix, hideNumbers)
 		-- Commands off the bars have no cooldown to show, just their face and badge.
 		local face = faced(action)
 		if face then
-			button.restAlpha = 1
+			button:SetAlpha(1)
 			ns.ShowIcon(button.Icon, face)
 			button.Count:SetText(face.badge or "")
 		end
 	end
-	-- Refreshes can land mid-press, e.g. a cast changing its slot; keep a held button looking held.
-	setPressed(button, down[key] == true and prefix == ns.HeldPrefix())
 end
 
 -- Drops land on an 8-unit grid and pull level with a neighbour within 12 on one axis, so sets and buttons
@@ -391,10 +380,22 @@ local function makeButton(parent, key)
 	overlay:SetFrameLevel(button.ChargeCooldown:GetFrameLevel() + 1)
 	button.Flash = overlay:CreateTexture(nil, "OVERLAY")
 	button.Flash:SetAllPoints()
-	button.Flash:SetColorTexture(1, 1, 1, 0.45)
+	button.Flash:SetColorTexture(1, 1, 1, 0.6)
 	button.Flash:SetBlendMode("ADD")
 	button.Flash:AddMaskTexture(button.IconMask)
-	button.Flash:Hide()
+	button.Flash:SetAlpha(0) -- seen only while a blink plays
+	-- A press blinks: the flash fades out, and a faint empty socket shows in full meanwhile. The client runs it.
+	local blink = button:CreateAnimationGroup()
+	local full = blink:CreateAnimation("Alpha")
+	full:SetFromAlpha(1)
+	full:SetToAlpha(1)
+	full:SetDuration(ns.CROSSBAR_BLINK)
+	local fade = blink:CreateAnimation("Alpha")
+	fade:SetTarget(button.Flash)
+	fade:SetFromAlpha(1)
+	fade:SetToAlpha(0)
+	fade:SetDuration(ns.CROSSBAR_BLINK)
+	button.Blink = blink
 	button.Count = overlay:CreateFontString(nil, "OVERLAY", "NumberFontNormal")
 	button.Count:SetPoint("BOTTOMRIGHT", -2, 2)
 	return button
@@ -481,10 +482,7 @@ local function build()
 		-- First shown during login, when Blizzard may not have pointed its main bar buttons at slots yet.
 		RunNextFrame(ns.RefreshCrossbar)
 	end)
-	bar:SetScript("OnHide", function()
-		bar:UnregisterAllEvents()
-		down = {} -- a key let go while hidden must not come back held
-	end)
+	bar:SetScript("OnHide", function() bar:UnregisterAllEvents() end)
 	bar:SetScript("OnEvent", onEvent)
 	bar:Hide()
 end

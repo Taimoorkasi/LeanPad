@@ -219,55 +219,44 @@ describe("Crossbar", function()
 			assert.equal(bar, bar.Pad.parent) -- deaf while the crossbar is hidden
 		end)
 
-		it("press in, flash and turn the rim gold while the pad button is held", function()
+		it("blink: a white flash fading out, with a faint socket shown in full meanwhile", function()
 			local button = buttonFor("PAD3")
+			assert.equal(0, button.Flash.alpha)
+			local full, fade
+			for _, widget in ipairs(w.widgets) do
+				if widget.kind == "Animation" and widget.parent == button.Blink then
+					if widget.target then fade = widget else full = widget end
+				end
+			end
+			assert.same({ "Alpha", 1, 1, ns.CROSSBAR_BLINK }, { full.animationType, full.fromAlpha, full.toAlpha, full.seconds })
+			assert.same({ "Alpha", 1, 0, ns.CROSSBAR_BLINK }, { fade.animationType, fade.fromAlpha, fade.toAlpha, fade.seconds })
+			assert.equal(button.Flash, fade.target)
+			assert.equal(button, button.Blink.parent)
+		end)
+
+		it("blink the pressed button's socket, restarting on every press", function()
 			bar.Pad:Fire("OnGamePadButtonDown", "PAD3")
-			assert.equal(ns.CROSSBAR_PRESSED_SCALE, button.Face.scale)
-			assert.is_true(button.Flash:IsShown())
-			assert.same({ 1, 0.82, 0, 1 }, button.Rim.color)
-			assert.is_false(buttonFor("PAD1").Flash:IsShown())
-			bar.Pad:Fire("OnGamePadButtonUp", "PAD3")
-			assert.equal(1, button.Face.scale)
-			assert.is_false(button.Flash:IsShown())
-			assert.same({ 0.05, 0.05, 0.05, 0.9 }, button.Rim.color)
+			bar.Pad:Fire("OnGamePadButtonDown", "PAD3")
+			assert.equal(2, buttonFor("PAD3").Blink.plays)
+			assert.equal(2, buttonFor("PAD3").Blink.stops)
+			assert.equal(0, buttonFor("PAD1").Blink.plays)
 			assert.has_no.errors(function() bar.Pad:Fire("OnGamePadButtonDown", "PADSYSTEM") end) -- no socket
 		end)
 
-		it("press on an empty slot or a command too, an empty one lit to full while held", function()
+		it("blink on an empty slot or a command too", function()
 			w.bindings.PAD4 = "ACTIONBUTTON1" -- an empty slot
 			bar:Fire("OnEvent", "UPDATE_BINDINGS")
-			local button = buttonFor("PAD4")
-			assert.equal(ns.CROSSBAR_EMPTY_ALPHA, button.alpha)
 			bar.Pad:Fire("OnGamePadButtonDown", "PAD4")
-			assert.is_true(button.Flash:IsShown())
-			assert.equal(1, button.alpha)
-			bar.Pad:Fire("OnGamePadButtonUp", "PAD4")
-			assert.is_false(button.Flash:IsShown())
-			assert.equal(ns.CROSSBAR_EMPTY_ALPHA, button.alpha)
 			bar.Pad:Fire("OnGamePadButtonDown", "PAD1") -- Jump, on no bar
-			assert.is_true(buttonFor("PAD1").Flash:IsShown())
+			assert.equal(1, buttonFor("PAD4").Blink.plays)
+			assert.equal(1, buttonFor("PAD1").Blink.plays)
 		end)
 
-		it("press only the held layer's set when all layers show", function()
+		it("blink only the held layer's set when all layers show", function()
 			ns.SetCrossbarStyle("all")
 			bar.Pad:Fire("OnGamePadButtonDown", "PAD3")
-			assert.is_true(buttonFor("PAD3", 1).Flash:IsShown())
-			assert.is_false(buttonFor("PAD3", 2).Flash:IsShown())
-		end)
-
-		it("stay pressed through a refresh while the pad button is held", function()
-			bar.Pad:Fire("OnGamePadButtonDown", "PAD3")
-			bar:Fire("OnEvent", "ACTIONBAR_SLOT_CHANGED")
-			assert.is_true(buttonFor("PAD3").Flash:IsShown())
-			bar.Pad:Fire("OnGamePadButtonUp", "PAD3")
-			assert.is_false(buttonFor("PAD3").Flash:IsShown())
-		end)
-
-		it("forget held buttons while hidden, since their release goes unheard", function()
-			bar.Pad:Fire("OnGamePadButtonDown", "PAD3")
-			ns.SetCrossbarShown(false)
-			ns.SetCrossbarShown(true)
-			assert.is_false(buttonFor("PAD3").Flash:IsShown())
+			assert.equal(1, buttonFor("PAD3", 1).Blink.plays)
+			assert.equal(0, buttonFor("PAD3", 2).Blink.plays)
 		end)
 
 		it("start hearing the pad after combat when built during it", function()
