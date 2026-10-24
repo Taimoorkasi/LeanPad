@@ -197,7 +197,7 @@ describe("Options page", function()
 	end)
 
 	it("runs the setup actions and opens Blizzard's key bindings", function()
-		button("Reset to default layout..."):Fire("OnClick")
+		button("Reset layout..."):Fire("OnClick")
 		assert.same({ "LEANPAD_SETUP" }, w.popups)
 		button("Undo reset"):Fire("OnClick")
 		assert.is_nil(ns.db.undo)

@@ -181,11 +181,12 @@ local function buildRight(x, y)
 	y = row(x, y, "Hide it", cvarChoice(STICK_HIDES, "GamePadCursorAutoDisableSticks", "2"))
 	y = row(x, y, "Touchpad moves it", cvarCheckbox("GamePadTouchCursorEnable")) + GAP
 	y = heading(x, y, "Setup") + 4
-	local reset = ns.Button(page, "Reset to default layout...", 200, function() StaticPopup_Show("LEANPAD_SETUP") end)
+	local width = (COLUMN - 16) / 3 -- three buttons share the column
+	local reset = ns.Button(page, "Reset layout...", width, function() StaticPopup_Show("LEANPAD_SETUP") end)
 	reset:SetPoint("TOPLEFT", x, -y)
-	local undoReset = ns.Button(page, "Undo reset", 200, function() ns.OutOfCombat(ns.UndoReset) end)
+	local undoReset = ns.Button(page, "Undo reset", width, function() ns.OutOfCombat(ns.UndoReset) end)
 	undoReset:SetPoint("LEFT", reset, "RIGHT", 8, 0)
-	local undo = ns.Button(page, "Undo setup", 200, function() ns.OutOfCombat(ns.Restore) end)
+	local undo = ns.Button(page, "Undo setup", width, function() ns.OutOfCombat(ns.Restore) end)
 	undo:SetPoint("LEFT", undoReset, "RIGHT", 8, 0)
 	note(x, y + 38, "Reset clears your controller bindings and starts over on LeanPad's layout, saving your current layout first. Undo reset brings that layout back; Undo setup returns to how things were before LeanPad.")
 end
