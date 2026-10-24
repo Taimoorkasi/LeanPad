@@ -272,6 +272,22 @@ describe("Crossbar", function()
 			assert.equal(135808, button.Icon.texture)
 		end)
 
+		it("turn red while the target is out of range, and plain again in range or with no range to check", function()
+			local button = buttonFor("PAD3")
+			assert.same(ns.IN_RANGE, button.Icon.vertexColor)
+			w.actions[61].inRange = false
+			bar:Fire("OnEvent", "ACTION_RANGE_CHECK_UPDATE", 61, false, true)
+			assert.same(ns.OUT_OF_RANGE, button.Icon.vertexColor)
+			w.actions[61].inRange = true
+			bar:Fire("OnEvent", "ACTION_RANGE_CHECK_UPDATE", 61, true, true)
+			assert.same(ns.IN_RANGE, button.Icon.vertexColor)
+			w.actions[61].inRange = false
+			bar:Fire("OnEvent", "ACTION_RANGE_CHECK_UPDATE", 61, false, true)
+			w.bindings.PAD3 = "ACTIONBUTTON1" -- an empty slot never stays red
+			bar:Fire("OnEvent", "UPDATE_BINDINGS")
+			assert.same(ns.IN_RANGE, button.Icon.vertexColor)
+		end)
+
 		it("empty a button whose action is gone", function()
 			w.bindings.PAD3 = "ACTIONBUTTON1" -- a real button whose slot is empty
 			bar:Fire("OnEvent", "UPDATE_BINDINGS")

@@ -28,9 +28,15 @@ ns.CROSSBAR_EMPTY_ALPHA = 0.35
 local CIRCLE = "Interface\\CharacterFrame\\TempPortraitAlphaMask"
 -- Rim colours: dark at rest, gold while pressed or, in the editor, hovered.
 ns.RIM, ns.RIM_LIT = { 0.05, 0.05, 0.05, 0.9 }, { 1, 0.82, 0, 1 }
+-- Icon tints: plain, or red while the target is out of the action's range.
+ns.IN_RANGE, ns.OUT_OF_RANGE = { 1, 1, 1 }, { 1, 0.25, 0.25 }
 
 -- Cooldowns, charges and usability change often; only these refresh the filled buttons' state.
-local STATE_EVENTS = { ACTIONBAR_UPDATE_COOLDOWN = true, ACTIONBAR_UPDATE_USABLE = true, ACTIONBAR_UPDATE_STATE = true, SPELL_UPDATE_CHARGES = true }
+-- Range changes come from the checks Blizzard's own bar buttons enable for these same slots.
+local STATE_EVENTS = {
+	ACTIONBAR_UPDATE_COOLDOWN = true, ACTIONBAR_UPDATE_USABLE = true, ACTIONBAR_UPDATE_STATE = true, SPELL_UPDATE_CHARGES = true,
+	ACTION_RANGE_CHECK_UPDATE = true,
+}
 -- Blizzard re-points its bar buttons on these, possibly after LeanPad's handler runs.
 local PAGE_EVENTS = { ACTIONBAR_PAGE_CHANGED = true, UPDATE_BONUS_ACTIONBAR = true, PLAYER_ENTERING_WORLD = true }
 local LAYOUT_EVENTS = { "UPDATE_BINDINGS", "MODIFIER_STATE_CHANGED", "ACTIONBAR_SLOT_CHANGED", "CVAR_UPDATE", "GAME_PAD_ACTIVE_CHANGED" }
@@ -84,6 +90,8 @@ local function updateState(button)
 	setDuration(button.ChargeCooldown, C_ActionBar.GetActionChargeDuration(slot))
 	button.Count:SetText(C_ActionBar.GetActionDisplayCount(slot))
 	button.Icon:SetDesaturated(not C_ActionBar.IsUsableAction(slot))
+	-- Red when the target is out of range; nil, no range to check, stays plain.
+	button.Icon:SetVertexColor(unpack(C_ActionBar.IsActionInRange(slot) == false and ns.OUT_OF_RANGE or ns.IN_RANGE))
 end
 
 local function faced(action)
@@ -109,6 +117,7 @@ local function clearButton(button)
 	button.slot, button.source = nil, nil
 	button.restAlpha = ns.CROSSBAR_EMPTY_ALPHA
 	button.Icon:SetDesaturated(false)
+	button.Icon:SetVertexColor(unpack(ns.IN_RANGE))
 	button.Icon:SetColorTexture(0, 0, 0, 0.5)
 	button.Cooldown:Clear()
 	button.ChargeCooldown:Clear()

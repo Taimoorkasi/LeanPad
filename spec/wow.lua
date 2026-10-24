@@ -197,6 +197,7 @@ function M.reset()
 		GetActionChargeDuration = function(slot) return action(slot).charge end,
 		GetActionDisplayCount = function(slot) return action(slot).count end,
 		IsUsableAction = function(slot) return action(slot).usable end,
+		IsActionInRange = function(slot) return action(slot).inRange end,
 		GetActionText = function(slot) return action(slot).text end,
 	}
 	GetActionInfo = function(slot) return action(slot).kind, action(slot).id end
