@@ -1,4 +1,4 @@
-local _, ns = ...
+local addonName, ns = ...
 
 -- LeanPad's own settings page inside the controller window. Blizzard's Settings panel stays the way in.
 local C = ns.COLORS
@@ -76,6 +76,81 @@ end
 
 local function keyChoice(keys, cvar)
 	return choice(ns.KeyOptions(keys), function() return GetCVar(cvar) or "none" end, function(value) ns.WriteCVar(cvar, value) end)
+end
+
+-- Where Toggle gamepad cursor puts the cursor, as an x, y offset from the screen's centre in UI units, the way
+-- frames are placed. Both blank leaves it where it was; one blank reads as 0.
+-- Pick on screen: the screen dims, lines cross at its centre and a ring marks the spot set now; a left click,
+-- by mouse or the gamepad cursor, sets the spot there. A right click or Escape leaves it as it was.
+local picker
+local function pickSpot(onPicked)
+	if not picker then
+		picker = CreateFrame("Button", "LeanPadCursorPicker", UIParent)
+		picker:SetAllPoints(UIParent)
+		picker:SetFrameStrata("FULLSCREEN_DIALOG")
+		picker:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+		local shade = picker:CreateTexture(nil, "BACKGROUND")
+		shade:SetAllPoints()
+		shade:SetColorTexture(0, 0, 0, 0.5)
+		for _, across in ipairs({ true, false }) do
+			local line = picker:CreateTexture(nil, "ARTWORK")
+			line:SetColorTexture(C.accent[1], C.accent[2], C.accent[3], 0.6)
+			line:SetPoint("CENTER")
+			if across then line:SetSize(4000, 1) else line:SetSize(1, 4000) end
+		end
+		picker.Marker = picker:CreateTexture(nil, "OVERLAY")
+		picker.Marker:SetTexture("Interface\\AddOns\\" .. addonName .. "\\Art\\Ring")
+		picker.Marker:SetVertexColor(unpack(C.accent))
+		picker.Marker:SetSize(36, 36)
+		local hint = ns.Text(picker, 16, C.text, "CENTER")
+		hint:SetPoint("TOP", 0, -140)
+		hint:SetText("Click where Toggle gamepad cursor should put the cursor. The lines cross at the screen's centre.\nRight-click or Escape cancels.")
+		table.insert(UISpecialFrames, picker:GetName())
+	end
+	local spot = ns.db.cursorStart
+	picker.Marker:SetShown(spot ~= nil)
+	picker.Marker:SetPoint("CENTER", UIParent, "CENTER", spot and spot[1] or 0, spot and spot[2] or 0)
+	picker:SetScript("OnClick", function(self, button)
+		self:Hide()
+		if button ~= "LeftButton" then return end
+		local scale, x, y = UIParent:GetEffectiveScale(), GetCursorPosition()
+		onPicked(math.floor(x / scale - UIParent:GetWidth() / 2 + 0.5), math.floor(y / scale - UIParent:GetHeight() / 2 + 0.5))
+	end)
+	picker:Show()
+end
+
+local function cursorStartInput()
+	local holder = CreateFrame("Frame", nil, page)
+	holder:SetSize(220, 28)
+	local boxes = {}
+	local function commit()
+		local x, y = tonumber(boxes[1]:GetText()), tonumber(boxes[2]:GetText())
+		ns.db.cursorStart = (x or y) and { x or 0, y or 0 } or nil
+		holder:Refresh()
+		ns.Saved()
+	end
+	function holder:Refresh()
+		for _, box in ipairs(boxes) do box:Refresh() end
+	end
+	for axis = 1, 2 do
+		boxes[axis] = ns.Input(holder, 64, function()
+			local spot = ns.db.cursorStart
+			return spot and tostring(spot[axis]) or ""
+		end, commit)
+		boxes[axis]:SetPoint("RIGHT", holder, "RIGHT", (axis - 3) * 72, 0)
+	end
+	holder.X, holder.Y = boxes[1], boxes[2]
+	holder.Pick = ns.Button(holder, "Pick...", 64, function()
+		pickSpot(function(x, y)
+			ns.db.cursorStart = { x, y }
+			holder:Refresh()
+			ns.Saved()
+		end)
+	end, false, "Pick the spot on screen: lines show the centre, a ring the spot set now.")
+	holder.Pick:SetHeight(28)
+	holder.Pick:SetPoint("RIGHT")
+	table.insert(controls, holder)
+	return holder
 end
 
 local function cvarCheckbox(cvar)
@@ -193,6 +268,7 @@ local function buildRight(x, y)
 		y = row(x, y, click[2], keyChoice(ns.CLICK_KEYS, click[1]))
 	end
 	y = row(x, y, "Speed", cvarChoice(SPEEDS, "GamePadCursorSpeedMax", "1"))
+	y = row(x, y, "Toggle starts it at x, y", cursorStartInput())
 	y = row(x, y, "Show it when a window opens", cvarCheckbox("GamePadCursorAutoEnable"))
 	y = row(x, y, "Hide it", cvarChoice(STICK_HIDES, "GamePadCursorAutoDisableSticks", "2"))
 	row(x, y, "Touchpad moves it", cvarCheckbox("GamePadTouchCursorEnable"))

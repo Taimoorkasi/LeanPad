@@ -12,6 +12,19 @@ BINDING_NAME_LEANPAD_TOGGLE_CURSOR = "Toggle gamepad cursor"
 -- The minimap's addon compartment entry, named in the TOC.
 function LeanPad_OnCompartmentClick() ns.ToggleController() end
 
+-- The Toggle gamepad cursor binding. Turning the cursor on puts it on the start spot set in settings, an x, y
+-- offset in UI units from the screen's centre: the client lets addon code move the cursor once per pad press, and
+-- this runs on one. SetCursorPosition takes fractions of the screen from the bottom left; UI units pinned the
+-- cursor to the top-right corner in game.
+function LeanPad_ToggleCursor()
+	local on = not IsGamePadCursorControlEnabled()
+	SetGamePadCursorControl(on)
+	local spot = ns.db.cursorStart
+	if on and type(spot) == "table" then
+		SetCursorPosition(0.5 + spot[1] / UIParent:GetWidth(), 0.5 + spot[2] / UIParent:GetHeight())
+	end
+end
+
 SLASH_LEANPAD1 = "/lp"
 SLASH_LEANPAD2 = "/leanpad"
 SlashCmdList.LEANPAD = function(msg)

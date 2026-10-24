@@ -146,6 +146,50 @@ describe("Options page", function()
 		assert.is_true(ns.CrossbarLocked())
 	end)
 
+	it("takes the cursor's start spot as x, y from the screen's centre; blank keeps it where it was", function()
+		local start = find("Frame", function(widget) return widget.parent == page and widget.X end)
+		assert.equal("", start.X:GetText())
+		start.X:SetText("200")
+		start.X:Fire("OnEnterPressed") -- Enter drops focus, which commits
+		assert.same({ 200, 0 }, ns.db.cursorStart) -- a blank axis reads as 0
+		assert.equal("0", start.Y:GetText())
+		start.Y:SetText("-150")
+		start.Y:ClearFocus()
+		assert.same({ 200, -150 }, ns.db.cursorStart)
+		start.Y:SetText("9")
+		start.Y:Fire("OnEscapePressed") -- puts back what was there
+		assert.equal("-150", start.Y:GetText())
+		assert.same({ 200, -150 }, ns.db.cursorStart)
+		start.X:SetText("")
+		start.Y:SetText("abc")
+		start.Y:ClearFocus()
+		assert.is_nil(ns.db.cursorStart)
+		assert.equal("", start.X:GetText())
+	end)
+
+	it("picks the cursor's start spot on screen: centre lines, a ring on the spot set now, a click sets it", function()
+		local start = find("Frame", function(widget) return widget.parent == page and widget.X end)
+		UIParent.width, UIParent.height, UIParent.effectiveScale = 1920, 1080, 0.5
+		start.Pick:Fire("OnClick")
+		local picker = LeanPadCursorPicker
+		assert.is_true(picker:IsShown())
+		assert.is_false(picker.Marker:IsShown()) -- no spot set yet
+		assert.equal("LeanPadCursorPicker", UISpecialFrames[#UISpecialFrames]) -- Escape closes it
+		w.mouseAt = { 600, 135 } -- screen pixels; at scale 0.5, UI point 1200, 270: 240 right of centre, 270 below
+		picker:Fire("OnClick", "LeftButton")
+		assert.is_false(picker:IsShown())
+		assert.same({ 240, -270 }, ns.db.cursorStart)
+		assert.equal("240", start.X:GetText())
+		assert.equal("-270", start.Y:GetText())
+		start.Pick:Fire("OnClick")
+		assert.is_true(picker.Marker:IsShown())
+		assert.same({ "CENTER", UIParent, "CENTER", 240, -270 }, picker.Marker.point)
+		w.mouseAt = { 0, 0 }
+		picker:Fire("OnClick", "RightButton") -- cancels
+		assert.is_false(picker:IsShown())
+		assert.same({ 240, -270 }, ns.db.cursorStart)
+	end)
+
 	it("tunes the native cursor", function()
 		local speed = controlFor("Speed")
 		assert.equal("Normal", speed.Label:GetText())
