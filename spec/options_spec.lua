@@ -208,6 +208,15 @@ describe("Options page", function()
 		assert.same({ Settings.KEYBINDINGS_CATEGORY_ID }, w.opened)
 	end)
 
+	it("names the bar addon that runs the action bars, if any", function()
+		assert.is_nil(find("FontString", function(widget) return widget.parent == page and (widget.text or ""):find("runs your action bars") end))
+		ns, w = wow.boot(nil)
+		w.addons.Dominos = true
+		ns.OpenOptions()
+		page = LeanPadControllerFrame.Options
+		assert.is_truthy(find("FontString", function(widget) return widget.parent == page and widget.text == ns.BarAddonNote("Dominos") end))
+	end)
+
 	it("has nothing to refresh before the page exists", function()
 		local fresh = wow.boot(nil)
 		assert.has_no.errors(fresh.RefreshOptions)

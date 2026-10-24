@@ -596,6 +596,33 @@ describe("Controller", function()
 			assert.equal("", strip.Note:GetText())
 		end)
 
+		it("picks which form's Action Bar 1 page Base edits, back to the page in play once closed", function()
+			w.forms = { { spell = 5487, icon = 1 }, { spell = 768, icon = 2 } }
+			ns.db.formPages = { [7] = { spell = 768 } }
+			w.actions[73] = { kind = "spell", id = 99, texture = 7373 }
+			open()
+			local page = editor.Toolbar.Page
+			assert.is_true(page:IsShown())
+			assert.equal("Base: Normal", page.Label:GetText())
+			page:Fire("OnClick")
+			assert.same({ "Base buttons change with your form; the other layers stay the same in every form." }, w.menu.root.titles)
+			assert.same({ "Normal", "spell:768" }, labels(w.menu.root))
+			wow.entry(w.menu.root, "spell:768").callback()
+			assert.equal("Base: spell:768", page.Label:GetText())
+			press("PAD3")
+			assert.equal("spell:99", strip.Name:GetText())
+			assert.equal("Action Bar 1, slot 1, spell:768", strip.Place:GetText())
+			ns.ToggleController()
+			assert.equal(1, ns.MainBarPage())
+		end)
+
+		it("hides the page picker for a class without forms, and says how to add one", function()
+			open()
+			assert.is_false(editor.Toolbar.Page:IsShown())
+			editor.Toolbar.Page:Fire("OnClick")
+			assert.equal("Shift into a form once to add it here.", w.menu.root.titles[2])
+		end)
+
 		it("warns that a button on a turned-off bar does nothing", function()
 			open()
 			w.held.shift = true
@@ -763,6 +790,69 @@ describe("Controller", function()
 			assert.is_true(frame:IsShown())
 			ns.ToggleController()
 			assert.is_false(frame:IsShown())
+		end)
+	end)
+	describe("form pages", function()
+		local watcher
+		local function shift(form, bonus, stealthed)
+			w.form, w.bar.bonus, w.stealthed = form, bonus, stealthed
+			watcher:Fire("OnEvent", "UPDATE_BONUS_ACTIONBAR")
+		end
+
+		before_each(function()
+			w.forms = { { spell = 5487, icon = 1 }, { spell = 768, icon = 2 }, { spell = 783, icon = 3 } }
+			for _, widget in ipairs(w.widgets) do
+				if widget.events.UPDATE_BONUS_ACTIONBAR and widget.events.PLAYER_ENTERING_WORLD then watcher = widget end
+			end
+		end)
+
+		it("learns each form's Action Bar 1 page as the player shifts, and names pages by it", function()
+			shift(0, nil) -- caster
+			shift(0, 7) -- a bonus bar with no form to name it by
+			shift(3, nil) -- Travel Form without a page of its own
+			w.bar.page = 2
+			shift(1, 9) -- a page picked by hand, not the form's
+			assert.is_nil(ns.db.formPages)
+			w.bar.page = 1
+			shift(2, 7)
+			shift(2, 8, true) -- Prowl
+			shift(1, 9)
+			assert.same({ [7] = { spell = 768 }, [8] = { spell = 768, stealth = true }, [9] = { spell = 5487 } }, ns.db.formPages)
+			assert.equal("Normal", ns.PageName(1))
+			assert.equal("spell:768 (stealth)", ns.PageName(8))
+			assert.equal("Page 12", ns.PageName(12))
+			assert.same({ { 1, "Normal" }, { 7, "spell:768" }, { 8, "spell:768 (stealth)" }, { 9, "spell:5487" } }, ns.PageOptions())
+			assert.equal("Action Bar 1, slot 5, spell:5487", ns.ActionPlace("ACTIONBUTTON5"))
+		end)
+	end)
+
+	describe("bar addons", function()
+		after_each(function() _G.ElvUI_Bar1 = nil end)
+
+		it("are found by ElvUI's own bars or by name", function()
+			assert.is_nil(ns.BarAddon())
+			w.addons.Dominos = true
+			assert.equal("Dominos", ns.BarAddon())
+			_G.ElvUI_Bar1 = {}
+			assert.equal("ElvUI", ns.BarAddon())
+		end)
+
+		it("are named once a session, with ElvUI's bar numbers for the layers", function()
+			wow.fire("PLAYER_ENTERING_WORLD")
+			assert.is_nil(w.printed[1])
+			ns, w = wow.boot(nil)
+			_G.ElvUI_Bar1 = {}
+			wow.fire("PLAYER_ENTERING_WORLD")
+			assert.equal("LeanPad: " .. ns.BarAddonNote("ElvUI"), w.printed[#w.printed])
+			assert.matches("its Bars 6, 5 and 3", ns.BarAddonNote("ElvUI"))
+			assert.matches("^Bartender4 runs your action bars", ns.BarAddonNote("Bartender4"))
+		end)
+
+		it("make Blizzard's turned-off bars no reason to warn", function()
+			w.barsShown[1] = false
+			assert.equal(2, ns.BarOff("MULTIACTIONBAR1BUTTON1"))
+			w.addons.Bartender4 = true
+			assert.is_nil(ns.BarOff("MULTIACTIONBAR1BUTTON1"))
 		end)
 	end)
 end)

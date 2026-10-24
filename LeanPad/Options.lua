@@ -131,6 +131,8 @@ local function buildLeft(x, y)
 	for i, cvar in ipairs(SOFT_TARGETS) do
 		y = row(x, y, SOFT_TARGET_LABELS[i], cvarChoice(softTargetOptions(), cvar, "0"))
 	end
+	local addon = ns.BarAddon()
+	if addon then note(x, y + GAP, ns.BarAddonNote(addon)) end
 end
 
 local function crossbarChoice()

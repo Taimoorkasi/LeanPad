@@ -119,13 +119,73 @@ local function mainBarPage()
 	return page
 end
 
+-- The editor can show another form's page of Action Bar 1 than the one in play; nil follows the game.
+local viewedPage
+function ns.MainBarPage() return viewedPage or mainBarPage() end
+
 -- The action slot a binding command fires. Action Bar 1 follows the page; Bars 2-8 keep theirs, read off the button.
 function ns.SlotForCommand(command)
 	local index = command:match("^ACTIONBUTTON(%d+)$")
-	if index then return tonumber(index) + (mainBarPage() - 1) * NUM_ACTIONBAR_BUTTONS end
+	if index then return tonumber(index) + (ns.MainBarPage() - 1) * NUM_ACTIONBAR_BUTTONS end
 	local button = ns.ButtonForCommand(command)
 	return button and button.action
 end
+
+-- No API maps forms to their pages, so LeanPad learns each as the player shifts: the page's form spell, and
+-- whether stealth chose it, as Prowl picks its own page in Cat Form.
+local function learnPage()
+	local page = mainBarPage()
+	if not (C_ActionBar.HasBonusActionBar() and page == C_ActionBar.GetBonusBarIndex()) then return end
+	local form = GetShapeshiftForm()
+	local spell = form > 0 and select(4, GetShapeshiftFormInfo(form))
+	if not spell then return end
+	ns.db.formPages = ns.db.formPages or {}
+	ns.db.formPages[page] = { spell = spell, stealth = IsStealthed() or nil }
+end
+local pageWatcher = CreateFrame("Frame")
+pageWatcher:RegisterEvent("UPDATE_BONUS_ACTIONBAR")
+pageWatcher:RegisterEvent("PLAYER_ENTERING_WORLD")
+pageWatcher:SetScript("OnEvent", learnPage)
+
+-- An Action Bar 1 page by name: Normal, a learned form such as Cat Form (stealth), or its number.
+function ns.PageName(page)
+	local form = (ns.db.formPages or {})[page]
+	if form then return (C_Spell.GetSpellName(form.spell) or "?") .. (form.stealth and " (stealth)" or "") end
+	return page == 1 and "Normal" or ("Page " .. page)
+end
+
+-- Normal, then every learned form's page, for the editor's picker.
+function ns.PageOptions()
+	local pages = {}
+	for page in pairs(ns.db.formPages or {}) do
+		if page ~= 1 then table.insert(pages, page) end
+	end
+	table.sort(pages)
+	local options = { { 1, ns.PageName(1) } }
+	for _, page in ipairs(pages) do table.insert(options, { page, ns.PageName(page) }) end
+	return options
+end
+
+-- A bar addon that runs the action bars in Blizzard's place: LeanPad's bindings fire its buttons, and Blizzard's
+-- Show Action Bar options mean nothing. ElvUI makes its bars only while its action bars are on.
+function ns.BarAddon()
+	if _G.ElvUI_Bar1 then return "ElvUI" end
+	for _, name in ipairs({ "Bartender4", "Dominos" }) do
+		if C_AddOns.IsAddOnLoaded(name) then return name end
+	end
+end
+
+-- ElvUI binds Blizzard's Action Bar 2-4 commands to its Bars 6, 5 and 3, on the same slots (ElvUI's barDefaults).
+function ns.BarAddonNote(addon)
+	if addon == "ElvUI" then
+		return "ElvUI runs your action bars. LeanPad's Base layer is its Bar 1, which changes with your form; the other layers are its Bars 6, 5 and 3 (Action Bars 2, 3 and 4), the same in every form."
+	end
+	return addon .. " runs your action bars; LeanPad's buttons fire the bars it puts on Blizzard's Action Bar 1-4 bindings."
+end
+EventUtil.RegisterOnceFrameEventAndCallback("PLAYER_ENTERING_WORLD", function()
+	local addon = ns.BarAddon()
+	if addon then print("LeanPad: " .. ns.BarAddonNote(addon)) end
+end)
 
 -- What a bar slot holds, by name, so the editor says Blink rather than Action Button 2.
 local function slotName(slot)
@@ -449,13 +509,18 @@ function ns.ActionPlace(action)
 	local bar, slot = action:match("^MULTIACTIONBAR(%d)BUTTON(%d+)$")
 	if bar then return ("Action Bar %d, slot %s"):format(bar + 1, slot) end
 	slot = action:match("^ACTIONBUTTON(%d+)$")
-	if slot then return ("Action Bar 1, slot %s"):format(slot) end
+	if slot then
+		local page = ns.MainBarPage()
+		return ("Action Bar 1, slot %s"):format(slot) .. (page ~= 1 and (", " .. ns.PageName(page)) or "")
+	end
 	return "Key binding command"
 end
 
 -- Action Bars 2-8 can be turned off in Options, and then their bindings fire nothing. GetActionBarToggles
 -- gives their shown states from Bar 2 up, the order of MULTIACTIONBAR1-7. Returns the bar's number when off.
+-- A bar addon's bars ignore those toggles.
 function ns.BarOff(action)
+	if ns.BarAddon() then return end
 	local bar = action:match("^MULTIACTIONBAR(%d)BUTTON")
 	if bar and not select(bar, GetActionBarToggles()) then return bar + 1 end
 end
@@ -673,6 +738,8 @@ local function refresh()
 	end
 	toolbar.Modifiers:SetText(#modifiers > 0 and table.concat(modifiers, "   ") or "none")
 	toolbar.Device:SetText(deviceLine())
+	toolbar.Page:SetShown(GetNumShapeshiftForms() > 0 or #ns.PageOptions() > 1)
+	toolbar.Page:Refresh()
 	prompt.Text:SetText(promptText())
 	status:SetText(GetCurrentBindingSet() == Enum.BindingSet.Character
 		and "Changes save to this character's key bindings" or "Changes save to your account's key bindings")
@@ -792,7 +859,19 @@ local function buildEditor()
 	editor.Toolbar = toolbar
 	toolbar.Device = ns.Text(editor, 13, C.muted)
 	toolbar.Device:SetPoint("LEFT", editor, "TOPLEFT", MARGIN, -TOOLBAR_Y)
-	local change = ns.Button(editor, "Change...", 84, function(self) MenuUtil.CreateContextMenu(self, layerMenu) end)
+	-- Which page of Action Bar 1 Base edits: the one in play, or another form's, set up without shifting.
+	toolbar.Page = ns.Dropdown(editor, 220, function() return "Base: " .. ns.PageName(ns.MainBarPage()) end, function(root)
+		root:CreateTitle("Base buttons change with your form; the other layers stay the same in every form.")
+		local options = ns.PageOptions()
+		ns.Radios(root, options, ns.MainBarPage, function(page)
+			viewedPage = page
+			refresh()
+			ns.RefreshCrossbar()
+		end)
+		if #options == 1 then root:CreateTitle("Shift into a form once to add it here.") end
+	end)
+	toolbar.Page:SetPoint("LEFT", toolbar.Device, "RIGHT", 16, 0)
+	local change =ns.Button(editor, "Change...", 84, function(self) MenuUtil.CreateContextMenu(self, layerMenu) end)
 	change:SetHeight(28)
 	change:SetPoint("RIGHT", editor, "TOPRIGHT", -MARGIN, -TOOLBAR_Y)
 	toolbar.Modifiers = ns.Text(editor, 13, C.text)
@@ -906,6 +985,8 @@ local function build()
 		frame:EnableGamePadButton(false)
 		frame:SetScript("OnGamePadButtonDown", nil)
 		selected = nil
+		viewedPage = nil -- back to the page in play, on the crossbar too
+		ns.RefreshCrossbar()
 		ns.ShowPage("editor")
 	end)
 	frame:SetScript("OnEvent", onEvent)

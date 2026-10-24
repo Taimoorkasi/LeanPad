@@ -4,6 +4,11 @@ All notable changes to LeanPad are documented here. The format is based on [Keep
 
 ## [Unreleased]
 
+### Added
+
+- **Form pages in the editor.** Action Bar 1 has its own page for each form or stance, such as Cat Form, Bear Form or Prowl, and Base edits the one in play. A *Base* picker by the controller name shows which, and lets you set up another form's buttons without shifting into it. LeanPad learns each form's page the first time you shift into it.
+- **Bar addons named.** With ElvUI, Bartender4 or Dominos running the action bars, LeanPad says so at login and on the settings page; for ElvUI it names the bars each layer uses (Bars 1, 6, 5 and 3). The turned-off-bar warning stays quiet then, since Blizzard's Show Action Bar options don't apply.
+
 ### Fixed
 
 - Action Bar 1 follows your form, stance, vehicle or override bar in the editor and on the crossbar, so a spell placed in Cat Form lands on Cat Form's page. LeanPad now reads the page from the game, not from Blizzard's bar button, which stays on a stale page when a bar addon such as ElvUI runs the bars.

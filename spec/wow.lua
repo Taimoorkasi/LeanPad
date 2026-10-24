@@ -111,7 +111,11 @@ function Widget:Fire(script, ...) return self.scripts[script](self, ...) end
 -- A fake Blizzard menu description: records titles and buttons so specs can read and click them.
 local function newMenuDescription(text, callback)
 	local description = { text = text, callback = callback, entries = {} }
-	function description:CreateTitle(title) self.title = title end
+	function description:CreateTitle(title)
+		self.title = self.title or title
+		self.titles = self.titles or {}
+		table.insert(self.titles, title)
+	end
 	function description:CreateButton(label, onClick)
 		local entry = newMenuDescription(label, onClick)
 		table.insert(self.entries, entry)
@@ -135,6 +139,7 @@ function M.reset()
 		glyphs = {}, devices = {}, deviceIDs = {}, power = 5, timers = {}, callbacks = {}, pickups = {}, cleared = 0,
 		barsShown = { true, true, true, true, true, true, true }, -- Action Bars 2-8, as GetActionBarToggles returns them
 		bar = { page = 1 },
+		forms = {}, form = 0, addons = {},
 		-- A paladin's spellbook: General and the active spec's tab show; an off-spec tab and a hidden one don't.
 		skillLines = {
 			{ name = "General", iconID = 1, itemIndexOffset = 0, numSpellBookItems = 2 },
@@ -229,6 +234,12 @@ function M.reset()
 	}
 	GetActionInfo = function(slot) return action(slot).kind, action(slot).id end
 	C_Spell = { GetSpellName = function(id) return "spell:" .. id end }
+	-- Forms in w.forms, each { spell, icon }, the one taken in w.form (0 for none), and stealth in w.stealthed.
+	GetNumShapeshiftForms = function() return #w.forms end
+	GetShapeshiftForm = function() return w.form end
+	GetShapeshiftFormInfo = function(index) return w.forms[index].icon, index == w.form, true, w.forms[index].spell end
+	IsStealthed = function() return w.stealthed end
+	C_AddOns = { IsAddOnLoaded = function(name) return w.addons[name] == true end }
 	C_Item = { GetItemNameByID = function(id) return "item:" .. id end }
 	GetCVarBool = function(name) return w.cvars[name] == "1" end
 	RunNextFrame = function(callback) table.insert(w.nextFrame, callback) end
