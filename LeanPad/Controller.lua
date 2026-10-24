@@ -297,6 +297,12 @@ local function padBound(command)
 	return false
 end
 
+-- The cursor's clicks only work while the cursor is up, so something must bring it up: a pad button on Toggle
+-- gamepad cursor, or Blizzard showing it when a window such as loot opens.
+function ns.CursorReachable()
+	return GetCVar("GamePadCursorAutoEnable") == "1" or padBound("LEANPAD_TOGGLE_CURSOR")
+end
+
 -- The bar slot a binding fires, binding the button to the first free slot of its layer's own bar when it has none.
 function ns.EnsureSlot(binding)
 	local slot = ns.SlotForCommand(GetBindingAction(binding))
@@ -560,6 +566,10 @@ local function note(key, action)
 	local off = ns.BarOff(action)
 	if off then return ("|cffff5050Action Bar %d is turned off, so this button does nothing.|r Turn it on in %s."):format(off, BARS_OPTION) end
 	if action == "LEANPAD_TOGGLE_CURSOR" then return "Keeps the gamepad cursor reachable." end
+	local clicks = GetCVar("GamePadCursorLeftClick") == key or GetCVar("GamePadCursorRightClick") == key
+	if clicks and not ns.CursorReachable() then
+		return "|cffff5050A cursor click, but nothing brings the cursor up, so it does nothing.|r Bind Toggle gamepad cursor to a button, or turn on Show it when a window opens in Settings."
+	end
 	if GetCVar("GamePadCursorLeftClick") == key then return "Also the cursor's left-click." end
 	if GetCVar("GamePadCursorRightClick") == key then return "Also the cursor's right-click." end
 	return ""

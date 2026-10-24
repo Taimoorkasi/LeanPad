@@ -596,6 +596,21 @@ describe("Controller", function()
 			assert.equal("", strip.Note:GetText())
 		end)
 
+		it("warns that the cursor's clicks do nothing while nothing brings the cursor up", function()
+			w.bindings.PADRSTICK = "TURNORACTION"
+			w.cvars.GamePadCursorAutoEnable = "0"
+			open()
+			press("PAD1")
+			assert.matches("nothing brings the cursor up", strip.Note:GetText())
+			w.cvars.GamePadCursorAutoEnable = "1"
+			press("PAD1")
+			assert.equal("Also the cursor's left-click.", strip.Note:GetText())
+			w.cvars.GamePadCursorAutoEnable = "0"
+			w.bindings.PADDLEFT = "LEANPAD_TOGGLE_CURSOR"
+			press("PAD2")
+			assert.equal("Also the cursor's right-click.", strip.Note:GetText())
+		end)
+
 		it("picks which form's Action Bar 1 page Base edits, back to the page in play once closed", function()
 			w.forms = { { spell = 5487, icon = 1 }, { spell = 768, icon = 2 } }
 			ns.db.formPages = { [7] = { spell = 768 } }

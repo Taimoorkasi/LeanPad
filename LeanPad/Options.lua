@@ -174,7 +174,15 @@ local function buildRight(x, y)
 	end)
 	table.insert(controls, mouse)
 	y = row(x, y, "Mouse: drop spells on it, see tooltips", mouse) + GAP
-	y = heading(x, y, "Cursor")
+	-- The heading says so when nothing can bring the cursor up, since its clicks would then do nothing.
+	local cursorTitle = ns.Text(page, 13, C.text)
+	cursorTitle:SetPoint("TOPLEFT", x, -y)
+	local warning = { Refresh = function()
+		cursorTitle:SetText("Cursor" .. (ns.CursorReachable() and "" or "   |cffff5050nothing brings it up: tick Show it when a window opens|r"))
+	end }
+	warning.Refresh()
+	table.insert(controls, warning)
+	y = y + 20
 	for _, click in ipairs(CLICKS) do
 		y = row(x, y, click[2], keyChoice(ns.CLICK_KEYS, click[1]))
 	end
