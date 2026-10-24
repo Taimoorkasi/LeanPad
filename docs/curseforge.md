@@ -10,6 +10,8 @@ Press a button on your pad and see what it does on every layer. Pick a spell or 
 
 ![The LeanPad controller editor](https://raw.githubusercontent.com/Taimoorkasi/LeanPad/main/docs/images/easy-binding-setup.png)
 
+![The LeanPad editor's Change action menu listing Guardian spells](https://raw.githubusercontent.com/Taimoorkasi/LeanPad/main/docs/images/easy-binding-mapping.png)
+
 ## Easy to understand settings
 
 Layer buttons, which pad to use, Xbox or PlayStation labels, the cursor, the crossbar and soft targeting, all on one page next to the editor.

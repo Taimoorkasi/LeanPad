@@ -10,7 +10,11 @@ Your actions stay on Blizzard's own action bars, so Blizzard draws the cooldowns
 
 **Easy binding setup.** Press a button on your pad and see what it does on every layer, then change it in one step.
 
-![The LeanPad controller editor with Y selected](docs/images/easy-binding-setup.png)
+![The LeanPad controller editor with Circle selected, showing Swipe on Action Bar 1 and its other layers](docs/images/easy-binding-setup.png)
+
+**Easy binding mapping.** Pick a spell or macro straight from your spellbook, by spec, and LeanPad puts it on the button for you.
+
+![The LeanPad editor's Change action menu listing Guardian spells](docs/images/easy-binding-mapping.png)
 
 **Easy to understand settings.** Layer buttons, pad, labels, cursor, crossbar and soft targeting on one page next to the editor.
 
