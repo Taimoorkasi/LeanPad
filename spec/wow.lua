@@ -10,7 +10,7 @@ local NO_OP_METHODS = {
 	"SetSize", "SetWidth", "SetHeight", "SetJustifyH", "SetToplevel", "SetClampedToScreen", "SetMovable", "RegisterForDrag",
 	"SetThickness", "AddMaskTexture", "SetBlendMode", "SetBackdrop", "SetBackdropBorderColor", "StartMoving", "StopMovingOrSizing",
 	"SetAllPoints", "SetDrawSwipe", "SetFont", "SetTextColor", "SetNormalFontObject", "SetHighlightFontObject", "SetDisabledFontObject",
-	"SetNormalAtlas", "SetHighlightAtlas", "SetTextInsets", "SetAutoFocus", "SetMaxLetters",
+	"SetNormalAtlas", "SetHighlightAtlas", "SetTextInsets", "SetAutoFocus", "SetMaxLetters", "SetSpacing",
 }
 
 local Widget = {}

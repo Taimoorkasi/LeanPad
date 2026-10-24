@@ -11,7 +11,8 @@ local SCALES = { { "0.6", "60%" }, { "0.8", "80%" }, { "1", "100%" }, { "1.2", "
 local OPACITIES = { { "1", "100%" }, { "0.8", "80%" }, { "0.6", "60%" }, { "0.4", "40%" } }
 local PLAYSTYLES = { { "manual", "Keep my own settings" }, { "auto", "Auto" }, { "tank", "Tank" }, { "melee", "Melee" }, { "ranged", "Ranged" }, { "healer", "Healer" } }
 local SPEEDS = { { "0.6", "Slow" }, { "1", "Normal" }, { "1.5", "Fast" } }
-local STICK_HIDES = { { "0", "Never" }, { "1", "When the character moves" }, { "2", "When either stick moves" } }
+local WINDOW_SCALES = { { "0.8", "80%" }, { "0.9", "90%" }, { "1", "100%" }, { "1.1", "110%" }, { "1.25", "125%" } }
+local STICK_HIDES ={ { "0", "Never" }, { "1", "When the character moves" }, { "2", "When either stick moves" } }
 local LAYER_BUTTONS = {
 	{ "GamePadEmulateShift", "Layer 1, acts as Shift" }, { "GamePadEmulateCtrl", "Layer 2, acts as Ctrl" }, { "GamePadEmulateAlt", "Layer 3, acts as Alt" },
 }
@@ -110,11 +111,15 @@ local function cvarCheckbox(cvar)
 	return box
 end
 
+-- A section heading: small amber capitals over a hairline across the column, so sections read apart from rows.
 local function heading(x, y, text)
-	local title = ns.Text(page, 13, C.text)
+	local title = ns.Text(page, 11, C.accent)
 	title:SetPoint("TOPLEFT", x, -y)
-	title:SetText(text)
-	return y + 20
+	title:SetText(text:upper())
+	local rule = ns.Rule(page)
+	rule:SetPoint("TOPLEFT", page, "TOPLEFT", x, -(y + 17))
+	rule:SetPoint("TOPRIGHT", page, "TOPLEFT", x + COLUMN, -(y + 17))
+	return y + 26, title
 end
 
 local function row(x, y, label, control)
@@ -125,12 +130,14 @@ local function row(x, y, label, control)
 	return y + ROW
 end
 
-local function note(x, y, text)
-	local line = ns.Text(page, 12, C.muted)
-	line:SetPoint("TOPLEFT", x, -y)
+-- Muted help under a section, in as many lines as given.
+local function note(x, y, text, lines)
+	local line = ns.Text(page, 11, C.muted)
+	line:SetPoint("TOPLEFT", x, -(y + 2))
 	line:SetWidth(COLUMN)
+	line:SetSpacing(2)
 	line:SetText(text)
-	return y + 34
+	return y + lines * 14 + 6
 end
 
 local function buildLeft(x, y)
@@ -148,7 +155,7 @@ local function buildLeft(x, y)
 		y = row(x, y, layer[2], choice(ns.KeyOptions(ns.MODIFIER_KEYS), function() return GetCVar(layer[1]) or "none" end,
 			function(key) ns.SetLayerButton(layer[1], key) end))
 	end
-	y = note(x, y, "Hold a layer button to use its layer. Layer buttons fire nothing themselves: a button made one loses its own bindings.") + GAP
+	y = note(x, y, "Hold one to use its layer. It fires nothing itself, so it loses its own bindings.", 1) + GAP
 	y = heading(x, y, "Play style")
 	y = row(x, y, "Style", choice(playstyleOptions, function() return ns.db.playstyle or "manual" end, function(value)
 		ns.db.playstyle = value ~= "manual" and value or nil
@@ -159,7 +166,7 @@ local function buildLeft(x, y)
 		y = row(x, y, SOFT_TARGET_LABELS[i], cvarChoice(softTargetOptions(), cvar, "0"))
 	end
 	local addon = ns.BarAddon()
-	if addon then note(x, y + GAP, ns.BarAddonNote(addon)) end
+	if addon then note(x, y + 8, ns.BarAddonNote(addon), 3) end
 end
 
 local function crossbarChoice()
@@ -200,16 +207,15 @@ local function buildRight(x, y)
 		ns.Saved()
 	end)
 	table.insert(controls, mouse)
-	y = row(x, y, "Mouse: drop spells on it, see tooltips", mouse) + 4
-	-- The heading says so when nothing can bring the cursor up, since its clicks would then do nothing.
-	local cursorTitle = ns.Text(page, 13, C.text)
-	cursorTitle:SetPoint("TOPLEFT", x, -y)
-	local warning = { Refresh = function()
-		cursorTitle:SetText("Cursor" .. (ns.CursorReachable() and "" or "   |cffff5050nothing brings it up: tick Show it when a window opens|r"))
-	end }
-	warning.Refresh()
-	table.insert(controls, warning)
-	y = y + 20
+	y = row(x, y, "Mouse: drop spells on it, see tooltips", mouse) + GAP
+	local cursorTitle
+	y, cursorTitle = heading(x, y, "Cursor")
+	-- Beside the heading when nothing can bring the cursor up, since its clicks would then do nothing.
+	local warning = ns.Text(page, 11, { 1, 0.314, 0.314 })
+	warning:SetPoint("LEFT", cursorTitle, "RIGHT", 10, 0)
+	warning:SetText("Nothing brings it up: tick Show it when a window opens")
+	table.insert(controls, { Refresh = function() warning:SetShown(not ns.CursorReachable()) end })
+	controls[#controls].Refresh()
 	for _, click in ipairs(CLICKS) do
 		y = row(x, y, click[2], keyChoice(ns.CLICK_KEYS, click[1]))
 	end
@@ -217,16 +223,7 @@ local function buildRight(x, y)
 	y = row(x, y, "Toggle starts it at x, y from centre", cursorStartInput())
 	y = row(x, y, "Show it when a window opens", cvarCheckbox("GamePadCursorAutoEnable"))
 	y = row(x, y, "Hide it", cvarChoice(STICK_HIDES, "GamePadCursorAutoDisableSticks", "2"))
-	y = row(x, y, "Touchpad moves it", cvarCheckbox("GamePadTouchCursorEnable")) + 4
-	y = heading(x, y, "Setup") + 4
-	local width = (COLUMN - 16) / 3 -- three buttons share the column
-	local reset = ns.Button(page, "Reset layout...", width, function() StaticPopup_Show("LEANPAD_SETUP") end)
-	reset:SetPoint("TOPLEFT", x, -y)
-	local undoReset = ns.Button(page, "Undo reset", width, function() ns.OutOfCombat(ns.UndoReset) end)
-	undoReset:SetPoint("LEFT", reset, "RIGHT", 8, 0)
-	local undo = ns.Button(page, "Undo setup", width, function() ns.OutOfCombat(ns.Restore) end)
-	undo:SetPoint("LEFT", undoReset, "RIGHT", 8, 0)
-	note(x, y + 34, "Reset starts over on LeanPad's layout, saving yours first. Undo reset brings yours back; Undo setup returns to before LeanPad.")
+	row(x, y, "Touchpad moves it", cvarCheckbox("GamePadTouchCursorEnable"))
 end
 
 function ns.BuildOptions(frame)
@@ -244,9 +241,20 @@ function ns.BuildOptions(frame)
 	arrow:SetSize(12, 12)
 	arrow:SetPoint("LEFT", 10, 0)
 	back:GetFontString():SetPoint("LEFT", 28, 0)
-	local title = ns.Text(page, 14, C.text)
-	title:SetPoint("LEFT", back, "RIGHT", 12, 0)
+	local title = ns.Text(page, 16, C.text)
+	title:SetPoint("LEFT", back, "RIGHT", 14, 0)
 	title:SetText(SETTINGS)
+	-- LeanPad's window sits on the UI scale, which bar addons such as ElvUI change; this sizes it on top of that.
+	local size = choice(WINDOW_SCALES, function() return tostring(ns.db.windowScale or 1) end, function(value)
+		ns.SetWindowScale(tonumber(value))
+		ns.Saved()
+	end)
+	size:SetWidth(100)
+	size:SetHeight(28)
+	size:SetPoint("TOPRIGHT", -MARGIN, -42)
+	local sizeLabel = ns.Text(page, 13, C.text2)
+	sizeLabel:SetPoint("RIGHT", size, "LEFT", -10, 0)
+	sizeLabel:SetText("Window size")
 
 	buildLeft(MARGIN, 97)
 	buildRight(MARGIN + COLUMN + GAP, 97)
@@ -260,8 +268,18 @@ function ns.BuildOptions(frame)
 	page.Saved = ns.Text(page, 12, C.accent)
 	page.Saved:SetPoint("LEFT", page, "TOPLEFT", MARGIN, -640)
 	page.Saved:Hide()
+	-- Setup's actions share the footer with Key Bindings; each says what it does on hover.
 	local bindings = ns.Button(page, KEY_BINDINGS, 120, function() Settings.OpenToCategory(Settings.KEYBINDINGS_CATEGORY_ID) end)
 	bindings:SetPoint("TOPRIGHT", -MARGIN, -624)
+	local undo = ns.Button(page, "Undo setup", 110, function() ns.OutOfCombat(ns.Restore) end, false,
+		"Return to your controller settings and bindings from before LeanPad. Also /lp restore.")
+	undo:SetPoint("RIGHT", bindings, "LEFT", -8, 0)
+	local undoReset = ns.Button(page, "Undo reset", 110, function() ns.OutOfCombat(ns.UndoReset) end, false,
+		"Bring back the controller layout from before the last reset. Also /lp undo.")
+	undoReset:SetPoint("RIGHT", undo, "LEFT", -8, 0)
+	local reset = ns.Button(page, "Reset layout...", 130, function() StaticPopup_Show("LEANPAD_SETUP") end, false,
+		"Clear your controller bindings and start over on LeanPad's layout. Your current layout is saved first.")
+	reset:SetPoint("RIGHT", undoReset, "LEFT", -8, 0)
 	return page
 end
 

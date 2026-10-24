@@ -51,8 +51,9 @@ function ns.Rule(parent)
 	return rule
 end
 
--- A flat button. Primary ones are amber with dark text; the rest are raised slate. Hover lifts the fill.
-function ns.Button(parent, text, width, onClick, primary)
+-- A flat button. Primary ones are amber with dark text; the rest are raised slate. Hover lifts the fill and shows
+-- the tooltip, if any.
+function ns.Button(parent, text, width, onClick, primary, tooltip)
 	local button = CreateFrame("Button", nil, parent, "BackdropTemplate")
 	button:SetSize(width, 32)
 	local fill, hover = primary and C.accent or C.raised, primary and C.accentHover or C.hover
@@ -61,8 +62,18 @@ function ns.Button(parent, text, width, onClick, primary)
 	button:SetDisabledFontObject(ns.Font(13, C.muted))
 	button:SetText(text)
 	button:SetScript("OnClick", onClick)
-	button:SetScript("OnEnter", function(self) self:SetBackdropColor(unpack(hover)) end)
-	button:SetScript("OnLeave", function(self) self:SetBackdropColor(unpack(fill)) end)
+	button:SetScript("OnEnter", function(self)
+		self:SetBackdropColor(unpack(hover))
+		if tooltip then
+			GameTooltip:SetOwner(self, "ANCHOR_TOP")
+			GameTooltip:SetText(tooltip, nil, nil, nil, nil, true)
+			GameTooltip:Show()
+		end
+	end)
+	button:SetScript("OnLeave", function(self)
+		self:SetBackdropColor(unpack(fill))
+		if tooltip then GameTooltip:Hide() end
+	end)
 	return button
 end
 

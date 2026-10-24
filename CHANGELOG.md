@@ -14,7 +14,12 @@ All notable changes to LeanPad are documented here. The format is based on [Keep
 - **Proc glows on the crossbar.** When a proc lights a spell, its socket shows Blizzard's own spell alert, the gold birth flash and running border its bars use, macros included.
 - *Toggle gamepad cursor* and *Interact with target* head the editor's Commands menu, instead of sitting deep in Blizzard's categories.
 - **Cursor start spot.** *Settings > Cursor* takes an x, y offset from the screen's centre, in UI units as frames are placed, and *Toggle gamepad cursor* puts the cursor there each time it turns it on. Left blank, the cursor stays where it was.
+- **Window size** beside the settings page title, 80% to 125%, sizes LeanPad's window on top of the UI scale that ElvUI and others set.
 - **Cursor warning.** When the cursor clicks are on buttons but nothing brings the cursor up (no button on *Toggle gamepad cursor* and *Show it when a window opens* off), the editor and the settings page say so, since the clicks then do nothing.
+
+### Changed
+
+- The settings page reads in a clear hierarchy: section headings in small amber capitals over a hairline, grey labels, white values and smaller notes, with even spacing between sections. Reset layout, Undo reset and Undo setup move to the footer beside Key Bindings and explain themselves on hover.
 
 ### Fixed
 

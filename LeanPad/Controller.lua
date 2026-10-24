@@ -962,6 +962,7 @@ local function build()
 	frame:SetSize(WIDTH, HEIGHT)
 	frame:SetPoint("CENTER")
 	frame:SetToplevel(true)
+	frame:SetScale(ns.db.windowScale or 1)
 	frame:SetClampedToScreen(true)
 	frame:SetMovable(true)
 	frame:EnableMouse(true)
@@ -1048,4 +1049,10 @@ end
 
 function ns.OpenOptions()
 	open("options")
+end
+
+-- The window's own size, on top of the UI scale.
+function ns.SetWindowScale(scale)
+	ns.db.windowScale = scale
+	if frame then frame:SetScale(scale) end
 end
