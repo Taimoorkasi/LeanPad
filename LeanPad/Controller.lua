@@ -431,8 +431,47 @@ function ns.ActionPlace(action)
 	return "Key binding command"
 end
 
+-- Action Bars 2-8 can be turned off in Options, and then their bindings fire nothing. GetActionBarToggles
+-- gives their shown states from Bar 2 up, the order of MULTIACTIONBAR1-7. Returns the bar's number when off.
+function ns.BarOff(action)
+	local bar = action:match("^MULTIACTIONBAR(%d)BUTTON")
+	if bar and not select(bar, GetActionBarToggles()) then return bar + 1 end
+end
+local BARS_OPTION = "Options > Gameplay > Action Bars"
+
+-- The turned-off bars some pad binding fires, lowest first.
+function ns.OffBars()
+	local off, bars = {}, {}
+	for key in pairs(ns.PADS.playstation.keys) do
+		for _, layer in ipairs(ns.Layers()) do
+			local bar = ns.BarOff(GetBindingAction(layer.prefix .. key))
+			if bar and not off[bar] then
+				off[bar] = true
+				table.insert(bars, bar)
+			end
+		end
+	end
+	table.sort(bars)
+	return bars
+end
+
+-- Says so in chat when a bar the pad fires is off, else those buttons just do nothing. Blizzard reads the
+-- toggles once settings have loaded, and announces each change; a repeat of the same warning is skipped.
+local lastWarning
+local function warnOffBars()
+	local bars = ns.OffBars()
+	local warning = #bars > 0 and ("LeanPad: controller buttons bound to turned-off action bars do nothing (Action Bar %s). Turn them on in %s.")
+		:format(table.concat(bars, ", "), BARS_OPTION) or nil
+	if warning and warning ~= lastWarning then print(warning) end
+	lastWarning = warning
+end
+EventUtil.RegisterOnceFrameEventAndCallback("SETTINGS_LOADED", warnOffBars)
+EventRegistry:RegisterCallback("ActionBarShownSettingUpdated", warnOffBars)
+
 -- A button's other job, so the player doesn't rebind their way out of the cursor.
 local function note(key, action)
+	local off = ns.BarOff(action)
+	if off then return ("|cffff5050Action Bar %d is turned off, so this button does nothing.|r Turn it on in %s."):format(off, BARS_OPTION) end
 	if action == "LEANPAD_TOGGLE_CURSOR" then return "Keeps the gamepad cursor reachable." end
 	if GetCVar("GamePadCursorLeftClick") == key then return "Also the cursor's left-click." end
 	if GetCVar("GamePadCursorRightClick") == key then return "Also the cursor's right-click." end

@@ -115,6 +115,7 @@ function M.reset()
 		onLoaded = {}, onceEvents = {}, metricCalls = {}, controls = {}, layout = {},
 		combat = false, widgets = {}, held = {}, placed = {}, actions = {}, nextFrame = {},
 		glyphs = {}, devices = {}, deviceIDs = {}, power = 5, timers = {}, callbacks = {}, pickups = {}, cleared = 0,
+		barsShown = { true, true, true, true, true, true, true }, -- Action Bars 2-8, as GetActionBarToggles returns them
 		-- A paladin's spellbook: General and the active spec's tab show; an off-spec tab and a hidden one don't.
 		skillLines = {
 			{ name = "General", iconID = 1, itemIndexOffset = 0, numSpellBookItems = 2 },
@@ -288,6 +289,7 @@ function M.reset()
 	GetBindingAction = function(key) return w.bindings[key] or "" end
 	SetBinding = function(key, action) w.bindings[key] = action end
 	SaveBindings = function(set) table.insert(w.saved, set) end
+	GetActionBarToggles = function() return unpack(w.barsShown) end
 	GetCurrentBindingSet = function() return w.bindingSet end
 	GetBindingText = function(key) return w.glyphs[key] or ("text:" .. key) end
 	StaticPopup_Show = function(which) table.insert(w.popups, which) end

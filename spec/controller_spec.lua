@@ -127,6 +127,31 @@ describe("Controller", function()
 			assert.equal("Action Bar 2, slot 1", ns.ActionPlace("MULTIACTIONBAR1BUTTON1"))
 			assert.equal("Key binding command", ns.ActionPlace("JUMP"))
 		end)
+
+		it("knows which turned-off bars the pad fires, and warns in chat once per change", function()
+			assert.is_nil(ns.BarOff("MULTIACTIONBAR2BUTTON1"))
+			assert.is_nil(ns.BarOff("ACTIONBUTTON1")) -- Action Bar 1 can't be turned off
+			w.bindings["SHIFT-PAD1"] = "MULTIACTIONBAR1BUTTON1"
+			w.bindings["CTRL-PAD2"] = "MULTIACTIONBAR3BUTTON6"
+			w.bindings["PAD3"] = "MULTIACTIONBAR3BUTTON1"
+			w.barsShown[1], w.barsShown[3] = false, false
+			w.cvars.GamePadEmulateShift, w.cvars.GamePadEmulateCtrl = "PADLTRIGGER", "PADRTRIGGER"
+			assert.equal(4, ns.BarOff("MULTIACTIONBAR3BUTTON1"))
+			assert.same({ 2, 4 }, ns.OffBars())
+
+			wow.fire("SETTINGS_LOADED")
+			local warning = "LeanPad: controller buttons bound to turned-off action bars do nothing (Action Bar 2, 4). Turn them on in Options > Gameplay > Action Bars."
+			assert.equal(warning, w.printed[#w.printed])
+			local count = #w.printed
+			wow.trigger("ActionBarShownSettingUpdated") -- nothing new to say
+			assert.equal(count, #w.printed)
+			w.barsShown[1], w.barsShown[3] = true, true
+			wow.trigger("ActionBarShownSettingUpdated")
+			assert.equal(count, #w.printed)
+			w.barsShown[3] = false
+			wow.trigger("ActionBarShownSettingUpdated")
+			assert.equal((warning:gsub("Bar 2, 4", "Bar 4")), w.printed[#w.printed])
+		end)
 	end)
 
 	describe("actions", function()
@@ -550,6 +575,14 @@ describe("Controller", function()
 			assert.equal("Keeps the gamepad cursor reachable.", strip.Note:GetText())
 			press("PAD3")
 			assert.equal("", strip.Note:GetText())
+		end)
+
+		it("warns that a button on a turned-off bar does nothing", function()
+			open()
+			w.held.shift = true
+			w.barsShown[1] = false
+			press("PAD1")
+			assert.equal("|cffff5050Action Bar 2 is turned off, so this button does nothing.|r Turn it on in Options > Gameplay > Action Bars.", strip.Note:GetText())
 		end)
 
 		it("shows a layer button as one, with nothing to change, clear or drop on it", function()
