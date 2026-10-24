@@ -4,6 +4,8 @@ All notable changes to LeanPad are documented here. The format is based on [Keep
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-24
+
 ### Added
 
 - **Form pages in the editor.** Action Bar 1 has its own page for each form or stance, such as Cat Form, Bear Form or Prowl, and Base edits the one in play. A *Base* picker by the controller name shows which, and lets you set up another form's buttons without shifting into it. LeanPad learns each form's page the first time you shift into it.
@@ -71,7 +73,8 @@ First public release.
 - `/lp perf` readout from the in-game addon profiler.
 - In-combat requests to change bindings or CVars are queued until combat ends.
 
-[Unreleased]: https://github.com/Taimoorkasi/LeanPad/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/Taimoorkasi/LeanPad/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/Taimoorkasi/LeanPad/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/Taimoorkasi/LeanPad/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/Taimoorkasi/LeanPad/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Taimoorkasi/LeanPad/releases/tag/v0.1.0
