@@ -35,4 +35,8 @@ Install, log in, and accept the setup prompt. Then type `/lp` to open the editor
 
 Using ConsolePort? Turn it off first: both addons manage the gamepad bindings and settings.
 
-Source, issues and changelog: https://github.com/Taimoorkasi/LeanPad
+## Reporting a problem
+
+Found a bug? Report it at https://github.com/Taimoorkasi/LeanPad/issues. The form asks for your LeanPad version, controller, bar addon and any Lua error, so it can be tracked down quickly. Reports left in the comments here are easy to miss.
+
+Source and changelog: https://github.com/Taimoorkasi/LeanPad

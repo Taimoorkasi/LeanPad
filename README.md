@@ -155,6 +155,10 @@ The release workflow in `.github/workflows/release.yml` sees a version with no t
 
 The reasoning behind the design is in [docs/WoW controller addon design.md](docs/WoW%20controller%20addon%20design.md).
 
+## Reporting a problem
+
+Open an issue at [github.com/Taimoorkasi/LeanPad/issues](https://github.com/Taimoorkasi/LeanPad/issues). The form asks for your LeanPad version, controller, bar addon and any Lua error, which is usually what it takes to find the cause.
+
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md).

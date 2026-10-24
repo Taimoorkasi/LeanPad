@@ -1,0 +1,53 @@
+name: Bug report
+description: Something in LeanPad doesn't work as it should
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you pressed or did, what you expected, and what happened instead. Screenshots help.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: LeanPad version
+      description: Shown in the AddOns list at the character screen.
+      placeholder: "0.5.0"
+    validations:
+      required: true
+  - type: input
+    id: controller
+    attributes:
+      label: Controller
+      description: Its model, and how it's connected (USB, Bluetooth, Steam Input, DS4Windows, reWASD...).
+      placeholder: Xbox Series controller over Bluetooth
+    validations:
+      required: true
+  - type: dropdown
+    id: bars
+    attributes:
+      label: Action bars
+      description: What runs your action bars?
+      options:
+        - Blizzard's own
+        - ElvUI
+        - Bartender4
+        - Dominos
+        - Something else (say which below)
+    validations:
+      required: true
+  - type: textarea
+    id: error
+    attributes:
+      label: Lua error
+      description: If the game showed one, paste it here. BugSack catches them, or type `/console scriptErrors 1` to see them.
+      render: text
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checked
+      options:
+        - label: ConsolePort is turned off. It manages the same bindings and settings, and the two overwrite each other.
+        - label: The action bars my buttons use are turned on in *Options > Gameplay > Action Bars*, unless a bar addon runs them.
