@@ -323,16 +323,34 @@ describe("Crossbar", function()
 			assert.equal(4242, buttonFor("PAD3").Icon.texture)
 		end)
 
-		it("re-read Blizzard's buttons a frame after login, when the main bar gets its slots", function()
+		it("re-read Blizzard's buttons a frame after login, when they get their slots", function()
 			ns, w = wow.boot({ prompted = true })
-			ActionButton1.action = nil -- not yet pointed at a slot when PLAYER_ENTERING_WORLD reaches LeanPad
-			w.actions[7] = { texture = 777 }
-			w.bindings.PAD4 = "ACTIONBUTTON1"
+			MultiBarBottomLeftButton1.action = nil -- not yet pointed at a slot when PLAYER_ENTERING_WORLD reaches LeanPad
+			w.bindings.PAD4 = "MULTIACTIONBAR1BUTTON1"
 			wow.fire("PLAYER_ENTERING_WORLD")
 			assert.is_nil(buttonFor("PAD4").slot)
-			ActionButton1.action = 7
+			MultiBarBottomLeftButton1.action = 61
 			wow.nextFrame()
-			assert.equal(777, buttonFor("PAD4").Icon.texture)
+			assert.equal(135808, buttonFor("PAD4").Icon.texture)
+		end)
+
+		it("follow Action Bar 1 onto a form's page, and onto vehicle and override bars", function()
+			w.bindings.PAD4 = "ACTIONBUTTON1"
+			w.actions[97] = { texture = 977 }
+			w.bar.bonus = 9 -- Bear Form
+			bar:Fire("OnEvent", "UPDATE_BONUS_ACTIONBAR")
+			wow.nextFrame()
+			assert.equal(97, buttonFor("PAD4").slot)
+			assert.equal(977, buttonFor("PAD4").Icon.texture)
+			w.actions[133] = { texture = 1333 }
+			w.bar.vehicle = 12
+			bar:Fire("OnEvent", "UPDATE_VEHICLE_ACTIONBAR")
+			wow.nextFrame()
+			assert.equal(1333, buttonFor("PAD4").Icon.texture)
+			w.bar.vehicle, w.bar.override = nil, 12
+			bar:Fire("OnEvent", "UPDATE_OVERRIDE_ACTIONBAR")
+			wow.nextFrame()
+			assert.equal(1333, buttonFor("PAD4").Icon.texture)
 		end)
 
 		it("re-read Blizzard's buttons a frame after a loading screen", function()
@@ -360,7 +378,7 @@ describe("Crossbar", function()
 			bar:Fire("OnEvent", "UPDATE_BINDINGS")
 			assert.is_nil(buttonFor("PAD3").slot)
 			assert.is_nil(buttonFor("PAD3").Icon.texture)
-			assert.equal(1, #w.errors)
+			assert.is_true(#w.errors > 0) -- one per socket on a bar slot
 			C_ActionBar.HasAction = hasAction
 		end)
 

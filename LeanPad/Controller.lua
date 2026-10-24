@@ -107,8 +107,22 @@ function ns.ButtonForCommand(command)
 	end
 end
 
--- The action slot that button shows, read from the button itself so paging is respected.
+-- Action Bar 1's page right now, by the rule Blizzard's ActionBarController_UpdateAll follows: a vehicle, override
+-- or temporary bar first, then a form's or stance's bonus bar while on page 1. Read from the game, not Blizzard's
+-- button, which keeps a stale page when a bar addon such as ElvUI takes Action Bar 1 over.
+local function mainBarPage()
+	if C_ActionBar.HasVehicleActionBar() then return C_ActionBar.GetVehicleBarIndex() end
+	if C_ActionBar.HasOverrideActionBar() then return C_ActionBar.GetOverrideBarIndex() end
+	if C_ActionBar.HasTempShapeshiftActionBar() then return C_ActionBar.GetTempShapeshiftBarIndex() end
+	local page = C_ActionBar.GetActionBarPage()
+	if page == 1 and C_ActionBar.HasBonusActionBar() then return C_ActionBar.GetBonusBarIndex() end
+	return page
+end
+
+-- The action slot a binding command fires. Action Bar 1 follows the page; Bars 2-8 keep theirs, read off the button.
 function ns.SlotForCommand(command)
+	local index = command:match("^ACTIONBUTTON(%d+)$")
+	if index then return tonumber(index) + (mainBarPage() - 1) * NUM_ACTIONBAR_BUTTONS end
 	local button = ns.ButtonForCommand(command)
 	return button and button.action
 end

@@ -161,6 +161,23 @@ describe("Controller", function()
 			assert.is_nil(ns.SlotForCommand("JUMP"))
 		end)
 
+		it("pages Action Bar 1 by the game's own state, never by Blizzard's possibly stale button", function()
+			ActionButton1.action = 97 -- left on Bear's page by a bar addon that took the bar over
+			assert.equal(1, ns.SlotForCommand("ACTIONBUTTON1"))
+			w.bar.bonus = 7 -- Cat Form's bar, used while on page 1
+			assert.equal(73, ns.SlotForCommand("ACTIONBUTTON1"))
+			assert.equal(84, ns.SlotForCommand("ACTIONBUTTON12"))
+			w.bar.page = 2 -- a page picked by hand wins over the form
+			assert.equal(13, ns.SlotForCommand("ACTIONBUTTON1"))
+			w.bar.temp = 14
+			assert.equal(157, ns.SlotForCommand("ACTIONBUTTON1"))
+			w.bar.override = 18
+			assert.equal(205, ns.SlotForCommand("ACTIONBUTTON1"))
+			w.bar.vehicle = 12
+			assert.equal(133, ns.SlotForCommand("ACTIONBUTTON1"))
+			assert.equal(61, ns.SlotForCommand("MULTIACTIONBAR1BUTTON1")) -- Bars 2-8 never page
+		end)
+
 		it("describes a binding by what its slot holds, with the slot's icon", function()
 			assert.is_nil(ns.ActionInfo("PAD1"))
 			w.bindings.PAD1 = "JUMP"
@@ -229,7 +246,8 @@ describe("Controller", function()
 
 		it("refuses drops when the layer's bar has no slot left for the button", function()
 			w.bindings.PAD1 = "JUMP"
-			w.bindings.PAD3 = "ACTIONBUTTON1" -- another pad button fires the only slot the fake's Bar 1 has
+			w.bindings.PAD3 = "ACTIONBUTTON1" -- another pad button fires slot 1, and slots 2-12 hold actions
+			for slot = 2, 12 do w.actions[slot] = { texture = slot } end
 			ns.PlaceOnButton("PAD1")
 			assert.same({}, w.placed)
 			assert.equal("JUMP", w.bindings.PAD1)
@@ -314,6 +332,7 @@ describe("Controller", function()
 
 		it("says so when the layer's bar has no free slot, or the layer no bar", function()
 			w.bindings.PAD3 = "ACTIONBUTTON1"
+			for slot = 2, 12 do w.actions[slot] = { texture = slot } end
 			w.bindings.PAD2 = "INTERACTTARGET"
 			ns.PutSpell("PAD2", 1)
 			assert.same({}, w.placed)
@@ -485,7 +504,7 @@ describe("Controller", function()
 			w.glyphs.PADDUP = "|A:Gamepad_Gen_Up_64:0:0|a"
 			frame:Fire("OnEvent", "UPDATE_BINDINGS")
 			local up = callout("PADDUP")
-			assert.equal("name:ACTIONBUTTON5 |A:Gamepad_Gen_Up_64:18:18|a", up.text:GetText())
+			assert.equal("|cff66788aEmpty slot|r |A:Gamepad_Gen_Up_64:18:18|a", up.text:GetText())
 			assert.same({ "RIGHT", editor, "TOPLEFT", 216, -314 }, up.text.point)
 			assert.same({ "TOPLEFT", editor, 222, -314 }, up.lines[1].startPoint)
 			-- A layer button says so; the system button and unbound buttons get nothing.
@@ -534,7 +553,7 @@ describe("Controller", function()
 			assert.same({ ns.COLORS.accent[1], ns.COLORS.accent[2], ns.COLORS.accent[3], 1 }, callout("PAD1").lines[1].color)
 			press("PADDUP")
 			assert.equal("Interface\\AddOns\\LeanPad\\Art\\RingSquare", editor.Ring.texture)
-			assert.equal("name:ACTIONBUTTON5", strip.Name:GetText())
+			assert.equal("|cff66788aEmpty slot|r", strip.Name:GetText())
 			assert.equal("Action Bar 1, slot 5", strip.Place:GetText())
 			press("PADDRIGHT") -- Target nearest enemy has a face though it sits on no bar
 			assert.is_true(strip.Icon:IsShown())

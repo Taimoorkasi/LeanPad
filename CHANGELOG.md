@@ -4,6 +4,10 @@ All notable changes to LeanPad are documented here. The format is based on [Keep
 
 ## [Unreleased]
 
+### Fixed
+
+- Action Bar 1 follows your form, stance, vehicle or override bar in the editor and on the crossbar, so a spell placed in Cat Form lands on Cat Form's page. LeanPad now reads the page from the game, not from Blizzard's bar button, which stays on a stale page when a bar addon such as ElvUI runs the bars.
+
 ## [0.3.0] - 2026-10-24
 
 ### Added

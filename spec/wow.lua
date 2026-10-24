@@ -134,6 +134,7 @@ function M.reset()
 		combat = false, widgets = {}, held = {}, placed = {}, actions = {}, nextFrame = {},
 		glyphs = {}, devices = {}, deviceIDs = {}, power = 5, timers = {}, callbacks = {}, pickups = {}, cleared = 0,
 		barsShown = { true, true, true, true, true, true, true }, -- Action Bars 2-8, as GetActionBarToggles returns them
+		bar = { page = 1 },
 		-- A paladin's spellbook: General and the active spec's tab show; an off-spec tab and a hidden one don't.
 		skillLines = {
 			{ name = "General", iconID = 1, itemIndexOffset = 0, numSpellBookItems = 2 },
@@ -208,6 +209,16 @@ function M.reset()
 	local function action(slot) return w.actions[slot] or {} end
 	C_ActionBar = {
 		HasAction = function(slot) return w.actions[slot] ~= nil end,
+		-- Action Bar 1's paging state, in w.bar: its page, and the vehicle, override, temporary or bonus bar index if any.
+		GetActionBarPage = function() return w.bar.page end,
+		HasVehicleActionBar = function() return w.bar.vehicle ~= nil end,
+		GetVehicleBarIndex = function() return w.bar.vehicle end,
+		HasOverrideActionBar = function() return w.bar.override ~= nil end,
+		GetOverrideBarIndex = function() return w.bar.override end,
+		HasTempShapeshiftActionBar = function() return w.bar.temp ~= nil end,
+		GetTempShapeshiftBarIndex = function() return w.bar.temp end,
+		HasBonusActionBar = function() return w.bar.bonus ~= nil end,
+		GetBonusBarIndex = function() return w.bar.bonus end,
 		GetActionTexture = function(slot) return action(slot).texture end,
 		GetActionCooldownDuration = function(slot) return action(slot).cooldown end,
 		GetActionChargeDuration = function(slot) return action(slot).charge end,
