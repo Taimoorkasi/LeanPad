@@ -12,6 +12,7 @@ All notable changes to LeanPad are documented here. The format is based on [Keep
 - **Bar addons named.** With ElvUI, Bartender4 or Dominos running the action bars, LeanPad says so at login and on the settings page; for ElvUI it names the bars each layer uses (Bars 1, 6, 5 and 3). The turned-off-bar warning stays quiet then, since Blizzard's Show Action Bar options don't apply.
 
 - **Proc glows on the crossbar.** When a proc lights a spell, its socket gets a pulsing gold ring, as Blizzard's and ElvUI's bars light their button, macros included.
+- *Toggle gamepad cursor* and *Interact with target* head the editor's Commands menu, instead of sitting deep in Blizzard's categories.
 - **Cursor warning.** When the cursor clicks are on buttons but nothing brings the cursor up (no button on *Toggle gamepad cursor* and *Show it when a window opens* off), the editor and the settings page say so, since the clicks then do nothing.
 
 ### Fixed

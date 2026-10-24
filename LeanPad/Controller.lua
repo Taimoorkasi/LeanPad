@@ -381,6 +381,8 @@ end
 
 -- Spells and macros land on the button directly. Bar slots and Blizzard's other commands keep their own lists,
 -- grouped by the categories of Blizzard's key binding list.
+local QUICK_COMMANDS = { "LEANPAD_TOGGLE_CURSOR", "INTERACTTARGET" }
+
 function ns.BuildAssignMenu(root, binding)
 	root:CreateTitle(GetBindingText(binding))
 	if GetBindingAction(binding) ~= "" then
@@ -389,6 +391,11 @@ function ns.BuildAssignMenu(root, binding)
 	spellMenu(root:CreateButton("Spells"), binding)
 	macroMenu(root:CreateButton("Macros"), binding)
 	local slots, commands = root:CreateButton("Bar slots"), root:CreateButton("Commands")
+	-- The commands a pad needs most come first, before Blizzard's long categories: the cursor toggle, and Interact,
+	-- which loots, talks and picks things up with soft targeting.
+	for _, action in ipairs(QUICK_COMMANDS) do
+		commands:CreateButton(commandLabel(action), function() ns.Assign(binding, action) end)
+	end
 	local categories, order = {}, {}
 	for i = 1, GetNumBindings() do
 		local action, category = GetBinding(i)
