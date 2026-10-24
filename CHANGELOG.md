@@ -4,6 +4,8 @@ All notable changes to LeanPad are documented here. The format is based on [Keep
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-24
+
 ### Added
 
 - **Warning for turned-off action bars.** Controller buttons bound to an Action Bar that is turned off in *Options > Gameplay > Action Bars* fire nothing. LeanPad now says so in chat at login and whenever a bar is turned off, and the editor marks the button, with where to turn the bar back on.
@@ -60,6 +62,7 @@ First public release.
 - `/lp perf` readout from the in-game addon profiler.
 - In-combat requests to change bindings or CVars are queued until combat ends.
 
-[Unreleased]: https://github.com/Taimoorkasi/LeanPad/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/Taimoorkasi/LeanPad/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/Taimoorkasi/LeanPad/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/Taimoorkasi/LeanPad/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Taimoorkasi/LeanPad/releases/tag/v0.1.0
