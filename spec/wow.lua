@@ -70,8 +70,10 @@ function Widget:CreateAnimation(type)
 	animation.animationType = type
 	return animation
 end
-function Widget:Play() self.plays = self.plays + 1 end
-function Widget:Stop() self.stops = self.stops + 1 end
+function Widget:Play() self.plays, self.playing = self.plays + 1, true end
+function Widget:Stop() self.stops, self.playing = self.stops + 1, false end
+function Widget:IsPlaying() return self.playing == true end
+function Widget:SetLooping(loop) self.looping = loop end
 function Widget:SetFromAlpha(alpha) self.fromAlpha = alpha end
 function Widget:SetToAlpha(alpha) self.toAlpha = alpha end
 function Widget:SetDuration(seconds) self.seconds = seconds end
@@ -140,6 +142,7 @@ function M.reset()
 		barsShown = { true, true, true, true, true, true, true }, -- Action Bars 2-8, as GetActionBarToggles returns them
 		bar = { page = 1 },
 		forms = {}, form = 0, addons = {},
+		procs = {},
 		-- A paladin's spellbook: General and the active spec's tab show; an off-spec tab and a hidden one don't.
 		skillLines = {
 			{ name = "General", iconID = 1, itemIndexOffset = 0, numSpellBookItems = 2 },
@@ -233,6 +236,8 @@ function M.reset()
 		GetActionText = function(slot) return action(slot).text end,
 	}
 	GetActionInfo = function(slot) return action(slot).kind, action(slot).id end
+	-- Spells lit by a proc, in w.procs.
+	C_SpellActivationOverlay = { IsSpellOverlayed = function(id) return w.procs[id] == true end }
 	C_Spell = { GetSpellName = function(id) return "spell:" .. id end }
 	-- Forms in w.forms, each { spell, icon }, the one taken in w.form (0 for none), and stealth in w.stealthed.
 	GetNumShapeshiftForms = function() return #w.forms end

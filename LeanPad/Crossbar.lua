@@ -1,4 +1,4 @@
-local _, ns = ...
+local addonName, ns = ...
 
 -- Button centres from a cluster's centre: D-pad and face diamonds on the outside,
 -- shoulder, trigger and stick click columns between them.
@@ -26,16 +26,20 @@ ns.CROSSBAR_EMPTY_ALPHA = 0.35
 
 -- Blizzard's circular alpha mask makes icons, sweeps and the rim round without any art of LeanPad's own.
 local CIRCLE = "Interface\\CharacterFrame\\TempPortraitAlphaMask"
+-- LeanPad's own highlight ring, from Art/, drawn by tools/draw-pads.js.
+local RING = "Interface\\AddOns\\" .. addonName .. "\\Art\\Ring"
 -- The rim: a dark ring around the icon.
 ns.RIM = { 0.05, 0.05, 0.05, 0.9 }
 -- Icon tints: plain, or red while the target is out of the action's range.
 ns.IN_RANGE, ns.OUT_OF_RANGE = { 1, 1, 1 }, { 1, 0.25, 0.25 }
+-- A proc's ring: Blizzard's spell alert gold.
+ns.PROC = { 1, 0.82, 0 }
 
 -- Cooldowns, charges and usability change often; only these refresh the filled buttons' state.
 -- Range changes come from the checks Blizzard's own bar buttons enable for these same slots.
 local STATE_EVENTS = {
 	ACTIONBAR_UPDATE_COOLDOWN = true, ACTIONBAR_UPDATE_USABLE = true, ACTIONBAR_UPDATE_STATE = true, SPELL_UPDATE_CHARGES = true,
-	ACTION_RANGE_CHECK_UPDATE = true,
+	ACTION_RANGE_CHECK_UPDATE = true, SPELL_ACTIVATION_OVERLAY_GLOW_SHOW = true, SPELL_ACTIVATION_OVERLAY_GLOW_HIDE = true,
 }
 -- Blizzard re-points its bar buttons on these, possibly after LeanPad's handler runs.
 local PAGE_EVENTS = {
@@ -83,6 +87,16 @@ local function listen()
 	bar.Pad = pad
 end
 
+-- The proc ring pulses only while shown, and keeps its beat through the many state refreshes a fight brings.
+local function setGlow(button, on)
+	button.Glow:SetShown(on == true)
+	if not on then
+		button.Pulse:Stop()
+	elseif not button.Pulse:IsPlaying() then
+		button.Pulse:Play()
+	end
+end
+
 -- Some actions have no cooldown or charge duration object; clear the sweep for those.
 local function setDuration(cooldown, duration)
 	if duration then
@@ -101,6 +115,10 @@ local function updateState(button)
 	button.Icon:SetDesaturated(not C_ActionBar.IsUsableAction(slot))
 	-- Red when the target is out of range; nil, no range to check, stays plain.
 	button.Icon:SetVertexColor(unpack(C_ActionBar.IsActionInRange(slot) == false and ns.OUT_OF_RANGE or ns.IN_RANGE))
+	-- A proc lights the socket as it does Blizzard's button: asked of the slot's spell, as UpdateSpellAlert does,
+	-- so no event payload is compared. A macro's id is its spell's when it casts one.
+	local kind, id = GetActionInfo(slot)
+	setGlow(button, (kind == "spell" or kind == "macro") and id ~= nil and C_SpellActivationOverlay.IsSpellOverlayed(id))
 end
 
 local function faced(action)
@@ -131,6 +149,7 @@ local function clearButton(button)
 	button.Cooldown:Clear()
 	button.ChargeCooldown:Clear()
 	button.Count:SetText("")
+	setGlow(button, false)
 end
 
 local function refreshButton(button, key, prefix, hideNumbers)
@@ -399,6 +418,19 @@ local function makeButton(parent, key)
 	fade:SetToAlpha(0)
 	fade:SetDuration(ns.CROSSBAR_BLINK)
 	button.Blink = blink
+	-- A proc's gold ring, pulsing while it lasts.
+	button.Glow = overlay:CreateTexture(nil, "OVERLAY", nil, 2)
+	button.Glow:SetTexture(RING)
+	button.Glow:SetVertexColor(unpack(ns.PROC))
+	button.Glow:SetSize(ns.CROSSBAR_BUTTON_SIZE + 14, ns.CROSSBAR_BUTTON_SIZE + 14)
+	button.Glow:SetPoint("CENTER")
+	button.Glow:Hide()
+	button.Pulse = button.Glow:CreateAnimationGroup()
+	button.Pulse:SetLooping("BOUNCE")
+	local pulse = button.Pulse:CreateAnimation("Alpha")
+	pulse:SetFromAlpha(1)
+	pulse:SetToAlpha(0.35)
+	pulse:SetDuration(0.5)
 	button.Count = overlay:CreateFontString(nil, "OVERLAY", "NumberFontNormal")
 	button.Count:SetPoint("BOTTOMRIGHT", -2, 2)
 	return button

@@ -234,6 +234,34 @@ describe("Crossbar", function()
 			assert.equal(button, button.Blink.parent)
 		end)
 
+		it("light a gold, pulsing ring while the slot's spell is procced, a macro's too", function()
+			local button = buttonFor("PAD3") -- slot 61, spell 1953
+			assert.equal("Interface\\AddOns\\LeanPad\\Art\\Ring", button.Glow.texture)
+			assert.same(ns.PROC, button.Glow.vertexColor)
+			assert.equal("BOUNCE", button.Pulse.looping)
+			assert.is_false(button.Glow:IsShown())
+			w.procs[1953] = true
+			bar:Fire("OnEvent", "SPELL_ACTIVATION_OVERLAY_GLOW_SHOW", 1953)
+			assert.is_true(button.Glow:IsShown())
+			assert.is_true(button.Pulse:IsPlaying())
+			bar:Fire("OnEvent", "ACTIONBAR_UPDATE_COOLDOWN") -- refreshes keep the pulse's beat
+			assert.equal(1, button.Pulse.plays)
+			w.procs[1953] = nil
+			bar:Fire("OnEvent", "SPELL_ACTIVATION_OVERLAY_GLOW_HIDE", 1953)
+			assert.is_false(button.Glow:IsShown())
+			assert.is_false(button.Pulse:IsPlaying())
+			w.procs[1953] = true
+			w.actions[61].kind = "macro"
+			bar:Fire("OnEvent", "SPELL_ACTIVATION_OVERLAY_GLOW_SHOW", 1953)
+			assert.is_true(button.Glow:IsShown())
+			w.actions[61].kind = "item"
+			bar:Fire("OnEvent", "SPELL_ACTIVATION_OVERLAY_GLOW_SHOW", 1953)
+			assert.is_false(button.Glow:IsShown())
+			w.actions[61].kind, w.actions[61].id = "spell", nil
+			bar:Fire("OnEvent", "SPELL_ACTIVATION_OVERLAY_GLOW_SHOW", 1953)
+			assert.is_false(button.Glow:IsShown())
+		end)
+
 		it("blink the pressed button's socket, restarting on every press", function()
 			bar.Pad:Fire("OnGamePadButtonDown", "PAD3")
 			bar.Pad:Fire("OnGamePadButtonDown", "PAD3")
