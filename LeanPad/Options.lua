@@ -105,7 +105,16 @@ local function pickSpot(onPicked)
 		local hint = ns.Text(picker, 16, C.text, "CENTER")
 		hint:SetPoint("TOP", 0, -140)
 		hint:SetText("Click where Toggle gamepad cursor should put the cursor. The lines cross at the screen's centre.\nRight-click or Escape cancels.")
-		table.insert(UISpecialFrames, picker:GetName())
+		-- Escape cancels here rather than through UISpecialFrames, which would close LeanPad's window as well.
+		picker:EnableKeyboard(true)
+		picker:SetScript("OnKeyDown", function(self, key)
+			if key == "ESCAPE" then self:Hide() end
+		end)
+		-- LeanPad's window turns invisible while picking, so the whole screen can be picked; hiding it would
+		-- reset the editor and leave the settings page.
+		picker:SetScript("OnShow", function() ns.window:SetAlpha(0) end)
+		picker:SetScript("OnHide", function() ns.window:SetAlpha(1) end)
+		picker:Hide()
 	end
 	local spot = ns.db.cursorStart
 	picker.Marker:SetShown(spot ~= nil)

@@ -38,6 +38,7 @@ function Widget:ClearAllPoints() self.point = nil end
 function Widget:GetPoint() return unpack(self.point) end
 function Widget:EnableMouse(enabled) self.mouse = enabled end
 function Widget:EnableMouseWheel(enabled) self.wheel = enabled end
+function Widget:EnableKeyboard(enabled) self.keyboard = enabled end
 function Widget:GetCenter() return self.cx or 0, self.cy or 0 end
 function Widget:GetWidth() return self.width or 0 end
 function Widget:GetHeight() return self.height or 0 end

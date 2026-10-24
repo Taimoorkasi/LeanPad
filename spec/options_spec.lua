@@ -174,7 +174,14 @@ describe("Options page", function()
 		local picker = LeanPadCursorPicker
 		assert.is_true(picker:IsShown())
 		assert.is_false(picker.Marker:IsShown()) -- no spot set yet
-		assert.equal("LeanPadCursorPicker", UISpecialFrames[#UISpecialFrames]) -- Escape closes it
+		assert.equal(0, frame.alpha) -- LeanPad's window steps aside while picking, still open
+		assert.is_true(frame:IsShown())
+		picker:Fire("OnKeyDown", "SPACE")
+		assert.is_true(picker:IsShown())
+		picker:Fire("OnKeyDown", "ESCAPE") -- cancels, without closing LeanPad's window as UISpecialFrames would
+		assert.is_false(picker:IsShown())
+		assert.equal(1, frame.alpha)
+		start.Pick:Fire("OnClick")
 		w.mouseAt = { 600, 135 } -- screen pixels; at scale 0.5, UI point 1200, 270: 240 right of centre, 270 below
 		picker:Fire("OnClick", "LeftButton")
 		assert.is_false(picker:IsShown())
