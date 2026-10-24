@@ -58,6 +58,7 @@ function Widget:CreateMaskTexture() return newWidget("MaskTexture", nil, self) e
 function Widget:RegisterEvent(event) self.events[event] = true end
 function Widget:UnregisterAllEvents() self.events = {} end
 function Widget:EnableGamePadButton(enable) self.gamePadButton = enable end
+function Widget:SetPropagateKeyboardInput(propagate) self.propagate = propagate end
 function Widget:SetDesaturated(desaturated) self.desaturated = desaturated end
 function Widget:SetCooldownFromDurationObject(duration) self.duration = duration end
 function Widget:SetHideCountdownNumbers(hide) self.hideNumbers = hide end
@@ -171,10 +172,8 @@ function M.reset()
 
 	-- Two Blizzard bar buttons: Action Bar 1 slot 1 (no icon) and Action Bar 2 slot 1, which holds slot 61.
 	ActionButtonUtil = { ActionBarButtonNames = { "ActionButton", "MultiBarBottomLeftButton" } }
-	local function setButtonState(self, state) self.state = state end
-	local function getButtonState(self) return self.state or "NORMAL" end
-	ActionButton1 = { bindingAction = "ACTIONBUTTON1", action = 1, SetButtonState = setButtonState, GetButtonState = getButtonState }
-	MultiBarBottomLeftButton1 = { bindingAction = "MULTIACTIONBAR1BUTTON1", action = 61, SetButtonState = setButtonState, GetButtonState = getButtonState }
+	ActionButton1 = { bindingAction = "ACTIONBUTTON1", action = 1 }
+	MultiBarBottomLeftButton1 = { bindingAction = "MULTIACTIONBAR1BUTTON1", action = 61 }
 	w.actions[61] = { texture = 135808, kind = "spell", id = 1953, cooldown = "cooldown:61", charge = "charge:61", count = "2", usable = true }
 
 	GetNumBindings = function() return #w.bindingList end
@@ -273,15 +272,6 @@ function M.reset()
 	w.cursorControl = false
 	SetGamePadCursorControl = function(enabled) w.cursorControl = enabled end
 	IsGamePadCursorControlEnabled = function() return w.cursorControl end
-	w.hooks = 0
-	hooksecurefunc = function(target, method, hook)
-		local original = target[method]
-		w.hooks = w.hooks + 1
-		target[method] = function(...)
-			original(...)
-			hook(...)
-		end
-	end
 
 	Enum = {
 		SoftTargetEnableFlags = { None = 0, Gamepad = 1, Kbm = 2, Any = 3 },

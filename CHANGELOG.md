@@ -8,7 +8,7 @@ All notable changes to LeanPad are documented here. The format is based on [Keep
 
 - **Warning for turned-off action bars.** Controller buttons bound to an Action Bar that is turned off in *Options > Gameplay > Action Bars* fire nothing. LeanPad now says so in chat at login and whenever a bar is turned off, and the editor marks the button, with where to turn the bar back on.
 - **Drag spells off** the crossbar (with its mouse on) and the editor, as off Blizzard's bars: the slot empties and the spell rides the cursor, to drop on another slot or let go of to remove it.
-- Crossbar sockets show every press, on an empty slot too: the socket presses in, flashes and lights to full while held.
+- Crossbar sockets blink on every press of their pad button, whatever it does: a spell, one on cooldown, an empty slot or a command such as Jump. The socket presses in, flashes and lights to full while held.
 - Crossbar icons turn red while your target is out of their range.
 - **Undo reset**, on the settings page, in *AddOns > LeanPad* and as `/lp undo`: brings back the layout the last reset replaced. *Undo setup* still returns to how things were before LeanPad.
 

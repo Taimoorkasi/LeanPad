@@ -47,7 +47,7 @@ local locked = true -- unlocked from the settings page or Edit Mode, the bar, it
 local HUD_SKIP = { LEANPAD_TOGGLE_CURSOR = true, TOGGLEAUTORUN = true }
 local NOT_BOUND = "Not bound"
 local clusters = {}
-local watched = {}
+local down = {} -- pad keys held right now
 
 local function eachButton(fn)
 	for _, cluster in ipairs(clusters) do
@@ -63,15 +63,30 @@ local function setPressed(button, pressed)
 	button.Flash:SetShown(pressed)
 end
 
--- Blizzard's binding handlers push its bar button on press and release it on key up; mirror that.
-local function watch(source)
-	if watched[source] then return end
-	watched[source] = true
-	hooksecurefunc(source, "SetButtonState", function(self, state)
-		eachButton(function(button)
-			if button.source == self then setPressed(button, state == "PUSHED") end
-		end)
-	end)
+-- A key's socket looks pressed while the pad holds it, on the set of the layer held now. Every press blinks,
+-- whatever the button does: an empty slot, a spell on cooldown or a command.
+local function showPress(key)
+	local prefix = ns.HeldPrefix()
+	for _, cluster in ipairs(clusters) do
+		setPressed(cluster.buttons[key], down[key] == true and cluster.frame.prefix == prefix)
+	end
+end
+
+-- On 12.x the client presses bar slots for pad bindings outside Lua, so Blizzard's buttons never show them; the
+-- crossbar listens to the pad itself and passes every press on to its binding. Both calls are combat-restricted
+-- and keep once made. A child of the bar, it hears nothing while the crossbar is hidden.
+local function listen()
+	local pad = CreateFrame("Frame", nil, bar)
+	pad:EnableGamePadButton(true)
+	pad:SetPropagateKeyboardInput(true)
+	local function track(_, key, isDown)
+		if not ns.CROSSBAR[key] then return end
+		down[key] = isDown
+		showPress(key)
+	end
+	pad:SetScript("OnGamePadButtonDown", function(self, key) track(self, key, true) end)
+	pad:SetScript("OnGamePadButtonUp", function(self, key) track(self, key, nil) end)
+	bar.Pad = pad
 end
 
 -- Some actions have no cooldown or charge duration object; clear the sweep for those.
@@ -114,7 +129,7 @@ end
 
 -- A faint empty slot, which is also what a button whose action can't be read keeps showing.
 local function clearButton(button)
-	button.slot, button.source = nil, nil
+	button.slot = nil
 	button.restAlpha = ns.CROSSBAR_EMPTY_ALPHA
 	button.Icon:SetDesaturated(false)
 	button.Icon:SetVertexColor(unpack(ns.IN_RANGE))
@@ -130,20 +145,14 @@ local function refreshButton(button, key, prefix, hideNumbers)
 	ns.SetGlyph(button, key)
 
 	local action = GetBindingAction(prefix .. key)
-	local source = ns.ButtonForCommand(action)
-	local slot = source and source.action
-	-- Blizzard's binding pushes its bar button even when the slot is empty or on cooldown, so every press shows.
-	if source then
-		button.source = source
-		watch(source)
-	end
+	local slot = ns.SlotForCommand(action)
 	if slot and C_ActionBar.HasAction(slot) then
 		button.slot, button.restAlpha = slot, 1
 		button.Icon:SetTexture(C_ActionBar.GetActionTexture(slot))
 		button.Cooldown:SetHideCountdownNumbers(hideNumbers)
 		updateState(button)
 	else
-		-- Commands off the bars have no cooldown or press to show, just their face and badge.
+		-- Commands off the bars have no cooldown to show, just their face and badge.
 		local face = faced(action)
 		if face then
 			button.restAlpha = 1
@@ -152,7 +161,7 @@ local function refreshButton(button, key, prefix, hideNumbers)
 		end
 	end
 	-- Refreshes can land mid-press, e.g. a cast changing its slot; keep a held button looking held.
-	setPressed(button, source ~= nil and source:GetButtonState() == "PUSHED")
+	setPressed(button, down[key] == true and prefix == ns.HeldPrefix())
 end
 
 -- Drops land on an 8-unit grid and pull level with a neighbour within 12 on one axis, so sets and buttons
@@ -457,6 +466,12 @@ local function build()
 	reset:SetPoint("TOP", hint, "BOTTOM", 0, -8)
 	bar.Outline:Hide()
 	applyMouse()
+	-- A reload in combat starts hearing the pad once combat ends.
+	if InCombatLockdown() then
+		EventUtil.RegisterOnceFrameEventAndCallback("PLAYER_REGEN_ENABLED", listen)
+	else
+		listen()
+	end
 	-- Listen only while shown, so a hidden crossbar costs nothing.
 	bar:SetScript("OnShow", function()
 		for _, event in ipairs(LAYOUT_EVENTS) do bar:RegisterEvent(event) end
@@ -466,7 +481,10 @@ local function build()
 		-- First shown during login, when Blizzard may not have pointed its main bar buttons at slots yet.
 		RunNextFrame(ns.RefreshCrossbar)
 	end)
-	bar:SetScript("OnHide", function() bar:UnregisterAllEvents() end)
+	bar:SetScript("OnHide", function()
+		bar:UnregisterAllEvents()
+		down = {} -- a key let go while hidden must not come back held
+	end)
 	bar:SetScript("OnEvent", onEvent)
 	bar:Hide()
 end
