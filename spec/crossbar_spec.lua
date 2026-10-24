@@ -234,21 +234,27 @@ describe("Crossbar", function()
 			assert.equal(button, button.Blink.parent)
 		end)
 
-		it("show Blizzard's spell alert while the slot's spell is procced, a macro's too", function()
+		it("light a round gold glow with a spinning spark while the slot's spell is procced, a macro's too", function()
 			local button = buttonFor("PAD3") -- slot 61, spell 1953
 			local alert = button.Glow
-			assert.equal("ActionButtonSpellAlertTemplate", alert.template)
+			assert.equal("Interface\\AddOns\\LeanPad\\Art\\ProcGlow", alert.Ring.texture)
+			assert.same(ns.PROC, alert.Ring.vertexColor)
+			assert.equal("Interface\\AddOns\\LeanPad\\Art\\ProcSpark", alert.Spark.texture)
+			assert.equal("REPEAT", alert.Spin.looping)
+			assert.equal("BOUNCE", alert.Breathe.looping)
 			assert.is_false(alert:IsShown())
 			w.procs[1953] = true
 			bar:Fire("OnEvent", "SPELL_ACTIVATION_OVERLAY_GLOW_SHOW", 1953)
 			assert.is_true(alert:IsShown())
-			assert.equal(1, alert.ProcStartAnim.plays) -- the birth flash, which starts the loop itself
-			bar:Fire("OnEvent", "ACTIONBAR_UPDATE_COOLDOWN") -- refreshes leave a lit alert alone
-			assert.equal(1, alert.ProcStartAnim.plays)
+			assert.equal(1, alert.Birth.plays)
+			assert.is_true(alert.Spin:IsPlaying())
+			bar:Fire("OnEvent", "ACTIONBAR_UPDATE_COOLDOWN") -- refreshes leave a lit glow alone
+			assert.equal(1, alert.Birth.plays)
 			w.procs[1953] = nil
 			bar:Fire("OnEvent", "SPELL_ACTIVATION_OVERLAY_GLOW_HIDE", 1953)
 			assert.is_false(alert:IsShown())
-			assert.is_false(alert.ProcStartAnim:IsPlaying())
+			assert.is_false(alert.Spin:IsPlaying())
+			assert.is_false(alert.Breathe:IsPlaying())
 			w.procs[1953] = true
 			w.actions[61].kind = "macro"
 			bar:Fire("OnEvent", "SPELL_ACTIVATION_OVERLAY_GLOW_SHOW", 1953)

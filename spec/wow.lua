@@ -10,7 +10,7 @@ local NO_OP_METHODS = {
 	"SetSize", "SetWidth", "SetHeight", "SetJustifyH", "SetToplevel", "SetClampedToScreen", "SetMovable", "RegisterForDrag",
 	"SetThickness", "AddMaskTexture", "SetBlendMode", "SetBackdrop", "SetBackdropBorderColor", "StartMoving", "StopMovingOrSizing",
 	"SetAllPoints", "SetDrawSwipe", "SetFont", "SetTextColor", "SetNormalFontObject", "SetHighlightFontObject", "SetDisabledFontObject",
-	"SetNormalAtlas", "SetHighlightAtlas", "SetSpacing",
+	"SetNormalAtlas", "SetHighlightAtlas", "SetSpacing", "SetDegrees", "SetScaleFrom", "SetScaleTo",
 }
 
 local Widget = {}
@@ -184,11 +184,6 @@ function M.reset()
 
 	CreateFrame = function(kind, name, parent, template)
 		local frame = newWidget(kind, name, parent, template)
-		-- Blizzard's spell alert: a birth flipbook, then a loop it starts itself, hidden until shown.
-		if template == "ActionButtonSpellAlertTemplate" then
-			frame.ProcStartAnim, frame.ProcLoop = frame:CreateAnimationGroup(), frame:CreateAnimationGroup()
-			frame.shown = false
-		end
 		return frame
 	end
 	CreateFont = function(name) return newWidget("Font", name) end

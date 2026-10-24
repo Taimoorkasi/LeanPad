@@ -155,10 +155,27 @@ function logo() {
 	].join("");
 }
 
+// The crossbar's proc glow, the round take on Blizzard's square spell alert: a soft ring round the socket, and a
+// spark with a fading tail that the client spins round it. The spark's head is at the top, its tail trailing back
+// anticlockwise, so it leads a clockwise spin.
+const BLUR = el("defs", {}, el("filter", { id: "blur", filterUnits: "userSpaceOnUse", x: 0, y: 0, width: 128, height: 128 }, el("feGaussianBlur", { stdDeviation: 5 })));
+const PROC_R = 44;
+function arc(from, to) {
+	const at = (degrees) => [64 + PROC_R * Math.cos((degrees * Math.PI) / 180), 64 + PROC_R * Math.sin((degrees * Math.PI) / 180)].map((v) => v.toFixed(2));
+	const [x0, y0] = at(from), [x1, y1] = at(to);
+	return `M${x0} ${y0} A${PROC_R} ${PROC_R} 0 0 1 ${x1} ${y1}`;
+}
+const sparkTail = Array.from({ length: 8 }, (_, i) =>
+	el("path", { d: arc(-90 - (i + 1) * 15, -90 - i * 15), fill: "none", stroke: "#fff", "stroke-width": 6 - i * 0.5, "stroke-linecap": i === 0 ? "round" : "butt", opacity: (1 - i / 8).toFixed(2) }),
+).join("");
+
 // White strokes, tinted in game with SetVertexColor.
 const rings = {
 	Ring: el("circle", { cx: 64, cy: 64, r: 58, fill: "none", stroke: "#fff", "stroke-width": 7 }),
 	RingSquare: el("rect", { x: 6, y: 6, width: 116, height: 116, rx: 26, fill: "none", stroke: "#fff", "stroke-width": 7 }),
+	ProcGlow: BLUR + el("circle", { cx: 64, cy: 64, r: PROC_R, fill: "none", stroke: "#fff", "stroke-width": 12, opacity: 0.85, filter: "url(#blur)" })
+		+ el("circle", { cx: 64, cy: 64, r: PROC_R, fill: "none", stroke: "#fff", "stroke-width": 3 }),
+	ProcSpark: BLUR + sparkTail + el("circle", { cx: 64, cy: 64 - PROC_R, r: 6, fill: "#fff", filter: "url(#blur)" }),
 };
 
 // Uncompressed 32-bit TGA, top-left origin. resvg's pixels are premultiplied RGBA; TGA wants straight BGRA.

@@ -1,4 +1,4 @@
-local _, ns = ...
+local addonName, ns = ...
 
 -- Button centres from a cluster's centre: D-pad and face diamonds on the outside,
 -- shoulder, trigger and stick click columns between them.
@@ -30,6 +30,8 @@ local CIRCLE = "Interface\\CharacterFrame\\TempPortraitAlphaMask"
 ns.RIM = { 0.05, 0.05, 0.05, 0.9 }
 -- Icon tints: plain, or red while the target is out of the action's range.
 ns.IN_RANGE, ns.OUT_OF_RANGE = { 1, 1, 1 }, { 1, 0.25, 0.25 }
+-- The proc glow: Blizzard's spell alert gold, and a paler spark.
+ns.PROC, ns.PROC_SPARK = { 1, 0.82, 0 }, { 1, 0.95, 0.7 }
 
 -- Cooldowns, charges and usability change often; only these refresh the filled buttons' state.
 -- Range changes come from the checks Blizzard's own bar buttons enable for these same slots.
@@ -83,17 +85,29 @@ local function listen()
 	bar.Pad = pad
 end
 
--- Blizzard's own spell alert, driven as its ActionButtonSpellAlertManager does: shown with its birth flash,
--- which hands over to the loop, and hidden with both stopped. A lit alert stays as is through state refreshes.
+-- The proc glow pops in, then breathes and spins until it goes. A lit glow stays as is through state refreshes.
 local function setGlow(button, on)
-	local alert = button.Glow
-	if on and not alert:IsShown() then
-		alert:Show()
-		alert.ProcStartAnim:Play()
-	elseif not on and alert:IsShown() then
-		alert:Hide()
-		alert.ProcStartAnim:Stop()
+	local glow = button.Glow
+	if on and not glow:IsShown() then
+		glow:Show()
+		glow.Birth:Play()
+		glow.Breathe:Play()
+		glow.Spin:Play()
+	elseif not on and glow:IsShown() then
+		glow:Hide()
+		glow.Breathe:Stop()
+		glow.Spin:Stop()
 	end
+end
+
+-- One additive layer of the proc glow, from LeanPad's Art/, tinted.
+local function glowTexture(glow, name, color)
+	local texture = glow:CreateTexture(nil, "OVERLAY")
+	texture:SetAllPoints()
+	texture:SetTexture("Interface\\AddOns\\" .. addonName .. "\\Art\\" .. name)
+	texture:SetVertexColor(unpack(color))
+	texture:SetBlendMode("ADD")
+	return texture
 end
 
 -- Some actions have no cooldown or charge duration object; clear the sweep for those.
@@ -417,10 +431,31 @@ local function makeButton(parent, key)
 	fade:SetToAlpha(0)
 	fade:SetDuration(ns.CROSSBAR_BLINK)
 	button.Blink = blink
-	-- A proc shows Blizzard's spell alert, at the 1.4 times the button size its bars use.
-	button.Glow = CreateFrame("Frame", nil, overlay, "ActionButtonSpellAlertTemplate")
-	button.Glow:SetSize(ns.CROSSBAR_BUTTON_SIZE * 1.4, ns.CROSSBAR_BUTTON_SIZE * 1.4)
-	button.Glow:SetPoint("CENTER")
+	-- A proc lights the round take on Blizzard's square spell alert, in LeanPad's own art: a gold ring that pops in
+	-- and breathes, and a spark running round it. The client runs all three animations while it shows.
+	local glow = CreateFrame("Frame", nil, overlay)
+	glow:SetSize(ns.CROSSBAR_BUTTON_SIZE * 1.6, ns.CROSSBAR_BUTTON_SIZE * 1.6)
+	glow:SetPoint("CENTER")
+	glow:Hide()
+	glow.Ring = glowTexture(glow, "ProcGlow", ns.PROC)
+	glow.Spark = glowTexture(glow, "ProcSpark", ns.PROC_SPARK)
+	glow.Birth = glow.Ring:CreateAnimationGroup()
+	local pop = glow.Birth:CreateAnimation("Scale")
+	pop:SetScaleFrom(1.5, 1.5)
+	pop:SetScaleTo(1, 1)
+	pop:SetDuration(0.25)
+	glow.Breathe = glow.Ring:CreateAnimationGroup()
+	glow.Breathe:SetLooping("BOUNCE")
+	local breathe = glow.Breathe:CreateAnimation("Alpha")
+	breathe:SetFromAlpha(1)
+	breathe:SetToAlpha(0.55)
+	breathe:SetDuration(0.6)
+	glow.Spin = glow.Spark:CreateAnimationGroup()
+	glow.Spin:SetLooping("REPEAT")
+	local spin = glow.Spin:CreateAnimation("Rotation")
+	spin:SetDegrees(-360) -- clockwise
+	spin:SetDuration(1.2)
+	button.Glow = glow
 	button.Count = overlay:CreateFontString(nil, "OVERLAY", "NumberFontNormal")
 	button.Count:SetPoint("BOTTOMRIGHT", -2, 2)
 	return button
