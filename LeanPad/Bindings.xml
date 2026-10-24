@@ -1,5 +1,5 @@
 <Bindings>
 	<Binding name="LEANPAD_TOGGLE_CURSOR" header="LEANPAD" category="ADDONS">
-		LeanPad_ToggleCursor()
+		SetGamePadCursorControl(not IsGamePadCursorControlEnabled())
 	</Binding>
 </Bindings>

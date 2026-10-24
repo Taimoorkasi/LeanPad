@@ -10,7 +10,7 @@ local NO_OP_METHODS = {
 	"SetSize", "SetWidth", "SetHeight", "SetJustifyH", "SetToplevel", "SetClampedToScreen", "SetMovable", "RegisterForDrag",
 	"SetThickness", "AddMaskTexture", "SetBlendMode", "SetBackdrop", "SetBackdropBorderColor", "StartMoving", "StopMovingOrSizing",
 	"SetAllPoints", "SetDrawSwipe", "SetFont", "SetTextColor", "SetNormalFontObject", "SetHighlightFontObject", "SetDisabledFontObject",
-	"SetNormalAtlas", "SetHighlightAtlas", "SetTextInsets", "SetAutoFocus", "SetMaxLetters", "SetSpacing",
+	"SetNormalAtlas", "SetHighlightAtlas", "SetSpacing",
 }
 
 local Widget = {}
@@ -38,13 +38,9 @@ function Widget:GetPoint() return unpack(self.point) end
 function Widget:EnableMouse(enabled) self.mouse = enabled end
 function Widget:EnableMouseWheel(enabled) self.wheel = enabled end
 function Widget:GetCenter() return self.cx or 0, self.cy or 0 end
-function Widget:GetWidth() return self.width or 0 end
-function Widget:GetHeight() return self.height or 0 end
 function Widget:GetEffectiveScale() return self.effectiveScale or 1 end
 function Widget:SetText(text) self.text = text end
 function Widget:GetText() return self.text end
--- Losing focus fires OnEditFocusLost, as on a real EditBox.
-function Widget:ClearFocus() if self.scripts.OnEditFocusLost then self.scripts.OnEditFocusLost(self) end end
 function Widget:SetTexture(texture) self.texture, self.color = texture, nil end
 function Widget:SetColorTexture(...) self.texture, self.color = nil, { ... } end
 function Widget:SetAtlas(atlas) self.atlas = atlas end
@@ -327,7 +323,6 @@ function M.reset()
 	}
 	w.cursorControl = false
 	SetGamePadCursorControl = function(enabled) w.cursorControl = enabled end
-	SetCursorPosition = function(x, y) w.cursorPosition = { x, y } end
 	IsGamePadCursorControlEnabled = function() return w.cursorControl end
 
 	Enum = {

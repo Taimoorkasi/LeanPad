@@ -78,33 +78,6 @@ local function keyChoice(keys, cvar)
 	return choice(ns.KeyOptions(keys), function() return GetCVar(cvar) or "none" end, function(value) ns.WriteCVar(cvar, value) end)
 end
 
--- Where Toggle gamepad cursor puts the cursor, as an x, y offset from the screen's centre in UI units, the way
--- frames are placed. Both blank leaves it where it was; one blank reads as 0.
-local function cursorStartInput()
-	local holder = CreateFrame("Frame", nil, page)
-	holder:SetSize(144, 28)
-	local boxes = {}
-	local function commit()
-		local x, y = tonumber(boxes[1]:GetText()), tonumber(boxes[2]:GetText())
-		ns.db.cursorStart = (x or y) and { x or 0, y or 0 } or nil
-		holder:Refresh()
-		ns.Saved()
-	end
-	function holder:Refresh()
-		for _, box in ipairs(boxes) do box:Refresh() end
-	end
-	for axis = 1, 2 do
-		boxes[axis] = ns.Input(holder, 64, function()
-			local spot = ns.db.cursorStart
-			return spot and tostring(spot[axis]) or ""
-		end, commit)
-		boxes[axis]:SetPoint("RIGHT", holder, "RIGHT", (axis - 2) * 80, 0)
-	end
-	holder.X, holder.Y = boxes[1], boxes[2]
-	table.insert(controls, holder)
-	return holder
-end
-
 local function cvarCheckbox(cvar)
 	local box = ns.Checkbox(page, function() return GetCVar(cvar) == "1" end, function(on) ns.WriteCVar(cvar, on and "1" or "0") end)
 	table.insert(controls, box)
@@ -220,7 +193,6 @@ local function buildRight(x, y)
 		y = row(x, y, click[2], keyChoice(ns.CLICK_KEYS, click[1]))
 	end
 	y = row(x, y, "Speed", cvarChoice(SPEEDS, "GamePadCursorSpeedMax", "1"))
-	y = row(x, y, "Toggle starts it at x, y from centre", cursorStartInput())
 	y = row(x, y, "Show it when a window opens", cvarCheckbox("GamePadCursorAutoEnable"))
 	y = row(x, y, "Hide it", cvarChoice(STICK_HIDES, "GamePadCursorAutoDisableSticks", "2"))
 	row(x, y, "Touchpad moves it", cvarCheckbox("GamePadTouchCursorEnable"))

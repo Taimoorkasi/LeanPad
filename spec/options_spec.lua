@@ -146,27 +146,6 @@ describe("Options page", function()
 		assert.is_true(ns.CrossbarLocked())
 	end)
 
-	it("takes the cursor's start spot as x, y from the screen's centre; blank keeps it where it was", function()
-		local start = find("Frame", function(widget) return widget.parent == page and widget.X end)
-		assert.equal("", start.X:GetText())
-		start.X:SetText("200")
-		start.X:Fire("OnEnterPressed") -- Enter drops focus, which commits
-		assert.same({ 200, 0 }, ns.db.cursorStart) -- a blank axis reads as 0
-		assert.equal("0", start.Y:GetText())
-		start.Y:SetText("-150")
-		start.Y:ClearFocus()
-		assert.same({ 200, -150 }, ns.db.cursorStart)
-		start.Y:SetText("9")
-		start.Y:Fire("OnEscapePressed") -- puts back what was there
-		assert.equal("-150", start.Y:GetText())
-		assert.same({ 200, -150 }, ns.db.cursorStart)
-		start.X:SetText("")
-		start.Y:SetText("abc")
-		start.Y:ClearFocus()
-		assert.is_nil(ns.db.cursorStart)
-		assert.equal("", start.X:GetText())
-	end)
-
 	it("tunes the native cursor", function()
 		local speed = controlFor("Speed")
 		assert.equal("Normal", speed.Label:GetText())
