@@ -1,4 +1,4 @@
-local addonName, ns = ...
+local _, ns = ...
 
 -- Button centres from a cluster's centre: D-pad and face diamonds on the outside,
 -- shoulder, trigger and stick click columns between them.
@@ -26,14 +26,10 @@ ns.CROSSBAR_EMPTY_ALPHA = 0.35
 
 -- Blizzard's circular alpha mask makes icons, sweeps and the rim round without any art of LeanPad's own.
 local CIRCLE = "Interface\\CharacterFrame\\TempPortraitAlphaMask"
--- LeanPad's own highlight ring, from Art/, drawn by tools/draw-pads.js.
-local RING = "Interface\\AddOns\\" .. addonName .. "\\Art\\Ring"
 -- The rim: a dark ring around the icon.
 ns.RIM = { 0.05, 0.05, 0.05, 0.9 }
 -- Icon tints: plain, or red while the target is out of the action's range.
 ns.IN_RANGE, ns.OUT_OF_RANGE = { 1, 1, 1 }, { 1, 0.25, 0.25 }
--- A proc's ring: Blizzard's spell alert gold.
-ns.PROC = { 1, 0.82, 0 }
 
 -- Cooldowns, charges and usability change often; only these refresh the filled buttons' state.
 -- Range changes come from the checks Blizzard's own bar buttons enable for these same slots.
@@ -87,13 +83,16 @@ local function listen()
 	bar.Pad = pad
 end
 
--- The proc ring pulses only while shown, and keeps its beat through the many state refreshes a fight brings.
+-- Blizzard's own spell alert, driven as its ActionButtonSpellAlertManager does: shown with its birth flash,
+-- which hands over to the loop, and hidden with both stopped. A lit alert stays as is through state refreshes.
 local function setGlow(button, on)
-	button.Glow:SetShown(on == true)
-	if not on then
-		button.Pulse:Stop()
-	elseif not button.Pulse:IsPlaying() then
-		button.Pulse:Play()
+	local alert = button.Glow
+	if on and not alert:IsShown() then
+		alert:Show()
+		alert.ProcStartAnim:Play()
+	elseif not on and alert:IsShown() then
+		alert:Hide()
+		alert.ProcStartAnim:Stop()
 	end
 end
 
@@ -418,19 +417,10 @@ local function makeButton(parent, key)
 	fade:SetToAlpha(0)
 	fade:SetDuration(ns.CROSSBAR_BLINK)
 	button.Blink = blink
-	-- A proc's gold ring, pulsing while it lasts.
-	button.Glow = overlay:CreateTexture(nil, "OVERLAY", nil, 2)
-	button.Glow:SetTexture(RING)
-	button.Glow:SetVertexColor(unpack(ns.PROC))
-	button.Glow:SetSize(ns.CROSSBAR_BUTTON_SIZE + 14, ns.CROSSBAR_BUTTON_SIZE + 14)
+	-- A proc shows Blizzard's spell alert, at the 1.4 times the button size its bars use.
+	button.Glow = CreateFrame("Frame", nil, overlay, "ActionButtonSpellAlertTemplate")
+	button.Glow:SetSize(ns.CROSSBAR_BUTTON_SIZE * 1.4, ns.CROSSBAR_BUTTON_SIZE * 1.4)
 	button.Glow:SetPoint("CENTER")
-	button.Glow:Hide()
-	button.Pulse = button.Glow:CreateAnimationGroup()
-	button.Pulse:SetLooping("BOUNCE")
-	local pulse = button.Pulse:CreateAnimation("Alpha")
-	pulse:SetFromAlpha(1)
-	pulse:SetToAlpha(0.35)
-	pulse:SetDuration(0.5)
 	button.Count = overlay:CreateFontString(nil, "OVERLAY", "NumberFontNormal")
 	button.Count:SetPoint("BOTTOMRIGHT", -2, 2)
 	return button

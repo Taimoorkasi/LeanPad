@@ -184,7 +184,15 @@ function M.reset()
 	SETTINGS = "Settings"
 	GameFontHighlightMedium = {}
 
-	CreateFrame = function(kind, name, parent, template) return newWidget(kind, name, parent, template) end
+	CreateFrame = function(kind, name, parent, template)
+		local frame = newWidget(kind, name, parent, template)
+		-- Blizzard's spell alert: a birth flipbook, then a loop it starts itself, hidden until shown.
+		if template == "ActionButtonSpellAlertTemplate" then
+			frame.ProcStartAnim, frame.ProcLoop = frame:CreateAnimationGroup(), frame:CreateAnimationGroup()
+			frame.shown = false
+		end
+		return frame
+	end
 	CreateFont = function(name) return newWidget("Font", name) end
 	ButtonFrameTemplate_HidePortrait = function(frame) frame.portraitHidden = true end
 	PanelTemplates_SetNumTabs = function(frame, count) frame.numTabs = count end
