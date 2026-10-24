@@ -12,6 +12,12 @@ local OPACITIES = { { "1", "100%" }, { "0.8", "80%" }, { "0.6", "60%" }, { "0.4"
 local PLAYSTYLES = { { "manual", "Keep my own settings" }, { "auto", "Auto" }, { "tank", "Tank" }, { "melee", "Melee" }, { "ranged", "Ranged" }, { "healer", "Healer" } }
 local SPEEDS = { { "0.6", "Slow" }, { "1", "Normal" }, { "1.5", "Fast" } }
 local STICK_HIDES = { { "0", "Never" }, { "1", "When the character moves" }, { "2", "When either stick moves" } }
+-- Where Toggle gamepad cursor puts the cursor: where it was, or a spot as fractions of the screen from bottom left.
+local CURSOR_STARTS = {
+	{ "last", "Where it was" }, { "0.5 0.5", "Screen centre" }, { "0.5 0.75", "Above centre" }, { "0.5 0.25", "Below centre" },
+	{ "0.25 0.5", "Left" }, { "0.75 0.5", "Right" }, { "0.25 0.75", "Top left" }, { "0.75 0.75", "Top right" },
+	{ "0.25 0.25", "Bottom left" }, { "0.75 0.25", "Bottom right" },
+}
 local LAYER_BUTTONS = {
 	{ "GamePadEmulateShift", "Layer 1, acts as Shift" }, { "GamePadEmulateCtrl", "Layer 2, acts as Ctrl" }, { "GamePadEmulateAlt", "Layer 3, acts as Alt" },
 }
@@ -173,7 +179,7 @@ local function buildRight(x, y)
 		ns.Saved()
 	end)
 	table.insert(controls, mouse)
-	y = row(x, y, "Mouse: drop spells on it, see tooltips", mouse) + GAP
+	y = row(x, y, "Mouse: drop spells on it, see tooltips", mouse) + 4
 	-- The heading says so when nothing can bring the cursor up, since its clicks would then do nothing.
 	local cursorTitle = ns.Text(page, 13, C.text)
 	cursorTitle:SetPoint("TOPLEFT", x, -y)
@@ -187,9 +193,13 @@ local function buildRight(x, y)
 		y = row(x, y, click[2], keyChoice(ns.CLICK_KEYS, click[1]))
 	end
 	y = row(x, y, "Speed", cvarChoice(SPEEDS, "GamePadCursorSpeedMax", "1"))
+	y = row(x, y, "Toggle cursor starts it at", choice(CURSOR_STARTS, function() return ns.db.cursorStart or "last" end, function(value)
+		ns.db.cursorStart = value ~= "last" and value or nil
+		ns.Saved()
+	end))
 	y = row(x, y, "Show it when a window opens", cvarCheckbox("GamePadCursorAutoEnable"))
 	y = row(x, y, "Hide it", cvarChoice(STICK_HIDES, "GamePadCursorAutoDisableSticks", "2"))
-	y = row(x, y, "Touchpad moves it", cvarCheckbox("GamePadTouchCursorEnable")) + GAP
+	y = row(x, y, "Touchpad moves it", cvarCheckbox("GamePadTouchCursorEnable")) + 4
 	y = heading(x, y, "Setup") + 4
 	local width = (COLUMN - 16) / 3 -- three buttons share the column
 	local reset = ns.Button(page, "Reset layout...", width, function() StaticPopup_Show("LEANPAD_SETUP") end)
@@ -198,7 +208,7 @@ local function buildRight(x, y)
 	undoReset:SetPoint("LEFT", reset, "RIGHT", 8, 0)
 	local undo = ns.Button(page, "Undo setup", width, function() ns.OutOfCombat(ns.Restore) end)
 	undo:SetPoint("LEFT", undoReset, "RIGHT", 8, 0)
-	note(x, y + 38, "Reset clears your controller bindings and starts over on LeanPad's layout, saving your current layout first. Undo reset brings that layout back; Undo setup returns to how things were before LeanPad.")
+	note(x, y + 34, "Reset starts over on LeanPad's layout, saving yours first. Undo reset brings yours back; Undo setup returns to before LeanPad.")
 end
 
 function ns.BuildOptions(frame)
