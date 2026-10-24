@@ -22,6 +22,8 @@ SlashCmdList.LEANPAD = function(msg)
 			get(addonName, M.EncounterAverageTime), get(addonName, M.PeakTime)))
 	elseif msg == "restore" then
 		ns.OutOfCombat(ns.Restore)
+	elseif msg == "undo" then
+		ns.OutOfCombat(ns.UndoReset)
 	elseif msg == "settings" then
 		ns.OpenOptions()
 	else

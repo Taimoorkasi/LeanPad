@@ -183,9 +183,11 @@ local function buildRight(x, y)
 	y = heading(x, y, "Setup") + 4
 	local reset = ns.Button(page, "Reset to default layout...", 200, function() StaticPopup_Show("LEANPAD_SETUP") end)
 	reset:SetPoint("TOPLEFT", x, -y)
+	local undoReset = ns.Button(page, "Undo reset", 200, function() ns.OutOfCombat(ns.UndoReset) end)
+	undoReset:SetPoint("LEFT", reset, "RIGHT", 8, 0)
 	local undo = ns.Button(page, "Undo setup", 200, function() ns.OutOfCombat(ns.Restore) end)
-	undo:SetPoint("LEFT", reset, "RIGHT", 8, 0)
-	note(x, y + 38, "Reset rebinds the controller to LeanPad's layout, saving your current bindings first. Undo puts back the settings and bindings from before setup.")
+	undo:SetPoint("LEFT", undoReset, "RIGHT", 8, 0)
+	note(x, y + 38, "Reset clears your controller bindings and starts over on LeanPad's layout, saving your current layout first. Undo reset brings that layout back; Undo setup returns to how things were before LeanPad.")
 end
 
 function ns.BuildOptions(frame)

@@ -17,6 +17,8 @@ EventUtil.ContinueOnAddOnLoaded(addonName, function()
 		"Layer buttons, controller, cursor clicks, crossbar and soft targeting. Also /lp settings.")
 	button("Controller setup", "Set up", ns.ShowSetup,
 		"Turn on the gamepad. If you have no layout yet, also set the trigger modifiers and soft targeting and bind the controller to Action Bars 1-4; an existing layout is kept unless you choose otherwise.")
+	button("Undo reset", "Restore", function() ns.OutOfCombat(ns.UndoReset) end,
+		"Put back the controller layout from before the last reset. Also /lp undo.")
 	button("Undo setup", "Restore", function() ns.OutOfCombat(ns.Restore) end,
 		"Put back the controller settings and bindings from before LeanPad's setup.")
 	button("Crossbar layers", "Action Bars", function() Settings.OpenToCategory(Settings.ACTION_BAR_CATEGORY_ID) end,

@@ -178,7 +178,15 @@ function M.reset()
 	w.actions[61] = { texture = 135808, kind = "spell", id = 1953, cooldown = "cooldown:61", charge = "charge:61", count = "2", usable = true }
 
 	GetNumBindings = function() return #w.bindingList end
-	GetBinding = function(index) return w.bindingList[index][1], w.bindingList[index][2] end
+	-- The action, its category, then every key bound to it, as the client returns them.
+	GetBinding = function(index)
+		local action, keys = w.bindingList[index][1], {}
+		for key, bound in pairs(w.bindings) do
+			if bound == action then table.insert(keys, key) end
+		end
+		table.sort(keys)
+		return action, w.bindingList[index][2], unpack(keys)
+	end
 	GetBindingName = function(action) return "name:" .. action end
 	-- Slots in w.actions hold an action; cooldowns come back as opaque duration objects, as in Midnight.
 	local function action(slot) return w.actions[slot] or {} end

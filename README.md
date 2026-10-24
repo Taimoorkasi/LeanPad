@@ -19,7 +19,7 @@ Your actions stay on Blizzard's own action bars, so Blizzard draws the cooldowns
 ## Features
 
 - **One-click setup.** Turns on the gamepad, makes LT and RT act as Shift and Ctrl, sets the cursor clicks and gamepad soft targeting, and binds the controller to Action Bars 1-4. If you already have a controller layout, LeanPad keeps it by default.
-- **Undo.** Setup saves your previous CVars and bindings first. `/lp restore` puts them back.
+- **Undo.** Setup and every reset save your controller settings and bindings first. *Undo reset* (`/lp undo`) brings back the layout the last reset replaced; *Undo setup* (`/lp restore`) returns to how things were before LeanPad.
 - **Three crossbar layers.** LT, RT and LT+RT each map the D-pad and face buttons onto 8 slots of their own action bar. The layer buttons only open layers and fire nothing themselves, as in FFXIV.
 - **Controller editor.** `/lp` shows a drawing of your controller (PlayStation or Xbox, detected from the pad) with every bound button labelled around it, one layer at a time. Press any button, holding a layer button first for its layer, and LeanPad shows what it does: the spell on the slot, where it lives and what the same button does on the other layers. From there, pick a spell or macro straight from the menu and LeanPad finds it a bar slot, pick a bar slot or command by hand, clear it, or drag a spell onto it. Cursor users can click the drawing instead. The Menu button closes the editor.
 - **Settings page.** The editor's Settings button opens LeanPad's own page: which pad to use, Xbox or PlayStation labels, the layer buttons, a play style per role or by spec, soft targeting, the crossbar's view, size, opacity and position, and the native cursor's clicks, speed and behaviour.
@@ -53,6 +53,7 @@ On your first login, LeanPad asks whether to set up the controller. You can run 
 | --- | --- |
 | `/lp` or `/leanpad` | Open or close the controller editor |
 | `/lp settings` | Open the editor on its settings page |
+| `/lp undo` | Bring back the controller layout from before the last reset |
 | `/lp restore` | Restore the controller settings and bindings from before setup |
 | `/lp perf` | Print LeanPad's CPU cost from the in-game addon profiler |
 

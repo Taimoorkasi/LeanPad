@@ -4,6 +4,15 @@ All notable changes to LeanPad are documented here. The format is based on [Keep
 
 ## [Unreleased]
 
+### Added
+
+- **Warning for turned-off action bars.** Controller buttons bound to an Action Bar that is turned off in *Options > Gameplay > Action Bars* fire nothing. LeanPad now says so in chat at login and whenever a bar is turned off, and the editor marks the button, with where to turn the bar back on.
+- **Undo reset**, on the settings page, in *AddOns > LeanPad* and as `/lp undo`: brings back the layout the last reset replaced. *Undo setup* still returns to how things were before LeanPad.
+
+### Changed
+
+- Reset to default layout starts over: it clears every controller binding, on any modifier, before binding LeanPad's layout, so no old chord fires alongside it. Keyboard and mouse bindings are left alone. Everything it clears is saved first.
+
 ## [0.2.0] - 2026-10-22
 
 ### Added

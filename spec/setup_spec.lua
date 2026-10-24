@@ -111,21 +111,52 @@ describe("Setup", function()
 			assert.matches("controller set up", w.printed[1])
 		end)
 
-		it("backs up the previous values of everything it touches", function()
+		it("backs up the controller CVars and every pad binding on any modifier, but no keyboard key", function()
 			w.cvars.GamePadEmulateCtrl = "PADLSHOULDER"
-			w.bindings.PAD1 = "MOVEFORWARD"
+			w.bindings = { PAD1 = "JUMP", ["ALT-PADPADDLE1"] = "SOME_ADDON_COMMAND", SPACE = "JUMP", ["SHIFT--"] = "ACTIONBUTTON1", NUMPAD1 = "JUMP" }
 			ns.Apply()
 			assert.equal("PADLSHOULDER", ns.db.backup.cvars.GamePadEmulateCtrl)
-			assert.equal("MOVEFORWARD", ns.db.backup.bindings.PAD1)
-			assert.equal("", ns.db.backup.bindings["CTRL-SHIFT-PAD3"])
-			assert.equal(count(ns.BINDINGS), count(ns.db.backup.bindings))
+			assert.same({ PAD1 = "JUMP", ["ALT-PADPADDLE1"] = "SOME_ADDON_COMMAND" }, ns.db.backup.bindings)
+			assert.is_true(ns.db.backup.all)
+			assert.same(ns.db.backup, ns.db.undo)
 		end)
 
-		it("keeps the first backup when run again", function()
-			w.bindings.PAD1 = "MOVEFORWARD"
+		it("starts over: pad bindings outside the preset are cleared, keyboard keys are kept", function()
+			w.bindings = { ["ALT-PADPADDLE1"] = "SOME_ADDON_COMMAND", SPACE = "JUMP" }
 			ns.Apply()
+			assert.is_nil(w.bindings["ALT-PADPADDLE1"])
+			assert.equal("JUMP", w.bindings.SPACE)
+		end)
+
+		it("keeps the first backup when run again, and the layout it replaced for Undo reset", function()
+			w.bindings.PAD1 = "SOME_ADDON_COMMAND"
 			ns.Apply()
-			assert.equal("MOVEFORWARD", ns.db.backup.bindings.PAD1)
+			w.bindings["ALT-PADPADDLE1"] = "SOME_ADDON_COMMAND" -- the player's own change
+			ns.Apply()
+			assert.equal("SOME_ADDON_COMMAND", ns.db.backup.bindings.PAD1)
+			assert.equal("JUMP", ns.db.undo.bindings.PAD1)
+			assert.equal("SOME_ADDON_COMMAND", ns.db.undo.bindings["ALT-PADPADDLE1"])
+		end)
+	end)
+
+	describe("UndoReset", function()
+		it("says so when there is no reset to undo", function()
+			ns.UndoReset()
+			assert.same({ "LeanPad: no reset to undo." }, w.printed)
+			assert.same({}, w.saved)
+		end)
+
+		it("puts back the layout the last reset replaced, keeping the pre-LeanPad backup", function()
+			ns.Apply()
+			w.bindings.PAD1 = "SOME_ADDON_COMMAND"
+			w.cvars.GamePadEmulateCtrl = "PADLSHOULDER"
+			ns.Apply()
+			ns.UndoReset()
+			assert.equal("SOME_ADDON_COMMAND", w.bindings.PAD1)
+			assert.equal("PADLSHOULDER", w.cvars.GamePadEmulateCtrl)
+			assert.is_nil(ns.db.undo)
+			assert.is_table(ns.db.backup)
+			assert.matches("before the last reset", w.printed[#w.printed])
 		end)
 	end)
 
@@ -138,15 +169,24 @@ describe("Setup", function()
 
 		it("puts back CVars and bindings, unbinding keys that were free, then drops the backup", function()
 			w.cvars.GamePadEnable = "0"
-			w.bindings.PAD1 = "MOVEFORWARD"
+			w.bindings.PAD1 = "SOME_ADDON_COMMAND"
 			ns.Apply()
 			ns.Restore()
 			assert.equal("0", w.cvars.GamePadEnable)
-			assert.equal("MOVEFORWARD", w.bindings.PAD1)
+			assert.equal("SOME_ADDON_COMMAND", w.bindings.PAD1)
 			assert.is_nil(w.bindings["SHIFT-PADDUP"])
 			assert.is_nil(ns.db.backup)
+			assert.is_nil(ns.db.undo)
 			assert.same({ Enum.BindingSet.Account, Enum.BindingSet.Account }, w.saved)
 			assert.matches("restored", w.printed[2])
+		end)
+
+		it("leaves pad keys an old backup never held, since old setups never touched them", function()
+			ns.db.backup = { cvars = {}, bindings = { PAD1 = "SOME_ADDON_COMMAND" } }
+			w.bindings["ALT-PADPADDLE1"] = "JUMP"
+			ns.Restore()
+			assert.equal("SOME_ADDON_COMMAND", w.bindings.PAD1)
+			assert.equal("JUMP", w.bindings["ALT-PADPADDLE1"])
 		end)
 	end)
 
@@ -155,7 +195,7 @@ describe("Setup", function()
 		before_each(function()
 			dialog = StaticPopupDialogs.LEANPAD_SETUP_EXISTING
 			w.cvars = { GamePadEnable = "0", GamePadEmulateShift = "PADLSHOULDER", GamePadEmulateCtrl = "PADLTRIGGER" }
-			w.bindings = { PAD1 = "JUMP", ["CTRL-PAD1"] = "EXTRAACTIONBUTTON1" }
+			w.bindings = { PAD1 = "JUMP", ["CTRL-PAD1"] = "SOME_ADDON_COMMAND" }
 		end)
 
 		it("is detected from any chord the preset would overwrite", function()
@@ -176,7 +216,7 @@ describe("Setup", function()
 		it("keeping only turns the gamepad on and leaves modifiers and bindings alone", function()
 			dialog.OnAccept()
 			assert.same({ GamePadEnable = "1", GamePadEmulateShift = "PADLSHOULDER", GamePadEmulateCtrl = "PADLTRIGGER" }, w.cvars)
-			assert.same({ PAD1 = "JUMP", ["CTRL-PAD1"] = "EXTRAACTIONBUTTON1" }, w.bindings)
+			assert.same({ PAD1 = "JUMP", ["CTRL-PAD1"] = "SOME_ADDON_COMMAND" }, w.bindings)
 			assert.same({}, w.saved)
 			assert.is_nil(ns.db.backup)
 			assert.matches("layout is unchanged", w.printed[1])
@@ -195,7 +235,7 @@ describe("Setup", function()
 			dialog.OnAlt()
 			assert.equal("PADRTRIGGER", w.cvars.GamePadEmulateCtrl)
 			assert.equal("MULTIACTIONBAR2BUTTON7", w.bindings["CTRL-PAD1"])
-			assert.equal("EXTRAACTIONBUTTON1", ns.db.backup.bindings["CTRL-PAD1"])
+			assert.equal("SOME_ADDON_COMMAND", ns.db.backup.bindings["CTRL-PAD1"])
 			assert.equal("PADLSHOULDER", ns.db.backup.cvars.GamePadEmulateShift)
 		end)
 	end)

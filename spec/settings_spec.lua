@@ -58,6 +58,13 @@ describe("Settings", function()
 			assert.same({ "LEANPAD_SETUP_EXISTING" }, w.popups)
 		end)
 
+		it("Undo reset puts back the layout the last reset replaced", function()
+			ns.Apply()
+			click("Undo reset")
+			assert.is_nil(ns.db.undo)
+			assert.is_table(ns.db.backup)
+		end)
+
 		it("Restore restores, out of combat", function()
 			ns.Apply()
 			w.combat = true

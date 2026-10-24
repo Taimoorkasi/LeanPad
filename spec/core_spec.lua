@@ -54,14 +54,27 @@ describe("Core", function()
 
 	it("/lp restore restores the saved layout, after combat if needed", function()
 		local ns, w = wow.boot(nil)
-		w.bindings.PAD1 = "SITORSTAND"
+		w.bindings.PAD1 = "SOME_ADDON_COMMAND"
 		ns.Apply()
 		w.combat = true
 		SlashCmdList.LEANPAD("restore")
 		assert.equal("JUMP", w.bindings.PAD1)
 		w.combat = false
 		wow.fire("PLAYER_REGEN_ENABLED")
-		assert.equal("SITORSTAND", w.bindings.PAD1)
+		assert.equal("SOME_ADDON_COMMAND", w.bindings.PAD1)
+	end)
+
+	it("/lp undo undoes the last reset, after combat if needed", function()
+		local ns, w = wow.boot(nil)
+		ns.Apply()
+		w.bindings.PAD1 = "SOME_ADDON_COMMAND"
+		ns.Apply()
+		w.combat = true
+		SlashCmdList.LEANPAD("undo")
+		assert.equal("JUMP", w.bindings.PAD1)
+		w.combat = false
+		wow.fire("PLAYER_REGEN_ENABLED")
+		assert.equal("SOME_ADDON_COMMAND", w.bindings.PAD1)
 	end)
 
 	it("/lp settings opens the window on its settings page", function()

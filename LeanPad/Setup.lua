@@ -65,29 +65,67 @@ local function bind(key, action)
 	SetBinding(key, action ~= "" and action or nil)
 end
 
-function ns.Apply()
-	local db = ns.db
-	if not db.backup then -- keep only the pre-LeanPad state, so Restore always gets back to it
-		local backup = { cvars = {}, bindings = {} }
-		for cvar in pairs(ns.CVARS) do backup.cvars[cvar] = GetCVar(cvar) end
-		for key in pairs(ns.BINDINGS) do backup.bindings[key] = GetBindingAction(key) end
-		db.backup = backup
+-- Every gamepad binding on any modifier, key to action; keyboard and mouse keys are left alone.
+local function padBindings()
+	local found = {}
+	for i = 1, GetNumBindings() do
+		local binding = { GetBinding(i) } -- action, category, then each key bound to it
+		for k = 3, #binding do
+			if binding[k]:gsub("^.*%-", ""):match("^PAD") then found[binding[k]] = binding[1] end
+		end
 	end
+	return found
+end
+
+local function clearPad()
+	for key in pairs(padBindings()) do SetBinding(key, nil) end
+end
+
+-- The controller CVars and every pad binding, so putting it back leaves nothing of what came after.
+local function snapshot()
+	local saved = { cvars = {}, bindings = padBindings(), all = true }
+	for cvar in pairs(ns.CVARS) do saved.cvars[cvar] = GetCVar(cvar) end
+	return saved
+end
+
+-- Backups made before 0.3 hold only the preset's keys and no `all`: the pad keys outside it were never touched,
+-- so they are kept rather than cleared.
+local function putBack(saved)
+	if saved.all then clearPad() end
+	for cvar, value in pairs(saved.cvars) do SetCVar(cvar, value) end
+	for key, action in pairs(saved.bindings) do bind(key, action) end
+	SaveBindings(GetCurrentBindingSet())
+end
+
+-- Starts over on LeanPad's layout: every pad binding is cleared first, so no old chord fires alongside it.
+-- Two backups: the state from before LeanPad's first setup, for Undo setup, and the layout each reset
+-- replaced, for Undo reset.
+function ns.Apply()
+	local db, before = ns.db, snapshot()
+	db.backup = db.backup or before
+	db.undo = before
+	clearPad()
 	for cvar, value in pairs(ns.CVARS) do SetCVar(cvar, value) end
 	for key, action in pairs(ns.BINDINGS) do bind(key, action) end
 	SaveBindings(GetCurrentBindingSet())
-	print("LeanPad: controller set up. Show Action Bars 2-4 to see the LT, RT and LT+RT layers.")
+	print("LeanPad: controller set up. Show Action Bars 2-4 to see the LT, RT and LT+RT layers. Undo reset brings back your previous layout.")
 end
 
 -- shortcut: restores into the current binding set, wrong if the user switched account/character sets since Apply; store the set if that comes up.
 function ns.Restore()
 	local backup = ns.db.backup
 	if not backup then return print("LeanPad: nothing to restore.") end
-	for cvar, value in pairs(backup.cvars) do SetCVar(cvar, value) end
-	for key, action in pairs(backup.bindings) do bind(key, action) end
-	SaveBindings(GetCurrentBindingSet())
-	ns.db.backup = nil
+	putBack(backup)
+	ns.db.backup, ns.db.undo = nil, nil
 	print("LeanPad: previous controller settings and bindings restored.")
+end
+
+function ns.UndoReset()
+	local undo = ns.db.undo
+	if not undo then return print("LeanPad: no reset to undo.") end
+	putBack(undo)
+	ns.db.undo = nil
+	print("LeanPad: your layout from before the last reset is back.")
 end
 
 -- True when any chord the preset would write is already bound, i.e. the player has a layout of their own.
@@ -109,7 +147,7 @@ function ns.ShowSetup()
 end
 
 StaticPopupDialogs.LEANPAD_SETUP_EXISTING = {
-	text = "LeanPad found a controller layout already bound.\n\nKeep it, and LeanPad only makes sure the gamepad is on. Or switch to LeanPad's layout; yours is saved so you can restore it with /lp restore.",
+	text = "LeanPad found a controller layout already bound.\n\nKeep it, and LeanPad only makes sure the gamepad is on. Or switch to LeanPad's layout; yours is saved so Undo reset, or /lp undo, brings it back.",
 	button1 = "Keep my layout",
 	button2 = CANCEL,
 	button3 = "Use LeanPad layout",
@@ -121,7 +159,7 @@ StaticPopupDialogs.LEANPAD_SETUP_EXISTING = {
 }
 
 StaticPopupDialogs.LEANPAD_SETUP = {
-	text = "Set up LeanPad?\n\nThis turns on the gamepad, makes LT and RT act as Shift and Ctrl, and binds your controller to Action Bars 1-4. Your current settings are saved so you can restore them with /lp restore.",
+	text = "Set up LeanPad?\n\nThis turns on the gamepad, makes LT and RT act as Shift and Ctrl, clears your controller bindings and binds the controller to Action Bars 1-4. Your current layout is saved first: Undo reset, or /lp undo, brings it back.",
 	button1 = ACCEPT,
 	button2 = CANCEL,
 	OnAccept = function() ns.OutOfCombat(ns.Apply) end,
