@@ -436,6 +436,18 @@ describe("Crossbar", function()
 			assert.is_false(buttonFor("PAD3").mouse)
 		end)
 
+		it("takes a socket's action out of its bar slot when dragged while locked, out of combat", function()
+			ns.SetCrossbarMouse(true)
+			buttonFor("PAD3"):Fire("OnDragStart")
+			assert.same({ { "action", 61 } }, w.pickups)
+			buttonFor("PAD1"):Fire("OnDragStart") -- JUMP lives on no slot
+			assert.same({ { "action", 61 } }, w.pickups)
+			w.combat = true
+			buttonFor("PAD3"):Fire("OnDragStart")
+			assert.same({ { "action", 61 } }, w.pickups)
+			assert.equal("LeanPad: action bars can't change in combat.", w.printed[#w.printed])
+		end)
+
 		it("comes back on at login when it was left on", function()
 			ns, w = wow.boot({ crossbarMouse = true })
 			wow.fire("PLAYER_ENTERING_WORLD")

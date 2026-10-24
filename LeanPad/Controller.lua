@@ -200,6 +200,14 @@ function ns.PlaceOnButton(binding)
 	if slot then PlaceAction(slot) end
 end
 
+-- Lifts what this button's bar slot holds onto the cursor, emptying the slot, as dragging a Blizzard bar button
+-- does; dropped anywhere but a slot, it is gone.
+function ns.PickupFromButton(binding)
+	if InCombatLockdown() then return print("LeanPad: action bars can't change in combat.") end
+	local slot = ns.SlotForCommand(GetBindingAction(binding))
+	if slot and C_ActionBar.HasAction(slot) then PickupAction(slot) end
+end
+
 local function commandLabel(action)
 	local slot = ns.SlotForCommand(action)
 	local icon = slot and C_ActionBar.GetActionTexture(slot)
@@ -720,9 +728,11 @@ local function buildStrip()
 	strip = CreateFrame("Frame", nil, editor)
 	strip:SetPoint("TOPLEFT", MARGIN, -STRIP_Y)
 	strip:SetSize(WIDTH - 2 * MARGIN, FOOTER_Y - STRIP_Y)
-	-- A spell dropped anywhere on the strip goes into the bar slot this button fires.
+	-- A spell dropped anywhere on the strip goes into the bar slot this button fires; dragging off it takes it out.
 	strip:EnableMouse(true)
 	strip:SetScript("OnReceiveDrag", placeHere)
+	strip:RegisterForDrag("LeftButton")
+	strip:SetScript("OnDragStart", function() ns.PickupFromButton(currentPrefix() .. selected) end)
 	strip:SetScript("OnMouseUp", function() if GetCursorInfo() then placeHere() end end)
 
 	strip.Glyph = strip:CreateTexture(nil, "ARTWORK")
@@ -755,7 +765,7 @@ local function buildStrip()
 	strip.Clear:SetPoint("TOP", strip.Change, "BOTTOM", 0, -8)
 	strip.Hint = ns.Text(strip, 12, C.muted, "CENTER")
 	strip.Hint:SetPoint("TOP", strip.Clear, "BOTTOM", 0, -8)
-	strip.Hint:SetText("or drag a spell from your spellbook here")
+	strip.Hint:SetText("or drag a spell here; drag it off to remove it")
 end
 
 local function buildEditor()
@@ -790,6 +800,11 @@ local function buildEditor()
 		hit:SetScript("OnReceiveDrag", function(self)
 			pick(self.key)
 			placeHere()
+		end)
+		hit:RegisterForDrag("LeftButton")
+		hit:SetScript("OnDragStart", function(self)
+			pick(self.key)
+			ns.PickupFromButton(currentPrefix() .. self.key)
 		end)
 		hits[key] = hit
 		local callout = { text = ns.Text(editor, 13, C.text), lines = {} }

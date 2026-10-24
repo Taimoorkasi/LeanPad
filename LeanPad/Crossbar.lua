@@ -223,11 +223,13 @@ local function droppedOffset(frame, parent)
 end
 
 -- Only an unlocked frame moves, and never while a spell rides the cursor: that drag is a drop.
-local function draggable(frame, onDrop)
+-- Locked, a drag goes to onLockedDrag, if any.
+local function draggable(frame, onDrop, onLockedDrag)
 	frame:SetMovable(true)
 	frame:RegisterForDrag("LeftButton")
 	frame:SetScript("OnDragStart", function(self)
-		if locked or GetCursorInfo() then return end
+		if GetCursorInfo() then return end
+		if locked then return onLockedDrag and onLockedDrag(self) end
 		self.moving = true
 		self:StartMoving()
 	end)
@@ -337,11 +339,12 @@ end
 
 local function makeButton(parent, key)
 	local button = ns.MakeSocket("Frame", parent, ns.CROSSBAR_BUTTON_SIZE)
-	-- Unlocked, a button can be dragged to a new spot, shared by every set.
+	-- Unlocked, a button can be dragged to a new spot, shared by every set. Locked, with the mouse on, dragging
+	-- it takes its action out of the bar slot, as on Blizzard's bars.
 	draggable(button, function(self)
 		local x, y = droppedOffset(self, parent)
 		remember("socketPoints", key, { snap(x, y, otherPoints(ns.CROSSBAR, key)) })
-	end)
+	end, function() ns.PickupFromButton(parent.prefix .. key) end)
 	-- With the mouse on, a spell dropped on a socket goes into the bar slot its button fires, and hovering tells the action.
 	local function drop() ns.PlaceOnButton(parent.prefix .. key) end
 	button:SetScript("OnReceiveDrag", drop)

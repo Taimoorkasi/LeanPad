@@ -257,6 +257,7 @@ function M.reset()
 		Hide = function() w.tooltip = nil end,
 	}
 	PlaceAction = function(slot) table.insert(w.placed, slot) end
+	PickupAction = function(slot) table.insert(w.pickups, { "action", slot }) end
 	IsAltKeyDown = function() return w.held.alt end
 	IsControlKeyDown = function() return w.held.ctrl end
 	IsShiftKeyDown = function() return w.held.shift end

@@ -647,6 +647,19 @@ describe("Controller", function()
 			assert.same({ 61 }, w.placed)
 		end)
 
+		it("takes an action out of its bar slot when dragged off the drawing or the strip", function()
+			open()
+			w.held.shift = true
+			editor.Hits.PAD1:Fire("OnDragStart")
+			assert.equal("A", strip.Key:GetText())
+			assert.same({ { "action", 61 } }, w.pickups)
+			strip:Fire("OnDragStart")
+			assert.same({ { "action", 61 }, { "action", 61 } }, w.pickups)
+			w.actions[61] = nil
+			strip:Fire("OnDragStart") -- an empty slot has nothing to take
+			assert.equal(2, #w.pickups)
+		end)
+
 		it("closes on the pad's Menu button and when combat starts, forgetting the pick", function()
 			open()
 			press("PAD1")
