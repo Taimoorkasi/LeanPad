@@ -49,7 +49,9 @@ local function eachButton(fn)
 	end
 end
 
+-- A faint empty socket lights up fully while pressed, so a press always shows.
 local function setPressed(button, pressed)
+	button:SetAlpha(pressed and 1 or button.restAlpha)
 	button.Face:SetScale(pressed and ns.CROSSBAR_PRESSED_SCALE or 1)
 	button.Rim:SetColorTexture(unpack(pressed and ns.RIM_LIT or ns.RIM))
 	button.Flash:SetShown(pressed)
@@ -105,7 +107,7 @@ end
 -- A faint empty slot, which is also what a button whose action can't be read keeps showing.
 local function clearButton(button)
 	button.slot, button.source = nil, nil
-	button:SetAlpha(ns.CROSSBAR_EMPTY_ALPHA)
+	button.restAlpha = ns.CROSSBAR_EMPTY_ALPHA
 	button.Icon:SetDesaturated(false)
 	button.Icon:SetColorTexture(0, 0, 0, 0.5)
 	button.Cooldown:Clear()
@@ -121,24 +123,27 @@ local function refreshButton(button, key, prefix, hideNumbers)
 	local action = GetBindingAction(prefix .. key)
 	local source = ns.ButtonForCommand(action)
 	local slot = source and source.action
-	if not (slot and C_ActionBar.HasAction(slot)) then
+	-- Blizzard's binding pushes its bar button even when the slot is empty or on cooldown, so every press shows.
+	if source then
+		button.source = source
+		watch(source)
+	end
+	if slot and C_ActionBar.HasAction(slot) then
+		button.slot, button.restAlpha = slot, 1
+		button.Icon:SetTexture(C_ActionBar.GetActionTexture(slot))
+		button.Cooldown:SetHideCountdownNumbers(hideNumbers)
+		updateState(button)
+	else
 		-- Commands off the bars have no cooldown or press to show, just their face and badge.
 		local face = faced(action)
 		if face then
-			button:SetAlpha(1)
+			button.restAlpha = 1
 			ns.ShowIcon(button.Icon, face)
 			button.Count:SetText(face.badge or "")
 		end
-		return
 	end
-	button.slot, button.source = slot, source
-	watch(source)
-	button:SetAlpha(1)
-	button.Icon:SetTexture(C_ActionBar.GetActionTexture(slot))
-	button.Cooldown:SetHideCountdownNumbers(hideNumbers)
 	-- Refreshes can land mid-press, e.g. a cast changing its slot; keep a held button looking held.
-	setPressed(button, source:GetButtonState() == "PUSHED")
-	updateState(button)
+	setPressed(button, source ~= nil and source:GetButtonState() == "PUSHED")
 end
 
 -- Drops land on an 8-unit grid and pull level with a neighbour within 12 on one axis, so sets and buttons
