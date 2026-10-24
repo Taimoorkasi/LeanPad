@@ -4,6 +4,8 @@ All notable changes to LeanPad are documented here. The format is based on [Keep
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-24
+
 ### Added
 
 - **Proc glows on the crossbar.** When a proc lights a spell, its socket lights a round gold glow that pops in and breathes, with a spark running round it: the round take on Blizzard's square spell alert, macros included.
@@ -85,7 +87,8 @@ First public release.
 - `/lp perf` readout from the in-game addon profiler.
 - In-combat requests to change bindings or CVars are queued until combat ends.
 
-[Unreleased]: https://github.com/Taimoorkasi/LeanPad/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/Taimoorkasi/LeanPad/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/Taimoorkasi/LeanPad/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/Taimoorkasi/LeanPad/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/Taimoorkasi/LeanPad/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/Taimoorkasi/LeanPad/compare/v0.1.0...v0.2.0
