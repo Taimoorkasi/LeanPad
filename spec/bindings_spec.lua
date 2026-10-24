@@ -43,9 +43,9 @@ describe("Bindings.xml", function()
 	it("puts the cursor on the chosen start spot when turning it on, not when turning it off", function()
 		local run = assert(loadstring(bindings().LEANPAD_TOGGLE_CURSOR.body))
 		LeanPadDB.cursorStart = { 0, -270 } -- below centre
-		UIParent.width, UIParent.height = 1920, 1080
+		UIParent.width, UIParent.height, UIParent.effectiveScale = 1920, 1080, 0.5
 		run()
-		assert.same({ 0.5, 0.25 }, w.cursorPosition) -- fractions of the screen from the bottom left
+		assert.same({ 480, 135 }, w.cursorPosition) -- UI units times the UI scale, as GetCursorPosition gives them
 		w.cursorPosition = nil
 		run()
 		assert.is_nil(w.cursorPosition)

@@ -14,14 +14,15 @@ function LeanPad_OnCompartmentClick() ns.ToggleController() end
 
 -- The Toggle gamepad cursor binding. Turning the cursor on puts it on the start spot set in settings, an x, y
 -- offset in UI units from the screen's centre: the client lets addon code move the cursor once per pad press, and
--- this runs on one. SetCursorPosition takes fractions of the screen from the bottom left; UI units pinned the
--- cursor to the top-right corner in game.
+-- this runs on one. SetCursorPosition takes the space GetCursorPosition returns, UI units times the UI scale, from
+-- the bottom left: in game, UI units landed top right and screen fractions bottom left.
 function LeanPad_ToggleCursor()
 	local on = not IsGamePadCursorControlEnabled()
 	SetGamePadCursorControl(on)
 	local spot = ns.db.cursorStart
 	if on and type(spot) == "table" then
-		SetCursorPosition(0.5 + spot[1] / UIParent:GetWidth(), 0.5 + spot[2] / UIParent:GetHeight())
+		local scale = UIParent:GetEffectiveScale()
+		SetCursorPosition((UIParent:GetWidth() / 2 + spot[1]) * scale, (UIParent:GetHeight() / 2 + spot[2]) * scale)
 	end
 end
 
