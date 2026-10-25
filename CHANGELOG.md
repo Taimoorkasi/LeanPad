@@ -4,6 +4,10 @@ All notable changes to LeanPad are documented here. The format is based on [Keep
 
 ## [Unreleased]
 
+### Fixed
+
+- **Pad buttons on Action Bars 2-8 work alongside ElvUI and other bar addons.** These addons send bar keys to their own buttons, so a pad button bound to a bar they had turned off, such as ElvUI's Bar 13 for Action Bar 6, gave a vibration and cast nothing, while the crossbar showed the spell. LeanPad now gives those pad keys their Blizzard binding back, so a press always fires the slot the crossbar shows. Action Bar 1 stays with the bar addon, which pages it for forms and stances. Without a bar addon nothing changes.
+
 ## [0.5.0] - 2026-10-24
 
 ### Added

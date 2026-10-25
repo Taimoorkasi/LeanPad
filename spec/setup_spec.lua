@@ -279,4 +279,46 @@ describe("Setup", function()
 			assert.same({}, w.popups)
 		end)
 	end)
+
+	describe("bar addon overrides", function()
+		-- The frame that listens for UPDATE_BINDINGS alone.
+		local function claimer()
+			for _, widget in ipairs(w.widgets) do
+				local events = rawget(widget, "events")
+				if events and events.UPDATE_BINDINGS and count(events) == 1 then return widget end
+			end
+		end
+
+		before_each(function()
+			w.bindings = { ["SHIFT-PAD1"] = "MULTIACTIONBAR1BUTTON1", ["1"] = "MULTIACTIONBAR1BUTTON1", PAD3 = "ACTIONBUTTON1", PAD1 = "JUMP" }
+		end)
+
+		it("gives pad keys on Bars 2-8 their own binding back, ahead of other addons' overrides", function()
+			claimer():Fire("OnEvent", "UPDATE_BINDINGS")
+			assert.same({ "SHIFT-PAD1" }, (function()
+				local keys = {}
+				for key in pairs(w.overrides) do table.insert(keys, key) end
+				return keys
+			end)())
+			local override = w.overrides["SHIFT-PAD1"]
+			assert.equal("MULTIACTIONBAR1BUTTON1", override.action)
+			assert.is_true(override.priority)
+		end)
+
+		it("drops an override once the key is bound elsewhere", function()
+			claimer():Fire("OnEvent", "UPDATE_BINDINGS")
+			w.bindings["SHIFT-PAD1"] = "JUMP"
+			claimer():Fire("OnEvent", "UPDATE_BINDINGS")
+			assert.is_nil(next(w.overrides))
+		end)
+
+		it("waits for combat to end", function()
+			w.combat = true
+			claimer():Fire("OnEvent", "UPDATE_BINDINGS")
+			assert.is_nil(next(w.overrides))
+			w.combat = false
+			wow.fire("PLAYER_REGEN_ENABLED")
+			assert.equal("MULTIACTIONBAR1BUTTON1", w.overrides["SHIFT-PAD1"].action)
+		end)
+	end)
 end)

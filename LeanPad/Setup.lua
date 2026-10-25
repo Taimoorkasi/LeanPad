@@ -81,6 +81,21 @@ local function clearPad()
 	for key in pairs(padBindings()) do SetBinding(key, nil) end
 end
 
+-- Bar addons such as ElvUI point bar keys at their own buttons, which fire nothing on a bar they have turned off.
+-- Pad keys on Action Bars 2-8 get their own binding back as a priority override, so a press fires the Blizzard
+-- slot the crossbar shows, with or without a bar addon. Action Bar 1 stays theirs: with Blizzard's bar hidden,
+-- its paging goes stale. Overrides are session-only, never saved, and only set out of combat.
+local claimer = CreateFrame("Frame")
+local function claimPad()
+	if InCombatLockdown() then return EventUtil.RegisterOnceFrameEventAndCallback("PLAYER_REGEN_ENABLED", claimPad) end
+	ClearOverrideBindings(claimer)
+	for key, action in pairs(padBindings()) do
+		if action:find("^MULTIACTIONBAR%dBUTTON%d+$") then SetOverrideBinding(claimer, true, key, action) end
+	end
+end
+claimer:RegisterEvent("UPDATE_BINDINGS")
+claimer:SetScript("OnEvent", claimPad)
+
 -- The controller CVars and every pad binding, so putting it back leaves nothing of what came after.
 local function snapshot()
 	local saved = { cvars = {}, bindings = padBindings(), all = true }

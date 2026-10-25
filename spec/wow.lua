@@ -344,6 +344,14 @@ function M.reset()
 	SetCVar = function(name, value) w.cvars[name] = value end
 	GetBindingAction = function(key) return w.bindings[key] or "" end
 	SetBinding = function(key, action) w.bindings[key] = action end
+	-- Override bindings by key, each with its owner and whether it is a priority one.
+	w.overrides = {}
+	SetOverrideBinding = function(owner, priority, key, action) w.overrides[key] = { owner = owner, priority = priority, action = action } end
+	ClearOverrideBindings = function(owner)
+		for key, override in pairs(w.overrides) do
+			if override.owner == owner then w.overrides[key] = nil end
+		end
+	end
 	SaveBindings = function(set) table.insert(w.saved, set) end
 	GetActionBarToggles = function() return unpack(w.barsShown) end
 	GetCurrentBindingSet = function() return w.bindingSet end
