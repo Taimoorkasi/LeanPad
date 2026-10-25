@@ -501,6 +501,125 @@ describe("Crossbar", function()
 		end)
 	end)
 
+	describe("styles", function()
+		before_each(function()
+			wow.fire("PLAYER_ENTERING_WORLD")
+			bar = LeanPadCrossbar
+		end)
+
+		it("place every key in every style, no two sockets overlapping", function()
+			local size = ns.CROSSBAR_BUTTON_SIZE
+			for name, s in pairs(ns.CROSSBAR_STYLES) do
+				for a in pairs(ns.CROSSBAR) do
+					assert.truthy(s.points[a], name .. " " .. a)
+					for b in pairs(ns.CROSSBAR) do
+						local pa, pb = s.points[a], s.points[b]
+						if a ~= b then assert.is_true(math.abs(pa[1] - pb[1]) >= size or math.abs(pa[2] - pb[2]) >= size, name .. " " .. a .. " " .. b) end
+					end
+				end
+			end
+		end)
+
+		it("order the row by hand: left bumper and D-pad, face buttons and right bumper", function()
+			ns.SetCrossbarStyle("strip")
+			local xs = {}
+			for i, key in ipairs({ "PADLSHOULDER", "PADDLEFT", "PADDUP", "PADDRIGHT", "PADDDOWN", "PAD3", "PAD4", "PAD2", "PAD1", "PADRSHOULDER" }) do
+				xs[i] = buttonFor(key).point[4]
+				assert.equal(0, buttonFor(key).point[5])
+				if i > 1 then assert.is_true(xs[i] > xs[i - 1], key) end
+			end
+			assert.equal(0, ns.CROSSBAR_STYLES.strip.points.PADDDOWN[1] + ns.CROSSBAR_STYLES.strip.points.PAD3[1]) -- centred
+			for _, widget in ipairs(w.widgets) do
+				if widget.kind == "FontString" and widget.parent == clusters()[1] then
+					assert.same({ "CENTER", clusters()[1], "CENTER", 0, 50 }, widget.point)
+				end
+			end
+		end)
+
+		it("keep the ghost row faint until a layer is held", function()
+			ns.SetCrossbarStyle("ghost")
+			assert.equal(ns.CROSSBAR_QUIET_ALPHA, clusters()[1].alpha)
+			w.held.shift = true
+			bar:Fire("OnEvent", "MODIFIER_STATE_CHANGED")
+			assert.equal(1, clusters()[1].alpha)
+			assert.equal(61, buttonFor("PAD1").slot)
+		end)
+
+		it("draw the grid square, columns by direction, and go round again in the classic style", function()
+			ns.SetCrossbarStyle("grid")
+			local x = buttonFor("PAD3")
+			assert.equal(ns.WHITE, x.IconMask.texture)
+			assert.equal(ns.WHITE, x.RimMask.texture)
+			assert.equal(ns.WHITE, x.Cooldown.swipeTexture)
+			assert.is_false(x.Cooldown.circularEdge)
+			assert.same({ "BOTTOMLEFT", x.Face, "BOTTOMLEFT", 1, 1 }, x.Glyph.point)
+			local points = ns.CROSSBAR_STYLES.grid.points
+			assert.equal(points.PADDLEFT[1], points.PAD3[1]) -- X under left
+			assert.equal(points.PADDDOWN[1], points.PAD1[1]) -- A under down
+			assert.is_true(points.PADDUP[2] > points.PAD4[2])
+			ns.SetCrossbarStyle("active")
+			assert.equal("Interface\\CharacterFrame\\TempPortraitAlphaMask", x.IconMask.texture)
+			assert.is_true(x.Cooldown.circularEdge)
+			assert.same({ "BOTTOM", x.Face, "TOP", 0, -6 }, x.Glyph.point)
+		end)
+
+		it("give every layer its own row in the row styles, the held one in front, nothing shrunk", function()
+			for _, name in ipairs({ "rows", "stacked" }) do
+				ns.SetCrossbarStyle(name)
+				local all = clusters()
+				for index, cluster in ipairs(all) do
+					assert.is_true(cluster:IsShown())
+					assert.equal(1, cluster.scale)
+					local point = ns.CROSSBAR_STYLES[name].clusters[index]
+					assert.same({ "CENTER", bar, "CENTER", point[1], point[2] }, cluster.point)
+				end
+				assert.equal(1, all[1].alpha)
+				assert.equal(ns.CROSSBAR_IDLE_ALPHA, all[2].alpha)
+				assert.equal(61, buttonFor("PAD1", 2).slot)
+			end
+			assert.is_true(ns.CROSSBAR_STYLES.rows.clusters[1][2] > ns.CROSSBAR_STYLES.rows.clusters[2][2]) -- Base on top
+			assert.is_true(ns.CROSSBAR_STYLES.stacked.clusters[1][2] < ns.CROSSBAR_STYLES.stacked.clusters[2][2]) -- Base at the bottom
+			w.held.shift = true
+			bar:Fire("OnEvent", "MODIFIER_STATE_CHANGED")
+			assert.equal(1, clusters()[2].alpha)
+			assert.equal(1, clusters()[2].scale)
+		end)
+
+		it("aim each row's click twins at its own layer", function()
+			ns.SetCrossbarMouse(true)
+			ns.SetCrossbarStyle("rows")
+			local socket = buttonFor("PAD1", 2)
+			for _, twin in ipairs(wow.widgets("Button", "SecureActionButtonTemplate")) do
+				if twin.scripts.OnEnter == socket.tooltip then
+					assert.equal(61, twin:GetAttribute("action"))
+					assert.is_nil(twin:GetAttribute("shift-type"))
+				end
+			end
+		end)
+
+		it("keep dragged spots and sizes per style, and reset only the style shown", function()
+			ns.SetCrossbarStyle("strip")
+			ns.SetCrossbarLocked(false)
+			local set, x = clusters()[1], buttonFor("PAD3")
+			x.cx, x.cy, set.cx, set.cy = 11, 21, 0, 0
+			x:Fire("OnDragStart")
+			x:Fire("OnDragStop")
+			assert.same({ 8, 24 }, ns.db["socketPoints.strip"].PAD3)
+			assert.is_nil(ns.db.socketPoints)
+			set:Fire("OnMouseWheel", 1)
+			assert.near(1.05, ns.db["clusterScales.strip"][1], 0.0001)
+			ns.db.socketPoints = { PAD3 = { 1, 1 } }
+			local reset
+			for _, widget in ipairs(w.widgets) do
+				if widget.parent == bar.Outline and widget.text == "Reset layout" then reset = widget end
+			end
+			reset:Fire("OnClick")
+			assert.is_nil(ns.db["socketPoints.strip"])
+			assert.is_nil(ns.db["clusterScales.strip"])
+			assert.same({ PAD3 = { 1, 1 } }, ns.db.socketPoints)
+		end)
+	end)
+
 	describe("mouse", function()
 		before_each(function()
 			wow.fire("PLAYER_ENTERING_WORLD")

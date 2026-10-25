@@ -22,7 +22,50 @@ ns.CROSSBAR_BUTTON_SIZE = 46
 ns.CROSSBAR_BLINK = 0.25 -- seconds a press blink takes to fade
 ns.CROSSBAR_IDLE_SCALE = 0.75
 ns.CROSSBAR_IDLE_ALPHA = 0.6
+ns.CROSSBAR_QUIET_ALPHA = 0.35
 ns.CROSSBAR_EMPTY_ALPHA = 0.35
+
+-- One row of groups, centred: LB and the D-pad under the left thumb, the face buttons and RB under the right,
+-- the stick clicks and triggers (when they are plain buttons) on the outside.
+local function row(step, gap)
+	local points, x = {}, 0
+	for _, group in ipairs({ { "PADLTRIGGER", "PADLSTICK", "PADLSHOULDER" }, { "PADDLEFT", "PADDUP", "PADDRIGHT", "PADDDOWN" },
+		{ "PAD3", "PAD4", "PAD2", "PAD1" }, { "PADRSHOULDER", "PADRSTICK", "PADRTRIGGER" } }) do
+		for _, key in ipairs(group) do
+			points[key] = { x, 0 }
+			x = x + step
+		end
+		x = x + gap
+	end
+	for _, point in pairs(points) do point[1] = point[1] - (x - step - gap) / 2 end
+	return points
+end
+
+-- Two rows, one per hand, each column one direction: left, up, right, down, with the face buttons in the same
+-- order under the D-pad; the bumpers, then the stick clicks, to the right, the triggers to the left.
+local function grid(pitch)
+	local points = {}
+	for c, column in ipairs({ { "PADLTRIGGER", "PADRTRIGGER" }, { "PADDLEFT", "PAD3" }, { "PADDUP", "PAD4" }, { "PADDRIGHT", "PAD2" },
+		{ "PADDDOWN", "PAD1" }, { "PADLSHOULDER", "PADRSHOULDER" }, { "PADLSTICK", "PADRSTICK" } }) do
+		points[column[1]] = { (c - 4) * pitch, pitch / 2 }
+		points[column[2]] = { (c - 4) * pitch, -pitch / 2 }
+	end
+	return points
+end
+
+-- Crossbar styles: where each key's socket sits in a set, and for the all-layers ones where each layer's set sits.
+-- The rest show one set that swaps as a layer is held. Square ones draw tiles; a quiet one fades its set until a
+-- layer is held. The all-layers styles past the classic one step back by fading only, so in combat the click twins
+-- still lie over their sockets.
+ns.CROSSBAR_STYLES = {
+	active = { points = ns.CROSSBAR, inner = true },
+	all = { points = ns.CROSSBAR, inner = true, all = true, clusters = ns.CROSSBAR_CLUSTERS, idleScale = ns.CROSSBAR_IDLE_SCALE },
+	strip = { points = row(54, 16), label = { 0, 50 }, size = { 780, 70 } },
+	ghost = { points = row(54, 16), label = { 0, 50 }, size = { 780, 70 }, quiet = true },
+	grid = { points = grid(48), label = { 0, 64 }, size = { 360, 110 }, square = true },
+	rows = { points = row(48, 6), all = true, clusters = { { 0, 72 }, { 0, 24 }, { 0, -24 }, { 0, -72 } }, label = { -392, 0 }, size = { 720, 50 }, square = true },
+	stacked = { points = row(54, 16), all = true, clusters = { { 0, -90 }, { 0, -30 }, { 0, 30 }, { 0, 90 } }, label = { -440, 0 }, size = { 780, 56 } },
+}
 
 -- Blizzard's circular alpha mask makes icons, sweeps and the rim round without any art of LeanPad's own.
 local CIRCLE = "Interface\\CharacterFrame\\TempPortraitAlphaMask"
@@ -205,18 +248,32 @@ local function snap(x, y, neighbours)
 	return x, y
 end
 
+local function style()
+	return ns.CROSSBAR_STYLES[ns.db.crossbarStyle] or ns.CROSSBAR_STYLES.active
+end
+
+-- Dragged spots and sizes are kept per style; the two classic styles share the original fields.
+local function field(name)
+	local id = ns.db.crossbarStyle
+	return (id == nil or id == "active" or id == "all") and name or name .. "." .. id
+end
+
+local function saved(name)
+	return ns.db[field(name)] or {}
+end
+
 local function clusterPoint(index)
-	return (ns.db.clusterPoints or {})[index] or ns.CROSSBAR_CLUSTERS[index]
+	return saved("clusterPoints")[index] or (style().clusters or ns.CROSSBAR_CLUSTERS)[index]
 end
 
 local function socketPoint(key)
-	return (ns.db.socketPoints or {})[key] or ns.CROSSBAR[key]
+	return saved("socketPoints")[key] or style().points[key]
 end
 
 local function otherPoints(points, except)
 	local list = {}
 	for key in pairs(points) do
-		if key ~= except then table.insert(list, points == ns.CROSSBAR and socketPoint(key) or clusterPoint(key)) end
+		if key ~= except then table.insert(list, type(key) == "number" and clusterPoint(key) or socketPoint(key)) end
 	end
 	return list
 end
@@ -231,23 +288,28 @@ end
 -- A set sits where the player dragged it, else on its slot; offsets are in the set's own scale, so they are
 -- divided by it to keep the set centred there. The wheel's per-set size multiplies the idle shrink.
 local function placeCluster(cluster, index, active)
-	local scale = (active and 1 or ns.CROSSBAR_IDLE_SCALE) * ((ns.db.clusterScales or {})[index] or 1)
+	local s = style()
+	local scale = (active and 1 or s.idleScale or 1) * (saved("clusterScales")[index] or 1)
 	local point = clusterPoint(index)
+	cluster.frame:SetSize(unpack(s.size or ns.CROSSBAR_CLUSTER_SIZE))
 	cluster.frame:SetScale(scale)
-	cluster.frame:SetAlpha(active and 1 or ns.CROSSBAR_IDLE_ALPHA)
+	cluster.frame:SetAlpha(active and 1 or (s.quiet and ns.CROSSBAR_QUIET_ALPHA or ns.CROSSBAR_IDLE_ALPHA))
 	cluster.frame:ClearAllPoints()
 	cluster.frame:SetPoint("CENTER", bar, "CENTER", point[1] / scale, point[2] / scale)
+	cluster.Label:ClearAllPoints()
+	cluster.Label:SetPoint("CENTER", cluster.frame, "CENTER", unpack(s.label or { 0, 92 }))
 end
 
--- Every button sits where the player dragged it, else on its spot; the sockets between the diamonds that
--- were not dragged stack on the diamonds' line.
+-- Every button sits where the player dragged it, else on its spot; in the classic styles the sockets between the
+-- diamonds that were not dragged stack on the diamonds' line.
 local function placeSockets(cluster)
-	local dragged = ns.db.socketPoints or {}
+	local dragged = saved("socketPoints")
 	for key, button in pairs(cluster.buttons) do
 		local point = socketPoint(key)
 		button:ClearAllPoints()
 		button:SetPoint("CENTER", cluster.frame, "CENTER", point[1], point[2])
 	end
+	if not style().inner then return end
 	for _, side in ipairs(ns.CROSSBAR_INNER) do
 		local shown = {}
 		for i = 2, #side do
@@ -288,9 +350,10 @@ local function draggable(frame, onDrop, onLockedDrag)
 	end)
 end
 
-local function remember(field, key, value)
-	ns.db[field] = ns.db[field] or {}
-	ns.db[field][key] = value
+local function remember(name, key, value)
+	local f = field(name)
+	ns.db[f] = ns.db[f] or {}
+	ns.db[f][key] = value
 	ns.RefreshCrossbar()
 end
 
@@ -382,7 +445,7 @@ local function syncTwins()
 	end
 	if not header then makeTwins() end
 	local on = locked and ns.db.crossbarMouse == true and bar:IsShown()
-	local allLayers, uiScale = ns.db.crossbarStyle == "all", UIParent:GetEffectiveScale()
+	local allLayers, uiScale = style().all, UIParent:GetEffectiveScale()
 	local byModifiers = {}
 	for _, layer in ipairs(ns.Layers()) do byModifiers[layer.prefix:lower()] = layer.prefix end
 	for _, entry in ipairs(twins) do
@@ -402,24 +465,43 @@ local function syncTwins()
 	header:Execute(PAGE_UPDATE)
 end
 
--- Held layer only (default): one cluster that switches as modifiers are held, labelled with them.
--- All layers: one cluster per layer, labelled, the held one full size.
+-- Square styles swap the round masks for square ones, square the sweeps and tuck the glyph into the corner.
+local function shape(button, square)
+	local mask = square and ns.WHITE or CIRCLE
+	button.IconMask:SetTexture(mask, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+	button.RimMask:SetTexture(mask, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+	for _, cooldown in ipairs({ button.Cooldown, button.ChargeCooldown }) do
+		cooldown:SetSwipeTexture(mask)
+		cooldown:SetUseCircularEdge(not square)
+	end
+	button.Glyph:ClearAllPoints()
+	if square then
+		button.Glyph:SetPoint("BOTTOMLEFT", button.Face, "BOTTOMLEFT", 1, 1)
+	else
+		button.Glyph:SetPoint("BOTTOM", button.Face, "TOP", 0, -6)
+	end
+end
+
+-- Held-layer styles: one cluster that switches as modifiers are held, labelled with them; a quiet one stays faint
+-- until a layer is held. All-layers styles: one cluster per layer, labelled, the held one in front.
 -- Each button updates in its own securecallfunction, so one error is reported without stopping the rest.
 function ns.RefreshCrossbar()
 	local layers = ns.Layers()
 	local held = ns.HeldPrefix()
-	local allLayers = ns.db.crossbarStyle == "all"
+	local s = style()
+	local allLayers = s.all
 	local hideNumbers = not GetCVarBool("countdownForCooldowns")
 	local used = actionKeys(layers)
 	for index, cluster in ipairs(clusters) do
 		local layer = allLayers and layers[index] or (index == 1 and heldLayer(layers, held)) or nil
 		cluster.frame:SetShown(layer ~= nil)
 		if layer then
-			placeCluster(cluster, index, not allLayers or layer.prefix == held)
+			placeCluster(cluster, index, allLayers and layer.prefix == held or not allLayers and (not s.quiet or held ~= ""))
 			cluster.frame.prefix = layer.prefix
 			cluster.Label:SetText(layer.prefix ~= "" and layer.label or "")
 			for key, button in pairs(cluster.buttons) do
 				button:SetShown(used[key] == true)
+				shape(button, s.square)
 				securecallfunction(refreshButton, button, key, layer.prefix, hideNumbers)
 			end
 			placeSockets(cluster)
@@ -470,7 +552,8 @@ function ns.MakeSocket(frameType, parent, size)
 	button.Rim = face:CreateTexture(nil, "BACKGROUND")
 	button.Rim:SetSize(size + 4, size + 4)
 	button.Rim:SetPoint("CENTER")
-	button.Rim:AddMaskTexture(circleMask(face, size + 4))
+	button.RimMask = circleMask(face, size + 4)
+	button.Rim:AddMaskTexture(button.RimMask)
 	button.Rim:SetColorTexture(unpack(ns.RIM))
 	button.IconMask = circleMask(face, size)
 	button.Icon = face:CreateTexture(nil, "ARTWORK")
@@ -500,7 +583,7 @@ local function makeButton(parent, key)
 	function button.pickup() ns.PickupFromButton(parent.prefix .. key) end
 	draggable(button, function(self)
 		local x, y = droppedOffset(self, parent)
-		remember("socketPoints", key, { snap(x, y, otherPoints(ns.CROSSBAR, key)) })
+		remember("socketPoints", key, { snap(x, y, otherPoints(style().points, key)) })
 	end, button.pickup)
 	-- With the mouse on, a spell dropped on a socket goes into the bar slot its button fires, and hovering tells the action.
 	-- The secure twin over a socket hands its tooltip and drops back here.
@@ -581,10 +664,10 @@ local function makeCluster(index)
 	-- Unlocked, a set can be dragged anywhere on the bar and sized with the wheel, in steps of 5%.
 	draggable(frame, function(self)
 		local x, y = droppedOffset(self, bar)
-		remember("clusterPoints", index, { snap(x, y, otherPoints(ns.CROSSBAR_CLUSTERS, index)) })
+		remember("clusterPoints", index, { snap(x, y, otherPoints(style().clusters or ns.CROSSBAR_CLUSTERS, index)) })
 	end)
 	frame:SetScript("OnMouseWheel", function(_, delta)
-		local scale = (ns.db.clusterScales or {})[index] or 1
+		local scale = saved("clusterScales")[index] or 1
 		remember("clusterScales", index, math.max(0.5, math.min(2, scale + delta * 0.05)))
 	end)
 	for key in pairs(ns.CROSSBAR) do cluster.buttons[key] = makeButton(frame, key) end
@@ -632,7 +715,8 @@ local function build()
 	hint:SetPoint("TOP", 0, -8)
 	hint:SetText("Drag the bar, a set or a single button; they snap to a grid and line up with neighbours, Shift drags freely. Scroll over a set to size it. Lock it on the settings page.")
 	local reset = ns.Button(bar.Outline, "Reset layout", 140, function()
-		ns.db.crossbarPoint, ns.db.clusterPoints, ns.db.clusterScales, ns.db.socketPoints = nil, nil, nil, nil
+		ns.db.crossbarPoint = nil
+		for _, name in ipairs({ "clusterPoints", "clusterScales", "socketPoints" }) do ns.db[field(name)] = nil end
 		anchor()
 		ns.RefreshCrossbar()
 	end)

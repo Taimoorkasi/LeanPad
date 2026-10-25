@@ -508,7 +508,7 @@ end
 -- A "## Key: value" line from the TOC.
 function M.tocHeader(key)
 	for line in io.lines("LeanPad/LeanPad.toc") do
-		local value = line:match("^## " .. key .. ": (.+)$")
+		local value = line:match("^## " .. key .. ": (.-)%s*$")
 		if value then return value end
 	end
 end

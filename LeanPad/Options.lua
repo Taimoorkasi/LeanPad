@@ -6,7 +6,11 @@ local MARGIN, GAP, COLUMN, ROW = 16, 16, 432, 32
 local SOFT_TARGETS = { "SoftTargetEnemy", "SoftTargetFriend", "SoftTargetInteract" }
 local SOFT_TARGET_LABELS = { "Enemies", "Friends", "Interact" }
 local STYLES = { { "auto", "Auto" }, { "xbox", "Xbox" }, { "playstation", "PlayStation" } }
-local CROSSBARS = { { "off", OFF }, { "active", "One set, swaps with the held layer" }, { "all", "All layers, the held one large" } }
+local CROSSBARS = {
+	{ "off", OFF }, { "active", "One set, swaps with the held layer" }, { "all", "All layers, the held one large" },
+	{ "strip", "One row, swaps with the held layer" }, { "ghost", "One row, faint until a layer is held" },
+	{ "grid", "Square grid, swaps with the held layer" }, { "rows", "Square rows, one per layer" }, { "stacked", "Stacked rows, one per layer" },
+}
 local SCALES = { { "0.6", "60%" }, { "0.8", "80%" }, { "1", "100%" }, { "1.2", "120%" } }
 local OPACITIES = { { "1", "100%" }, { "0.8", "80%" }, { "0.6", "60%" }, { "0.4", "40%" } }
 local PLAYSTYLES = { { "manual", "Keep my own settings" }, { "auto", "Auto" }, { "tank", "Tank" }, { "melee", "Melee" }, { "ranged", "Ranged" }, { "healer", "Healer" } }
