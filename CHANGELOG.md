@@ -7,6 +7,7 @@ All notable changes to LeanPad are documented here. The format is based on [Keep
 ### Added
 
 - **Click the crossbar to cast.** With *Mouse* on in the crossbar settings, clicking a socket casts what it holds, in combat too, as a click on an action bar does. Holding a layer button while clicking fires that layer, as the pad does, and Action Bar 1 follows forms and stances. Drag-and-drop and tooltips work as before.
+- **Profiles.** A profile is your whole controller setup under a name: LeanPad's settings and crossbar layout, the controller bindings on every layer, the controller CVars and what the bar slots your pad fires hold. Make one from your current setup, copy, rename or delete it, and switch from the *Profile* menu at the top of the settings page or with `/lp profile <name>`. Link each spec to a profile, say Guardian to Tank and Feral to DPS, and LeanPad switches when you change spec, once combat ends. Profiles are shared by all your characters; each character remembers its own and its spec links. Your current setup becomes the *Default* profile, nothing lost. The profile in use saves itself when you switch away and when you log out or reload. Bar slots are kept per spec, so one profile serves every class that uses it; a spell, macro or item the character doesn't have leaves its slot as it was, and LeanPad says so in one line.
 
 ### Fixed
 
