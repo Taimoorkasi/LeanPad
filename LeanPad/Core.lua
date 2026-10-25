@@ -3,6 +3,9 @@ local addonName, ns = ...
 EventUtil.ContinueOnAddOnLoaded(addonName, function()
 	LeanPadDB = LeanPadDB or {}
 	ns.db = LeanPadDB
+	-- Profiles are account-wide, in LeanPadDB; each character keeps which one it uses and its spec links.
+	LeanPadCharDB = LeanPadCharDB or { specs = {} }
+	ns.char = LeanPadCharDB
 end)
 
 -- Names for Bindings.xml, which the client loads from the addon folder on its own.
@@ -40,6 +43,8 @@ SlashCmdList.LEANPAD = function(msg)
 		ns.OutOfCombat(ns.UndoReset)
 	elseif msg == "settings" then
 		ns.OpenOptions()
+	elseif msg:find("^profile ") then
+		ns.SwitchProfile(msg:match("^profile%s+(.-)%s*$"))
 	else
 		ns.ToggleController()
 	end

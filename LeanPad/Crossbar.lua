@@ -703,6 +703,16 @@ end
 
 function ns.CrossbarLocked() return locked end
 
+-- Reads every crossbar setting again, once a profile switch has replaced them.
+function ns.ApplyCrossbarSettings()
+	ns.SetCrossbarShown(ns.db.crossbar ~= false)
+	anchor()
+	bar:SetScale(ns.db.crossbarScale or 1)
+	bar:SetAlpha(ns.db.crossbarAlpha or 1)
+	applyMouse()
+	ns.RefreshCrossbar()
+end
+
 -- Blizzard's Edit Mode unlocks the crossbar too, so it moves along with the rest of the HUD.
 EventRegistry:RegisterCallback("EditMode.Enter", function()
 	if ns.db.crossbar ~= false then ns.SetCrossbarLocked(false) end

@@ -148,6 +148,7 @@ local function newMenuDescription(text, callback)
 		return entry
 	end
 	function description:SetScrollMode(extent) self.scrollExtent = extent end
+	function description:CreateDivider() table.insert(self.entries, { divider = true, entries = {} }) end
 	function description:CreateRadio(label, isSelected, setSelected, data)
 		local entry = newMenuDescription(label, function() setSelected(data) end)
 		entry.selected = function() return isSelected(data) end
@@ -191,7 +192,7 @@ function M.reset()
 	}
 	M.state = w
 
-	LeanPadDB = nil
+	LeanPadDB, LeanPadCharDB = nil, nil
 	LeanPadControllerFrame, LeanPadCrossbar = nil, nil
 	SLASH_LEANPAD1 = nil
 	SlashCmdList = {}
@@ -265,21 +266,31 @@ function M.reset()
 	GetActionInfo = function(slot) return action(slot).kind, action(slot).id end
 	-- Spells lit by a proc, in w.procs.
 	C_SpellActivationOverlay = { IsSpellOverlayed = function(id) return w.procs[id] == true end }
-	C_Spell = { GetSpellName = function(id) return "spell:" .. id end }
+	-- Spells and items pick up unless their id is in w.unavailable, as the client gives nothing for one the character lacks.
+	w.unavailable = {}
+	local function pickup(kind, id)
+		if w.unavailable[id] then return end
+		w.cursor = kind
+		table.insert(w.pickups, { kind, id })
+	end
+	C_Spell = { GetSpellName = function(id) return "spell:" .. id end, PickupSpell = function(id) pickup("spellID", id) end }
 	-- Forms in w.forms, each { spell, icon }, the one taken in w.form (0 for none), and stealth in w.stealthed.
 	GetNumShapeshiftForms = function() return #w.forms end
 	GetShapeshiftForm = function() return w.form end
 	GetShapeshiftFormInfo = function(index) return w.forms[index].icon, index == w.form, true, w.forms[index].spell end
 	IsStealthed = function() return w.stealthed end
 	C_AddOns = { IsAddOnLoaded = function(name) return w.addons[name] == true end }
-	C_Item = { GetItemNameByID = function(id) return "item:" .. id end }
+	C_Item = { GetItemNameByID = function(id) return "item:" .. id end, PickupItem = function(id) pickup("item", id) end }
 	GetCVarBool = function(name) return w.cvars[name] == "1" end
 	RunNextFrame = function(callback) table.insert(w.nextFrame, callback) end
 	C_Timer = { After = function(seconds, callback) table.insert(w.timers, { seconds = seconds, callback = callback }) end }
 	-- A Beast Mastery hunter until a spec says otherwise.
 	w.spec, w.specID, w.role = 1, 253, "DAMAGER"
 	GetSpecialization = function() return w.spec end
-	GetSpecializationInfo = function() return w.specID end
+	-- The class's specs in w.specList; the current one, w.spec, reads as w.specID.
+	w.specList = { { 253, "Beast Mastery" }, { 254, "Marksmanship" }, { 255, "Survival" } }
+	GetNumSpecializations = function() return #w.specList end
+	GetSpecializationInfo = function(index) return index == w.spec and w.specID or w.specList[index][1], w.specList[index][2] end
 	GetSpecializationRole = function() return w.role end
 	EventRegistry = { RegisterCallback = function(_, event, callback) w.callbacks[event] = callback end }
 	-- Like the client's: an error goes to the error handler and the caller carries on.
@@ -379,6 +390,14 @@ function M.reset()
 	GetCurrentBindingSet = function() return w.bindingSet end
 	GetBindingText = function(key) return w.glyphs[key] or ("text:" .. key) end
 	StaticPopup_Show = function(which) table.insert(w.popups, which) end
+	-- Blizzard's generic input box and confirmation: the last one shown, its kind and data, in w.dialog.
+	StaticPopup_ShowCustomGenericInputBox = function(data) w.dialog = { kind = "input", data = data } end
+	StaticPopup_ShowCustomGenericConfirmation = function(data) w.dialog = { kind = "confirm", data = data } end
+	CopyTable = function(t)
+		local copy = {}
+		for k, v in pairs(t) do copy[k] = type(v) == "table" and CopyTable(v) or v end
+		return copy
+	end
 
 	C_AddOnProfiler = {
 		GetAddOnMetric = function(name, metric)
@@ -522,11 +541,11 @@ function M.fire(event)
 	end
 end
 
--- Sets up a loaded, ready addon: saved variables in place and ADDON_LOADED fired.
-function M.boot(savedVariables)
+-- Sets up a loaded, ready addon: account and per-character saved variables in place and ADDON_LOADED fired.
+function M.boot(savedVariables, perCharacter)
 	M.reset()
 	local ns = M.loadAddon()
-	LeanPadDB = savedVariables
+	LeanPadDB, LeanPadCharDB = savedVariables, perCharacter
 	M.addonLoaded("LeanPad")
 	return ns, M.state
 end

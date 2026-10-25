@@ -4,6 +4,7 @@
 ## Author: tamui
 ## Version: @project-version@
 ## SavedVariables: LeanPadDB
+## SavedVariablesPerCharacter: LeanPadCharDB
 ## Category: Action Bars
 ## AddonCompartmentFunc: LeanPad_OnCompartmentClick
 ## IconTexture: Interface\AddOns\LeanPad\Art\Logo
@@ -15,4 +16,5 @@ Theme.lua
 Controller.lua
 Options.lua
 Crossbar.lua
+Profiles.lua
 Settings.lua

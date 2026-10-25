@@ -96,10 +96,10 @@ end
 claimer:RegisterEvent("UPDATE_BINDINGS")
 claimer:SetScript("OnEvent", claimPad)
 
--- The controller CVars and every pad binding, so putting it back leaves nothing of what came after.
-local function snapshot()
+-- The controller CVars, or the given set, and every pad binding, so putting it back leaves nothing of what came after.
+local function snapshot(cvars)
 	local saved = { cvars = {}, bindings = padBindings(), all = true }
-	for cvar in pairs(ns.CVARS) do saved.cvars[cvar] = GetCVar(cvar) end
+	for cvar in pairs(cvars or ns.CVARS) do saved.cvars[cvar] = GetCVar(cvar) end
 	return saved
 end
 
@@ -111,6 +111,7 @@ local function putBack(saved)
 	for key, action in pairs(saved.bindings) do bind(key, action) end
 	SaveBindings(GetCurrentBindingSet())
 end
+ns.Snapshot, ns.PutBack = snapshot, putBack
 
 -- Starts over on LeanPad's layout: every pad binding is cleared first, so no old chord fires alongside it.
 -- Two backups: the state from before LeanPad's first setup, for Undo setup, and the layout each reset
