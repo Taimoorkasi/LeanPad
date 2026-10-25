@@ -283,6 +283,36 @@ local function buildRight(x, y)
 	row(x, y, "Touchpad moves it", cvarCheckbox("GamePadTouchCursorEnable"))
 end
 
+-- Names come from Blizzard's input box; text may carry %s for the profile in use.
+local function askName(text, done)
+	StaticPopup_ShowCustomGenericInputBox({ text = text, text_arg1 = ns.char.profile, callback = done, acceptText = ACCEPT, maxLetters = 24 })
+end
+
+-- Switch to a profile, make, copy, rename or delete one, and pick the profile each spec switches to.
+local function profileMenu(root)
+	local current, names = ns.char.profile, {}
+	for _, name in ipairs(ns.ProfileNames()) do table.insert(names, { name, name }) end
+	ns.Radios(root, names, function() return ns.char.profile end, function(name) ns.SwitchProfile(name) end)
+	root:CreateDivider()
+	root:CreateButton("New from current setup...", function() askName("Name the new profile. It starts as your current setup.", ns.NewProfile) end)
+	if current then
+		root:CreateButton("Copy...", function() askName("Name the copy of %s.", ns.CopyProfile) end)
+		root:CreateButton("Rename...", function() askName("Rename %s to:", ns.RenameProfile) end)
+		root:CreateButton("Delete...", function()
+			StaticPopup_ShowCustomGenericConfirmation({ text = "Delete profile %s? Your setup stays as it is now.", text_arg1 = current, callback = function() ns.DeleteProfile(current) end })
+		end)
+	end
+	root:CreateDivider()
+	root:CreateTitle("Switch profile when you change spec")
+	local links = { { false, NONE } }
+	for _, option in ipairs(names) do table.insert(links, option) end
+	for index = 1, GetNumSpecializations() do
+		local spec, specName = GetSpecializationInfo(index)
+		local submenu = root:CreateButton(("%s: %s"):format(specName, ns.char.specs[spec] or NONE))
+		ns.Radios(submenu, links, function() return ns.char.specs[spec] or false end, function(name) ns.LinkSpec(spec, name) end)
+	end
+end
+
 function ns.BuildOptions(frame)
 	if page then return page end
 	page = CreateFrame("Frame", nil, frame)
@@ -301,6 +331,9 @@ function ns.BuildOptions(frame)
 	local title = ns.Text(page, 16, C.text)
 	title:SetPoint("LEFT", back, "RIGHT", 14, 0)
 	title:SetText(SETTINGS)
+	local profile = ns.Dropdown(page, 220, function() return "Profile: " .. (ns.char.profile or NONE) end, profileMenu)
+	profile:SetPoint("LEFT", title, "RIGHT", 24, 0)
+	table.insert(controls, profile)
 	-- LeanPad's window sits on the UI scale, which bar addons such as ElvUI change; this sizes it on top of that.
 	local size = choice(WINDOW_SCALES, function() return tostring(ns.db.windowScale or 1) end, function(value)
 		ns.SetWindowScale(tonumber(value))

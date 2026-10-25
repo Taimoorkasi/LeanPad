@@ -282,4 +282,69 @@ describe("Profiles", function()
 			assert.is_false(printed("LeanPad: profile Tank in use."))
 		end)
 	end)
+
+	describe("on the settings page", function()
+		local dropdown
+
+		local function open()
+			ns.OpenOptions()
+			for _, widget in ipairs(w.widgets) do
+				if widget.parent == LeanPadControllerFrame.Options and rawget(widget, "Label") and widget.Label:GetText():find("^Profile: ") then dropdown = widget end
+			end
+			dropdown:Fire("OnClick")
+			return w.menu.root
+		end
+
+		local function labels(description)
+			local list = {}
+			for _, entry in ipairs(description.entries) do table.insert(list, entry.text or "-") end
+			return list
+		end
+
+		it("lists the profiles, what can be done with the one in use, and a link per spec", function()
+			ns.LinkSpec(253, "Default")
+			local root = open()
+			assert.equal("Profile: Default", dropdown.Label:GetText())
+			assert.same({ "Default", "-", "New from current setup...", "Copy...", "Rename...", "Delete...", "-", "Beast Mastery: Default", "Marksmanship: None", "Survival: None" }, labels(root))
+			assert.same({ "Switch profile when you change spec" }, root.titles)
+			assert.is_true(root.entries[1].selected())
+			local link = wow.entry(root, "Marksmanship: None")
+			assert.same({ "None", "Default" }, labels(link))
+			assert.is_true(link.entries[1].selected())
+			link.entries[2].callback()
+			assert.equal("Default", LeanPadCharDB.specs[254])
+		end)
+
+		it("names new, copied and renamed profiles in Blizzard's input box", function()
+			local root = open()
+			wow.entry(root, "New from current setup...").callback()
+			assert.equal("input", w.dialog.kind)
+			w.dialog.data.callback("Tank")
+			assert.equal("Tank", LeanPadCharDB.profile)
+			assert.equal("Profile: Tank", dropdown.Label:GetText())
+			wow.entry(open(), "Copy...").callback()
+			assert.equal("Name the copy of %s.", w.dialog.data.text)
+			assert.equal("Tank", w.dialog.data.text_arg1)
+			w.dialog.data.callback("Tank 2")
+			wow.entry(open(), "Rename...").callback()
+			w.dialog.data.callback("Bear")
+			assert.same({ "Bear", "Default", "Tank 2" }, ns.ProfileNames())
+			assert.equal("Profile: Bear", dropdown.Label:GetText())
+		end)
+
+		it("switches, and deletes after asking", function()
+			ns.NewProfile("Tank")
+			local root = open()
+			root.entries[1].callback() -- Default
+			assert.equal("Default", LeanPadCharDB.profile)
+			assert.equal("Profile: Default", dropdown.Label:GetText())
+			wow.entry(open(), "Delete...").callback()
+			assert.equal("confirm", w.dialog.kind)
+			assert.equal("Default", w.dialog.data.text_arg1)
+			w.dialog.data.callback()
+			assert.same({ "Tank" }, ns.ProfileNames())
+			assert.equal("Profile: None", dropdown.Label:GetText())
+			assert.same({ "Tank", "-", "New from current setup...", "-", "Beast Mastery: None", "Marksmanship: None", "Survival: None" }, labels(open()))
+		end)
+	end)
 end)
