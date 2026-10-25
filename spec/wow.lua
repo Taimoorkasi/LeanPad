@@ -113,6 +113,24 @@ function Widget:GetFontString()
 	self.fontString = self.fontString or newWidget("FontString", nil, self)
 	return self.fontString
 end
+-- Attributes, and frame refs for restricted snippets. A state handler runs its _onstate- snippet on a state change.
+function Widget:SetAttribute(name, value)
+	self.attributes = self.attributes or {}
+	self.attributes[name] = value
+	local state = name:match("^state%-(.+)$")
+	if state and rawget(self, "template") == "SecureHandlerStateTemplate" then self:Execute(self.attributes["_onstate-" .. state]) end
+end
+function Widget:GetAttribute(name) return (self.attributes or {})[name] end
+function Widget:SetFrameRef(label, frame) self:SetAttribute("frameref-" .. label, frame) end
+function Widget:GetFrameRef(label) return self:GetAttribute("frameref-" .. label) end
+-- Runs a restricted snippet with the frame as self, seeing only the restricted API the snippets use.
+local RESTRICTED_API = { "GetActionBarPage", "HasVehicleActionBar", "GetVehicleBarIndex", "HasOverrideActionBar", "GetOverrideBarIndex",
+	"HasTempShapeshiftActionBar", "GetTempShapeshiftBarIndex", "HasBonusActionBar", "GetBonusBarIndex" }
+function Widget:Execute(body)
+	local env = { gmatch = string.gmatch, tonumber = tonumber }
+	for _, name in ipairs(RESTRICTED_API) do env[name] = C_ActionBar[name] end
+	setfenv(assert(loadstring("local self = ...\n" .. body)), env)(self)
+end
 -- Runs a script the way the client would, with the widget as self.
 function Widget:Fire(script, ...) return self.scripts[script](self, ...) end
 
@@ -344,6 +362,10 @@ function M.reset()
 	SetCVar = function(name, value) w.cvars[name] = value end
 	GetBindingAction = function(key) return w.bindings[key] or "" end
 	SetBinding = function(key, action) w.bindings[key] = action end
+	ATTRIBUTE_NOOP = ""
+	-- State drivers by state name, each with its frame and macro conditions.
+	w.stateDrivers = {}
+	RegisterStateDriver = function(frame, state, values) w.stateDrivers[state] = { frame = frame, values = values } end
 	-- Override bindings by key, each with its owner and whether it is a priority one.
 	w.overrides = {}
 	SetOverrideBinding = function(owner, priority, key, action) w.overrides[key] = { owner = owner, priority = priority, action = action } end

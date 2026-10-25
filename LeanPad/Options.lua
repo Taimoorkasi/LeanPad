@@ -264,7 +264,7 @@ local function buildRight(x, y)
 		ns.Saved()
 	end)
 	table.insert(controls, mouse)
-	y = row(x, y, "Mouse: drop spells on it, see tooltips", mouse) + GAP
+	y = row(x, y, "Mouse: click, drop spells, see tooltips", mouse) + GAP
 	local cursorTitle
 	y, cursorTitle = heading(x, y, "Cursor")
 	-- Beside the heading when nothing can bring the cursor up, since its clicks would then do nothing.

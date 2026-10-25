@@ -551,6 +551,119 @@ describe("Crossbar", function()
 		end)
 	end)
 
+	describe("clicks", function()
+		-- The secure twin laid over a socket: the one handing its tooltip to that socket.
+		local function twinFor(key, index)
+			local socket = buttonFor(key, index)
+			for _, twin in ipairs(wow.widgets("Button", "SecureActionButtonTemplate")) do
+				if twin.scripts.OnEnter == socket.tooltip then return twin end
+			end
+		end
+
+		local function header() return wow.widgets("Frame", "SecureHandlerStateTemplate")[1] end
+
+		before_each(function()
+			w.bindings.PAD4 = "ACTIONBUTTON1" -- Action Bar 1 on Base
+			wow.fire("PLAYER_ENTERING_WORLD")
+			bar = LeanPadCrossbar
+		end)
+
+		it("need the mouse on, then put a twin over each shown socket and above it", function()
+			assert.is_false(twinFor("PAD3"):IsShown())
+			local socket = buttonFor("PAD3")
+			socket.cx, socket.cy, socket.effectiveScale, UIParent.effectiveScale = 100, 50, 1.5, 0.75
+			ns.SetCrossbarMouse(true)
+			local twin = twinFor("PAD3")
+			assert.is_true(twin:IsShown())
+			assert.same({ "CENTER", UIParent, "BOTTOMLEFT", 200, 100 }, twin.point)
+			assert.equal(socket.Overlay:GetFrameLevel() + 1, twin:GetFrameLevel())
+			assert.is_false(twinFor("PADRSTICK"):IsShown()) -- the cursor toggle shows no socket
+			assert.is_false(twinFor("PAD3", 2):IsShown()) -- sets the held-layer view doesn't show
+		end)
+
+		it("fire the slot of the layer the click's modifiers pick, and nothing off the bars", function()
+			ns.SetCrossbarMouse(true)
+			local x, a = twinFor("PAD3"), twinFor("PAD1")
+			assert.equal("action", x:GetAttribute("type"))
+			assert.equal(61, x:GetAttribute("action"))
+			assert.equal(ATTRIBUTE_NOOP, a:GetAttribute("type")) -- Jump
+			assert.equal("action", a:GetAttribute("shift-type")) -- LT + A
+			assert.equal(61, a:GetAttribute("shift-action"))
+			assert.equal(ATTRIBUTE_NOOP, a:GetAttribute("ctrl-type")) -- a bar button the fake lacks
+		end)
+
+		it("follow Action Bar 1's page as forms and bars change it, by the client's own conditions", function()
+			ns.SetCrossbarMouse(true)
+			local y = twinFor("PAD4")
+			assert.equal("action", y:GetAttribute("type"))
+			assert.equal(1, y:GetAttribute("action"))
+			local driver = w.stateDrivers.page
+			assert.equal(header(), driver.frame)
+			assert.truthy(driver.values:find("[bonusbar:1] b1", 1, true))
+			w.bar.bonus = 7 -- Cat Form
+			header():SetAttribute("state-page", "b1")
+			assert.equal(73, y:GetAttribute("action"))
+			w.bar.page = 2 -- a paged bar wins over the form, as in mainBarPage
+			header():SetAttribute("state-page", "2")
+			assert.equal(13, y:GetAttribute("action"))
+			for state, index in pairs({ v = "vehicle", o = "override", s = "temp" }) do
+				w.bar[index] = 12
+				header():SetAttribute("state-page", state)
+				assert.equal(133, y:GetAttribute("action"), state)
+				w.bar[index] = nil
+			end
+		end)
+
+		it("fire each set's own layer in the all-layers view", function()
+			ns.SetCrossbarMouse(true)
+			ns.SetCrossbarStyle("all")
+			local a = twinFor("PAD1", 2) -- the LT set
+			assert.is_true(a:IsShown())
+			assert.equal("action", a:GetAttribute("type"))
+			assert.equal(61, a:GetAttribute("action"))
+			assert.is_nil(a:GetAttribute("shift-type"))
+		end)
+
+		it("hide while unlocked, with the mouse off or with the bar", function()
+			ns.SetCrossbarMouse(true)
+			ns.SetCrossbarLocked(false)
+			assert.is_false(twinFor("PAD3"):IsShown())
+			ns.SetCrossbarLocked(true)
+			assert.is_true(twinFor("PAD3"):IsShown())
+			ns.SetCrossbarShown(false)
+			assert.is_false(twinFor("PAD3"):IsShown())
+			ns.SetCrossbarShown(true)
+			ns.SetCrossbarMouse(false)
+			assert.is_false(twinFor("PAD3"):IsShown())
+		end)
+
+		it("wait for combat to end before moving or aiming", function()
+			w.combat = true
+			ns.SetCrossbarMouse(true)
+			bar:Fire("OnEvent", "UPDATE_BINDINGS")
+			assert.is_false(twinFor("PAD3"):IsShown())
+			w.combat = false
+			wow.fire("PLAYER_REGEN_ENABLED")
+			assert.is_true(twinFor("PAD3"):IsShown())
+		end)
+
+		it("hand tooltips, drops and drags to their socket", function()
+			ns.SetCrossbarMouse(true)
+			local twin = twinFor("PAD3")
+			twin:Fire("OnEnter")
+			assert.same({ owner = twin, anchor = "ANCHOR_RIGHT", slot = 61, shown = true }, w.tooltip)
+			twin:Fire("OnLeave")
+			assert.is_nil(w.tooltip)
+			twin:Fire("OnReceiveDrag")
+			assert.same({ 61 }, w.placed)
+			twin:Fire("OnDragStart")
+			assert.same({ { "action", 61 } }, w.pickups)
+			w.cursor = "spell" -- a drag carrying a spell is a drop, not a pickup
+			twin:Fire("OnDragStart")
+			assert.same({ { "action", 61 } }, w.pickups)
+		end)
+	end)
+
 	describe("settings", function()
 		it("Show crossbar hides and shows the bar and remembers the choice", function()
 			ns.SetCrossbarShown(false)

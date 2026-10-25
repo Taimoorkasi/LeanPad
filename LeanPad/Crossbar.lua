@@ -294,6 +294,114 @@ local function remember(field, key, value)
 	ns.RefreshCrossbar()
 end
 
+-- Mouse clicks. WoW casts from a click only through a secure button, and a frame holding one can't move in combat,
+-- while the sets move whenever a layer is held. So each socket gets a secure twin under UIParent, laid over it out of
+-- combat. A twin carries every layer as modifier attributes (shift-action and the like), so a click while holding a
+-- trigger fires that layer, as the pad does. Action Bar 1's slots follow its page through a state driver that wakes
+-- on any paging change; its snippet repeats mainBarPage's rule with the restricted API.
+-- shortcut: in combat twins stay where the sets were as it began, so in the all-layers view a set that grows while a
+-- layer is held leaves them behind, and a crossbar hidden in combat stays clickable until it ends; move them in a
+-- snippet if that bites.
+local PAGE_STATES = "[vehicleui] v; [possessbar] p; [overridebar] o; [shapeshift] s; [bar:2] 2; [bar:3] 3; [bar:4] 4; [bar:5] 5; [bar:6] 6; [bonusbar:1] b1; [bonusbar:2] b2; [bonusbar:3] b3; [bonusbar:4] b4; [bonusbar:5] b5; 1"
+local PAGE_UPDATE = [[
+	local page = GetActionBarPage()
+	if HasVehicleActionBar() then
+		page = GetVehicleBarIndex()
+	elseif HasOverrideActionBar() then
+		page = GetOverrideBarIndex()
+	elseif HasTempShapeshiftActionBar() then
+		page = GetTempShapeshiftBarIndex()
+	elseif page == 1 and HasBonusActionBar() then
+		page = GetBonusBarIndex()
+	end
+	for i = 1, self:GetAttribute("count") do
+		local twin = self:GetFrameRef("twin" .. i)
+		for mod, index in gmatch(twin:GetAttribute("bar1"), "([%a%-]*)=(%d+)") do
+			twin:SetAttribute(mod .. "action", tonumber(index) + (page - 1) * 12)
+		end
+	end
+]]
+-- Every modifier prefix a click can carry, in SecureButton_GetModifierPrefix's order.
+local CLICK_PREFIXES = { "", "shift-", "ctrl-", "ctrl-shift-", "alt-", "alt-shift-", "alt-ctrl-", "alt-ctrl-shift-" }
+local header, twins, twinsQueued
+
+local function makeTwins()
+	header = CreateFrame("Frame", nil, UIParent, "SecureHandlerStateTemplate")
+	twins = {}
+	for _, cluster in ipairs(clusters) do
+		for key, socket in pairs(cluster.buttons) do
+			local twin = CreateFrame("Button", nil, header, "SecureActionButtonTemplate")
+			twin:RegisterForClicks("AnyUp", "AnyDown") -- it acts on one of them, by ActionButtonUseKeyDown
+			twin:RegisterForDrag("LeftButton")
+			twin:SetScript("OnEnter", socket.tooltip)
+			twin:SetScript("OnLeave", function() GameTooltip:Hide() end)
+			twin:SetScript("OnReceiveDrag", socket.drop)
+			twin:SetScript("OnDragStart", function() if not GetCursorInfo() then socket.pickup() end end)
+			twin:SetAttribute("bar1", "") -- no Action Bar 1 slots until aimed
+			twin:Hide()
+			table.insert(twins, { twin = twin, socket = socket, cluster = cluster, key = key })
+			header:SetFrameRef("twin" .. #twins, twin)
+		end
+	end
+	header:SetAttribute("count", #twins)
+	header:SetAttribute("_onstate-page", PAGE_UPDATE)
+	RegisterStateDriver(header, "page", PAGE_STATES)
+end
+
+-- Points a twin at what its socket's key fires on each layer, keyed by click prefix. Action Bar 1 waits for the
+-- page snippet; anything off the bars does nothing, rather than falling back to the plain click's action.
+local function aim(twin, key, layers)
+	local bar1 = {}
+	for _, mod in ipairs(CLICK_PREFIXES) do
+		twin:SetAttribute(mod .. "type", nil)
+		twin:SetAttribute(mod .. "action", nil)
+	end
+	for mod, prefix in pairs(layers) do
+		local action = GetBindingAction(prefix .. key)
+		local index = action:match("^ACTIONBUTTON(%d+)$")
+		local slot = not index and ns.SlotForCommand(action)
+		twin:SetAttribute(mod .. "type", (index or slot) and "action" or ATTRIBUTE_NOOP)
+		if index then table.insert(bar1, mod .. "=" .. index) end
+		if slot then twin:SetAttribute(mod .. "action", slot) end
+	end
+	twin:SetAttribute("bar1", table.concat(bar1, ";"))
+end
+
+-- Lays each shown socket's twin over it and aims it, out of combat; in combat, once it ends. The held-layer view
+-- fires the layer the click's modifiers pick; the all-layers view fires each set's own layer.
+local function syncTwins()
+	if InCombatLockdown() then
+		if not twinsQueued then
+			twinsQueued = true
+			EventUtil.RegisterOnceFrameEventAndCallback("PLAYER_REGEN_ENABLED", function()
+				twinsQueued = nil
+				syncTwins()
+			end)
+		end
+		return
+	end
+	if not header then makeTwins() end
+	local on = locked and ns.db.crossbarMouse == true and bar:IsShown()
+	local allLayers, uiScale = ns.db.crossbarStyle == "all", UIParent:GetEffectiveScale()
+	local byModifiers = {}
+	for _, layer in ipairs(ns.Layers()) do byModifiers[layer.prefix:lower()] = layer.prefix end
+	for _, entry in ipairs(twins) do
+		local socket, twin = entry.socket, entry.twin
+		local shown = on and entry.cluster.frame:IsShown() and socket:IsShown()
+		twin:SetShown(shown)
+		if shown then
+			local scale = socket:GetEffectiveScale() / uiScale
+			local x, y = socket:GetCenter()
+			twin:ClearAllPoints()
+			twin:SetPoint("CENTER", UIParent, "BOTTOMLEFT", x * scale, y * scale)
+			twin:SetSize(ns.CROSSBAR_BUTTON_SIZE * scale, ns.CROSSBAR_BUTTON_SIZE * scale)
+			twin:SetFrameLevel(socket.Overlay:GetFrameLevel() + 1)
+			aim(twin, entry.key, allLayers and { [""] = entry.cluster.frame.prefix } or byModifiers)
+		end
+	end
+	header:Execute(PAGE_UPDATE)
+end
+
 -- Held layer only (default): one cluster that switches as modifiers are held, labelled with them.
 -- All layers: one cluster per layer, labelled, the held one full size.
 -- Each button updates in its own securecallfunction, so one error is reported without stopping the rest.
@@ -317,6 +425,7 @@ function ns.RefreshCrossbar()
 			placeSockets(cluster)
 		end
 	end
+	syncTwins()
 end
 
 local function onEvent(_, event)
@@ -388,23 +497,26 @@ local function makeButton(parent, key)
 	local button = ns.MakeSocket("Frame", parent, ns.CROSSBAR_BUTTON_SIZE)
 	-- Unlocked, a button can be dragged to a new spot, shared by every set. Locked, with the mouse on, dragging
 	-- it takes its action out of the bar slot, as on Blizzard's bars.
+	function button.pickup() ns.PickupFromButton(parent.prefix .. key) end
 	draggable(button, function(self)
 		local x, y = droppedOffset(self, parent)
 		remember("socketPoints", key, { snap(x, y, otherPoints(ns.CROSSBAR, key)) })
-	end, function() ns.PickupFromButton(parent.prefix .. key) end)
+	end, button.pickup)
 	-- With the mouse on, a spell dropped on a socket goes into the bar slot its button fires, and hovering tells the action.
-	local function drop() ns.PlaceOnButton(parent.prefix .. key) end
-	button:SetScript("OnReceiveDrag", drop)
-	button:SetScript("OnMouseUp", function() if GetCursorInfo() then drop() end end)
-	button:SetScript("OnEnter", function(self)
-		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-		if self.slot then
-			GameTooltip:SetAction(self.slot)
+	-- The secure twin over a socket hands its tooltip and drops back here.
+	function button.drop() ns.PlaceOnButton(parent.prefix .. key) end
+	function button.tooltip(owner)
+		GameTooltip:SetOwner(owner, "ANCHOR_RIGHT")
+		if button.slot then
+			GameTooltip:SetAction(button.slot)
 		else
 			GameTooltip:SetText(ns.ActionInfo(parent.prefix .. key) or NOT_BOUND)
 		end
 		GameTooltip:Show()
-	end)
+	end
+	button:SetScript("OnReceiveDrag", button.drop)
+	button:SetScript("OnMouseUp", function() if GetCursorInfo() then button.drop() end end)
+	button:SetScript("OnEnter", button.tooltip)
 	button:SetScript("OnLeave", function() GameTooltip:Hide() end)
 	button.Cooldown = makeCooldown(button.Face)
 	button.ChargeCooldown = makeCooldown(button.Face)
@@ -542,7 +654,10 @@ local function build()
 		-- First shown during login, when Blizzard may not have pointed its main bar buttons at slots yet.
 		RunNextFrame(ns.RefreshCrossbar)
 	end)
-	bar:SetScript("OnHide", function() bar:UnregisterAllEvents() end)
+	bar:SetScript("OnHide", function()
+		bar:UnregisterAllEvents()
+		syncTwins()
+	end)
 	bar:SetScript("OnEvent", onEvent)
 	bar:Hide()
 end
@@ -575,11 +690,15 @@ function ns.SetCrossbarLocked(lock)
 	bar:EnableMouse(not locked)
 	bar.Outline:SetShown(not locked)
 	applyMouse()
+	syncTwins()
 end
 
 function ns.SetCrossbarMouse(on)
 	ns.db.crossbarMouse = on
-	if bar then applyMouse() end
+	if bar then
+		applyMouse()
+		syncTwins()
+	end
 end
 
 function ns.CrossbarLocked() return locked end
