@@ -182,6 +182,8 @@ describe("Controller", function()
 			assert.is_nil(ns.ActionInfo("PAD1"))
 			w.bindings.PAD1 = "JUMP"
 			assert.same({ "name:JUMP" }, { ns.ActionInfo("PAD1") })
+			w.bindings.PADLSTICK = "CAMERAORSELECTORMOVE" -- a hidden binding Blizzard gives no name
+			assert.same({ "Left-click: select, camera" }, { ns.ActionInfo("PADLSTICK") })
 			w.bindings["SHIFT-PAD1"] = "MULTIACTIONBAR1BUTTON1"
 			assert.same({ "spell:1953", 135808 }, { ns.ActionInfo("SHIFT-PAD1") })
 			w.actions[61] = { texture = 1, kind = "item", id = 6948 }

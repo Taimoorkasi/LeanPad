@@ -195,14 +195,20 @@ local function slotName(slot)
 	if kind == "macro" then return C_ActionBar.GetActionText(slot) end
 end
 
+-- Blizzard's mouse-button commands are hidden bindings with no name string, so GetBindingName echoes the command.
+local HIDDEN_NAMES = { CAMERAORSELECTORMOVE = "Left-click: select, camera", TURNORACTION = "Right-click: interact, turn" }
+local function bindingName(action)
+	return HIDDEN_NAMES[action] or GetBindingName(action)
+end
+
 -- A binding's action as the player knows it, and its icon: the slot's spell, an empty slot, or the command itself.
 function ns.ActionInfo(binding)
 	local action = GetBindingAction(binding)
 	if action == "" then return end
 	local slot = ns.SlotForCommand(action)
-	if not slot then return GetBindingName(action) end
+	if not slot then return bindingName(action) end
 	if not C_ActionBar.HasAction(slot) then return ns.MUTED_HEX .. "Empty slot|r" end
-	return slotName(slot) or GetBindingName(action), C_ActionBar.GetActionTexture(slot)
+	return slotName(slot) or bindingName(action), C_ActionBar.GetActionTexture(slot)
 end
 
 -- Faces for commands that live on no bar slot: LeanPad's own icons from Art/, drawn by tools/draw-pads.js, and
@@ -285,7 +291,7 @@ end
 local function commandLabel(action)
 	local slot = ns.SlotForCommand(action)
 	local icon = slot and C_ActionBar.GetActionTexture(slot)
-	return (icon and ("|T%s:16|t "):format(icon) or "") .. GetBindingName(action)
+	return (icon and ("|T%s:16|t "):format(icon) or "") .. bindingName(action)
 end
 
 -- Whether a pad button, on any layer, already fires a command. Keyboard keys on it don't count: Bar 1 has
