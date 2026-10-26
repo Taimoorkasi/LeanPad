@@ -4,6 +4,8 @@ All notable changes to LeanPad are documented here. The format is based on [Keep
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-26
+
 ### Added
 
 - **Five new crossbar styles**, picked from *View* on the settings page. *One row*: LB and the D-pad under the left thumb, the face buttons and RB under the right, in a single action-bar row. *One row, faint*: the same row, faint until you hold a layer button. *Square grid*: square tiles in two rows of five under the character, each column one direction (left, up, right, down, with X, Y, B, A under them), the bumpers beside them. *Square rows*: a tight square row per layer, Base on top. *Stacked rows*: a round row per layer, Base at the bottom. In the row styles the layer you hold comes to the front and the rest fade back. Each style keeps its own dragged layout, and *Reset layout* resets only the style shown.
@@ -13,6 +15,8 @@ All notable changes to LeanPad are documented here. The format is based on [Keep
 ### Fixed
 
 - **Pad buttons on Action Bars 2-8 work alongside ElvUI and other bar addons.** These addons send bar keys to their own buttons, so a pad button bound to a bar they had turned off, such as ElvUI's Bar 13 for Action Bar 6, gave a vibration and cast nothing, while the crossbar showed the spell. LeanPad now gives those pad keys their Blizzard binding back, so a press always fires the slot the crossbar shows. Action Bar 1 stays with the bar addon, which pages it for forms and stances. Without a bar addon nothing changes.
+- The editor's *Base* form menu fits under its picker instead of running out of the window over the layer buttons, and settings dropdowns keep long choices inside their box.
+- A pad button on Blizzard's mouse-button commands reads *Left-click: select, camera* or *Right-click: interact, turn* in the editor, not CAMERAORSELECTORMOVE or TURNORACTION.
 
 ## [0.5.0] - 2026-10-24
 
@@ -97,7 +101,8 @@ First public release.
 - `/lp perf` readout from the in-game addon profiler.
 - In-combat requests to change bindings or CVars are queued until combat ends.
 
-[Unreleased]: https://github.com/Taimoorkasi/LeanPad/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/Taimoorkasi/LeanPad/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/Taimoorkasi/LeanPad/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/Taimoorkasi/LeanPad/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/Taimoorkasi/LeanPad/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/Taimoorkasi/LeanPad/compare/v0.2.0...v0.3.0
