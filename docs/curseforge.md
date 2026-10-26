@@ -18,6 +18,14 @@ Layer buttons, which pad to use, Xbox or PlayStation labels, the cursor, the cro
 
 ![The LeanPad settings page](https://raw.githubusercontent.com/Taimoorkasi/LeanPad/main/docs/images/easy-to-understand-settings.png)
 
+## Crossbar layouts
+
+Seven styles, picked from *View* on the settings page. The square grid sits under your character and swaps as you hold a layer button; square rows show every layer at once, one row each, the held one in front.
+
+![The square grid crossbar under the character](https://raw.githubusercontent.com/Taimoorkasi/LeanPad/main/docs/images/layout-square-grid.png)
+
+![The square rows crossbar, one row per layer](https://raw.githubusercontent.com/Taimoorkasi/LeanPad/main/docs/images/layout-square-one-per-layer.png)
+
 ## Features
 
 - **One-click setup.** Turns on the gamepad, makes the triggers your layer buttons, sets the cursor clicks and gamepad soft targeting, and binds the controller to Action Bars 1 to 4. An existing controller layout is kept unless you choose otherwise, and *Undo setup* puts everything back.

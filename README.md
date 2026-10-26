@@ -20,6 +20,14 @@ Your actions stay on Blizzard's own action bars, so Blizzard draws the cooldowns
 
 ![The LeanPad settings page](docs/images/easy-to-understand-settings.png)
 
+**Crossbar layouts.** Seven styles, picked from *View* on the settings page. The square grid sits under your character and swaps as you hold a layer button:
+
+![The square grid crossbar under the character, two rows of square tiles](docs/images/layout-square-grid.png)
+
+Square rows show every layer at once, one row each, the held one in front:
+
+![The square rows crossbar, one row of tiles for Base, LB, LT and LB + LT](docs/images/layout-square-one-per-layer.png)
+
 ## Features
 
 - **One-click setup.** Turns on the gamepad, makes LT and RT act as Shift and Ctrl, sets the cursor clicks and gamepad soft targeting, and binds the controller to Action Bars 1-4. If you already have a controller layout, LeanPad keeps it by default.
