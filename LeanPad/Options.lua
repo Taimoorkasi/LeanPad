@@ -2,7 +2,8 @@ local addonName, ns = ...
 
 -- LeanPad's own settings page inside the controller window. Blizzard's Settings panel stays the way in.
 local C = ns.COLORS
-local MARGIN, GAP, COLUMN, ROW = 16, 16, 432, 32
+-- CONTROL: every row's control, wide enough for the longest crossbar view.
+local MARGIN, GAP, COLUMN, ROW, CONTROL = 16, 16, 432, 32, 250
 local SOFT_TARGETS = { "SoftTargetEnemy", "SoftTargetFriend", "SoftTargetInteract" }
 local SOFT_TARGET_LABELS = { "Enemies", "Friends", "Interact" }
 local STYLES = { { "auto", "Auto" }, { "xbox", "Xbox" }, { "playstation", "PlayStation" } }
@@ -64,7 +65,7 @@ end
 local function choice(options, current, set)
 	local function list() return type(options) == "function" and options() or options end
 	local dropdown
-	dropdown = ns.Dropdown(page, 200, function() return ns.LabelOf(list(), current()) end, function(root)
+	dropdown = ns.Dropdown(page, CONTROL, function() return ns.LabelOf(list(), current()) end, function(root)
 		ns.Radios(root, list(), current, function(value)
 			set(value)
 			dropdown:Refresh()
@@ -134,7 +135,7 @@ end
 
 local function cursorStartInput()
 	local holder = CreateFrame("Frame", nil, page)
-	holder:SetSize(220, 28)
+	holder:SetSize(CONTROL, 28)
 	local boxes = {}
 	local function commit()
 		local x, y = tonumber(boxes[1]:GetText()), tonumber(boxes[2]:GetText())
@@ -146,14 +147,14 @@ local function cursorStartInput()
 		for _, box in ipairs(boxes) do box:Refresh() end
 	end
 	for axis = 1, 2 do
-		boxes[axis] = ns.Input(holder, 64, function()
+		boxes[axis] = ns.Input(holder, 74, function()
 			local spot = ns.db.cursorStart
 			return spot and tostring(spot[axis]) or ""
 		end, commit)
-		boxes[axis]:SetPoint("RIGHT", holder, "RIGHT", (axis - 3) * 72, 0)
+		boxes[axis]:SetPoint("RIGHT", holder, "RIGHT", (axis - 3) * 88, 0)
 	end
 	holder.X, holder.Y = boxes[1], boxes[2]
-	holder.Pick = ns.Button(holder, "Pick...", 64, function()
+	holder.Pick = ns.Button(holder, "Pick...", 74, function()
 		pickSpot(function(x, y)
 			ns.db.cursorStart = { x, y }
 			holder:Refresh()
@@ -240,7 +241,7 @@ end
 
 -- Unlocks the crossbar for dragging; the button reads as the next thing it will do.
 local function lockButton()
-	local button = ns.Button(page, "", 200, function(self)
+	local button = ns.Button(page, "", CONTROL, function(self)
 		ns.SetCrossbarLocked(not ns.CrossbarLocked())
 		self:Refresh()
 	end)

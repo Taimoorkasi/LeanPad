@@ -83,12 +83,15 @@ function ns.Dropdown(parent, width, getLabel, fill)
 		MenuUtil.CreateContextMenu(self, function(_, root) fill(root) end)
 	end)
 	dropdown:SetHeight(28)
-	dropdown.Label = ns.Text(dropdown, 13, C.text)
-	dropdown.Label:SetPoint("LEFT", 10, 0)
 	local chevron = dropdown:CreateTexture(nil, "ARTWORK")
 	chevron:SetAtlas("uitools-icon-chevron-down")
 	chevron:SetSize(10, 10)
 	chevron:SetPoint("RIGHT", -10, 0)
+	-- A label too long for the box ends in an ellipsis before the chevron rather than running out of it.
+	dropdown.Label = ns.Text(dropdown, 13, C.text)
+	dropdown.Label:SetPoint("LEFT", 10, 0)
+	dropdown.Label:SetPoint("RIGHT", chevron, "LEFT", -6, 0)
+	dropdown.Label:SetWordWrap(false)
 	function dropdown:Refresh() self.Label:SetText(getLabel()) end
 	dropdown:Refresh()
 	return dropdown
