@@ -11,7 +11,7 @@ local NO_OP_METHODS = {
 	"SetThickness", "AddMaskTexture", "SetBlendMode", "SetBackdrop", "SetBackdropBorderColor", "StartMoving", "StopMovingOrSizing",
 	"SetAllPoints", "SetDrawSwipe", "SetFont", "SetTextColor", "SetNormalFontObject", "SetHighlightFontObject", "SetDisabledFontObject",
 	"SetNormalAtlas", "SetHighlightAtlas", "SetSpacing", "SetDegrees", "SetScaleFrom", "SetScaleTo",
-	"SetTextInsets", "SetAutoFocus", "SetMaxLetters", "SetFrameStrata", "RegisterForClicks",
+	"SetTextInsets", "SetAutoFocus", "SetMaxLetters", "SetFrameStrata", "RegisterForClicks", "SetWordWrap",
 }
 
 local Widget = {}
@@ -120,7 +120,14 @@ function Widget:SetAttribute(name, value)
 	local state = name:match("^state%-(.+)$")
 	if state and rawget(self, "template") == "SecureHandlerStateTemplate" then self:Execute(self.attributes["_onstate-" .. state]) end
 end
-function Widget:GetAttribute(name) return (self.attributes or {})[name] end
+-- With a modifier prefix and button suffix, the client's lookup for a click: never prefix..name alone.
+function Widget:GetAttribute(prefix, name, suffix)
+	local attributes = self.attributes or {}
+	if not name then return attributes[prefix] end
+	for _, key in ipairs({ prefix .. name .. suffix, "*" .. name .. suffix, prefix .. name .. "*", "*" .. name .. "*", name }) do
+		if attributes[key] ~= nil then return attributes[key] end
+	end
+end
 function Widget:SetFrameRef(label, frame) self:SetAttribute("frameref-" .. label, frame) end
 function Widget:GetFrameRef(label) return self:GetAttribute("frameref-" .. label) end
 -- Runs a restricted snippet with the frame as self, seeing only the restricted API the snippets use.

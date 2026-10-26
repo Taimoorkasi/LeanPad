@@ -359,8 +359,9 @@ end
 
 -- Mouse clicks. WoW casts from a click only through a secure button, and a frame holding one can't move in combat,
 -- while the sets move whenever a layer is held. So each socket gets a secure twin under UIParent, laid over it out of
--- combat. A twin carries every layer as modifier attributes (shift-action and the like), so a click while holding a
--- trigger fires that layer, as the pad does. Action Bar 1's slots follow its page through a state driver that wakes
+-- combat. A twin carries every layer as modifier attributes (shift-action* and the like), so a click while holding a
+-- trigger fires that layer, as the pad does. Each ends in * for any mouse button: the client looks a click up as
+-- shift-action1, *action1, shift-action*, *action*, then plain action, never shift-action. Action Bar 1's slots follow its page through a state driver that wakes
 -- on any paging change; its snippet repeats mainBarPage's rule with the restricted API.
 -- shortcut: in combat twins stay where the sets were as it began, so in the all-layers view a set that grows while a
 -- layer is held leaves them behind, and a crossbar hidden in combat stays clickable until it ends; move them in a
@@ -379,13 +380,13 @@ local PAGE_UPDATE = [[
 	end
 	for i = 1, self:GetAttribute("count") do
 		local twin = self:GetFrameRef("twin" .. i)
-		for mod, index in gmatch(twin:GetAttribute("bar1"), "([%a%-]*)=(%d+)") do
-			twin:SetAttribute(mod .. "action", tonumber(index) + (page - 1) * 12)
+		for mod, index in gmatch(twin:GetAttribute("bar1"), "([%a%-%*]*)=(%d+)") do
+			twin:SetAttribute(mod .. "action*", tonumber(index) + (page - 1) * 12)
 		end
 	end
 ]]
--- Every modifier prefix a click can carry, in SecureButton_GetModifierPrefix's order.
-local CLICK_PREFIXES = { "", "shift-", "ctrl-", "ctrl-shift-", "alt-", "alt-shift-", "alt-ctrl-", "alt-ctrl-shift-" }
+-- Every modifier prefix a click can carry, in SecureButton_GetModifierPrefix's order, and * for any of them.
+local CLICK_PREFIXES = { "", "shift-", "ctrl-", "ctrl-shift-", "alt-", "alt-shift-", "alt-ctrl-", "alt-ctrl-shift-", "*" }
 local header, twins, twinsQueued
 
 local function makeTwins()
@@ -416,22 +417,22 @@ end
 local function aim(twin, key, layers)
 	local bar1 = {}
 	for _, mod in ipairs(CLICK_PREFIXES) do
-		twin:SetAttribute(mod .. "type", nil)
-		twin:SetAttribute(mod .. "action", nil)
+		twin:SetAttribute(mod .. "type*", nil)
+		twin:SetAttribute(mod .. "action*", nil)
 	end
 	for mod, prefix in pairs(layers) do
 		local action = GetBindingAction(prefix .. key)
 		local index = action:match("^ACTIONBUTTON(%d+)$")
 		local slot = not index and ns.SlotForCommand(action)
-		twin:SetAttribute(mod .. "type", (index or slot) and "action" or ATTRIBUTE_NOOP)
+		twin:SetAttribute(mod .. "type*", (index or slot) and "action" or ATTRIBUTE_NOOP)
 		if index then table.insert(bar1, mod .. "=" .. index) end
-		if slot then twin:SetAttribute(mod .. "action", slot) end
+		if slot then twin:SetAttribute(mod .. "action*", slot) end
 	end
 	twin:SetAttribute("bar1", table.concat(bar1, ";"))
 end
 
 -- Lays each shown socket's twin over it and aims it, out of combat; in combat, once it ends. The held-layer view
--- fires the layer the click's modifiers pick; the all-layers view fires each set's own layer.
+-- fires the layer the click's modifiers pick; the all-layers view fires each set's own layer, whatever is held.
 local function syncTwins()
 	if InCombatLockdown() then
 		if not twinsQueued then
@@ -459,7 +460,7 @@ local function syncTwins()
 			twin:SetPoint("CENTER", UIParent, "BOTTOMLEFT", x * scale, y * scale)
 			twin:SetSize(ns.CROSSBAR_BUTTON_SIZE * scale, ns.CROSSBAR_BUTTON_SIZE * scale)
 			twin:SetFrameLevel(socket.Overlay:GetFrameLevel() + 1)
-			aim(twin, entry.key, allLayers and { [""] = entry.cluster.frame.prefix } or byModifiers)
+			aim(twin, entry.key, allLayers and { ["*"] = entry.cluster.frame.prefix } or byModifiers)
 		end
 	end
 	header:Execute(PAGE_UPDATE)

@@ -591,8 +591,9 @@ describe("Crossbar", function()
 			local socket = buttonFor("PAD1", 2)
 			for _, twin in ipairs(wow.widgets("Button", "SecureActionButtonTemplate")) do
 				if twin.scripts.OnEnter == socket.tooltip then
-					assert.equal(61, twin:GetAttribute("action"))
-					assert.is_nil(twin:GetAttribute("shift-type"))
+					assert.equal(61, twin:GetAttribute("", "action", "1"))
+					assert.equal("action", twin:GetAttribute("ctrl-", "type", "1")) -- holding another layer changes nothing
+					assert.equal(61, twin:GetAttribute("ctrl-", "action", "2"))
 				end
 			end
 		end)
@@ -703,32 +704,34 @@ describe("Crossbar", function()
 		it("fire the slot of the layer the click's modifiers pick, and nothing off the bars", function()
 			ns.SetCrossbarMouse(true)
 			local x, a = twinFor("PAD3"), twinFor("PAD1")
-			assert.equal("action", x:GetAttribute("type"))
-			assert.equal(61, x:GetAttribute("action"))
-			assert.equal(ATTRIBUTE_NOOP, a:GetAttribute("type")) -- Jump
-			assert.equal("action", a:GetAttribute("shift-type")) -- LT + A
-			assert.equal(61, a:GetAttribute("shift-action"))
-			assert.equal(ATTRIBUTE_NOOP, a:GetAttribute("ctrl-type")) -- a bar button the fake lacks
+			assert.equal("action", x:GetAttribute("", "type", "1"))
+			assert.equal(61, x:GetAttribute("", "action", "1"))
+			assert.equal(ATTRIBUTE_NOOP, a:GetAttribute("", "type", "1")) -- Jump
+			assert.equal("action", a:GetAttribute("shift-", "type", "1")) -- LT + A, by a left click
+			assert.equal(61, a:GetAttribute("shift-", "action", "1"))
+			assert.equal(61, a:GetAttribute("shift-", "action", "2")) -- or a right one
+			assert.equal(ATTRIBUTE_NOOP, a:GetAttribute("ctrl-", "type", "1")) -- a bar button the fake lacks
+			assert.is_nil(a:GetAttribute("alt-", "type", "1")) -- no Alt layer: no fall back to Base
 		end)
 
 		it("follow Action Bar 1's page as forms and bars change it, by the client's own conditions", function()
 			ns.SetCrossbarMouse(true)
 			local y = twinFor("PAD4")
-			assert.equal("action", y:GetAttribute("type"))
-			assert.equal(1, y:GetAttribute("action"))
+			assert.equal("action", y:GetAttribute("", "type", "1"))
+			assert.equal(1, y:GetAttribute("", "action", "1"))
 			local driver = w.stateDrivers.page
 			assert.equal(header(), driver.frame)
 			assert.truthy(driver.values:find("[bonusbar:1] b1", 1, true))
 			w.bar.bonus = 7 -- Cat Form
 			header():SetAttribute("state-page", "b1")
-			assert.equal(73, y:GetAttribute("action"))
+			assert.equal(73, y:GetAttribute("", "action", "1"))
 			w.bar.page = 2 -- a paged bar wins over the form, as in mainBarPage
 			header():SetAttribute("state-page", "2")
-			assert.equal(13, y:GetAttribute("action"))
+			assert.equal(13, y:GetAttribute("", "action", "1"))
 			for state, index in pairs({ v = "vehicle", o = "override", s = "temp" }) do
 				w.bar[index] = 12
 				header():SetAttribute("state-page", state)
-				assert.equal(133, y:GetAttribute("action"), state)
+				assert.equal(133, y:GetAttribute("", "action", "1"), state)
 				w.bar[index] = nil
 			end
 		end)
@@ -738,9 +741,10 @@ describe("Crossbar", function()
 			ns.SetCrossbarStyle("all")
 			local a = twinFor("PAD1", 2) -- the LT set
 			assert.is_true(a:IsShown())
-			assert.equal("action", a:GetAttribute("type"))
-			assert.equal(61, a:GetAttribute("action"))
-			assert.is_nil(a:GetAttribute("shift-type"))
+			assert.equal("action", a:GetAttribute("", "type", "1"))
+			assert.equal(61, a:GetAttribute("", "action", "1"))
+			assert.equal(61, a:GetAttribute("shift-", "action", "1")) -- whatever is held
+			assert.equal(1, twinFor("PAD4", 1):GetAttribute("shift-", "action", "1")) -- Action Bar 1, paged by the snippet
 		end)
 
 		it("hide while unlocked, with the mouse off or with the bar", function()
