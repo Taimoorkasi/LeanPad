@@ -878,14 +878,16 @@ local function buildEditor()
 	toolbar.Device:SetPoint("LEFT", editor, "TOPLEFT", MARGIN, -TOOLBAR_Y)
 	-- Which page of Action Bar 1 Base edits: the one in play, or another form's, set up without shifting.
 	toolbar.Page = ns.Dropdown(editor, 220, function() return "Base: " .. ns.PageName(ns.MainBarPage()) end, function(root)
-		root:CreateTitle("Base buttons change with your form; the other layers stay the same in every form.")
+		-- Short lines: a menu is as wide as its longest entry, and one long title ran it out of the window.
+		root:CreateTitle("Base changes with your form;")
+		root:CreateTitle("the other layers never do.")
 		local options = ns.PageOptions()
 		ns.Radios(root, options, ns.MainBarPage, function(page)
 			viewedPage = page
 			refresh()
 			ns.RefreshCrossbar()
 		end)
-		if #options == 1 then root:CreateTitle("Shift into a form once to add it here.") end
+		if #options == 1 then root:CreateTitle("Shift into a form to add it.") end
 	end)
 	toolbar.Page:SetPoint("LEFT", toolbar.Device, "RIGHT", 16, 0)
 	local change =ns.Button(editor, "Change...", 84, function(self) MenuUtil.CreateContextMenu(self, layerMenu) end)
