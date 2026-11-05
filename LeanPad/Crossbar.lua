@@ -183,14 +183,22 @@ local function faced(action)
 	return face and not HUD_SKIP[action] and face or nil
 end
 
--- Pad keys worth a button: those firing a Blizzard bar button, or a command with a face, on some layer.
--- Layer buttons never do.
+-- The player's choice, else this client's default: on for Forever, off for retail.
+function ns.ShowEmptySockets()
+	if ns.db.crossbarEmpty ~= nil then return ns.db.crossbarEmpty end
+	return ns.CROSSBAR_EMPTY_DEFAULT == true
+end
+
+-- Pad keys worth a button: with empty sockets on, every one, as Blizzard's Show Empty Action Bars does; otherwise those
+-- firing a Blizzard bar button, or a command with a face, on some layer. Stick clicks then take bar buttons only: a
+-- command there is a control, not something to watch. Layer buttons never show: they hold nothing.
+local STICK_CLICKS = { PADLSTICK = true, PADRSTICK = true }
 local function actionKeys(layers)
-	local used, layerButtons = {}, ns.ModifierKeys()
+	local used, layerButtons, showEmpty = {}, ns.ModifierKeys(), ns.ShowEmptySockets()
 	for key in pairs(ns.CROSSBAR) do
 		for _, layer in ipairs(layers) do
-			local action = GetBindingAction(layer.prefix .. key)
-			if not layerButtons[key] and (ns.ButtonForCommand(action) or faced(action)) then used[key] = true end
+			local action = ns.BindingAction(layer.prefix .. key)
+			if not layerButtons[key] and (showEmpty or ns.ButtonForCommand(action) or (faced(action) and not STICK_CLICKS[key])) then used[key] = true end
 		end
 	end
 	return used
@@ -777,6 +785,11 @@ function ns.SetCrossbarLocked(lock)
 	bar.Outline:SetShown(not locked)
 	applyMouse()
 	syncTwins()
+end
+
+function ns.SetCrossbarEmpty(on)
+	ns.db.crossbarEmpty = on
+	if bar and bar:IsShown() then ns.RefreshCrossbar() end
 end
 
 function ns.SetCrossbarMouse(on)
