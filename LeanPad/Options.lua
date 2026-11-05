@@ -18,9 +18,6 @@ local PLAYSTYLES = { { "manual", "Keep my own settings" }, { "auto", "Auto" }, {
 local SPEEDS = { { "0.6", "Slow" }, { "1", "Normal" }, { "1.5", "Fast" } }
 local WINDOW_SCALES = { { "0.8", "80%" }, { "0.9", "90%" }, { "1", "100%" }, { "1.1", "110%" }, { "1.25", "125%" } }
 local STICK_HIDES ={ { "0", "Never" }, { "1", "When the character moves" }, { "2", "When either stick moves" } }
-local LAYER_BUTTONS = {
-	{ "GamePadEmulateShift", "Layer 1, acts as Shift" }, { "GamePadEmulateCtrl", "Layer 2, acts as Ctrl" }, { "GamePadEmulateAlt", "Layer 3, acts as Alt" },
-}
 local CLICKS = { { "GamePadCursorLeftClick", "Left click" }, { "GamePadCursorRightClick", "Right click" } }
 
 local page, controls
@@ -213,8 +210,8 @@ local function buildLeft(x, y)
 	end))
 	y = y + GAP
 	y = heading(x, y, "Layer buttons")
-	for _, layer in ipairs(LAYER_BUTTONS) do
-		y = row(x, y, layer[2], choice(ns.KeyOptions(ns.MODIFIER_KEYS), function() return GetCVar(layer[1]) or "none" end,
+	for _, layer in ipairs(ns.LayerButtons()) do
+		y = row(x, y, layer[2], choice(ns.KeyOptions(ns.MODIFIER_KEYS), function() return ns.LayerButtonKey(layer[1]) end,
 			function(key) ns.SetLayerButton(layer[1], key) end))
 	end
 	y = note(x, y, "Hold one to use its layer. It fires nothing itself, so it loses its own bindings.", 1) + GAP
@@ -372,7 +369,7 @@ function ns.BuildOptions(frame)
 	local undoReset = ns.Button(page, "Undo reset", 110, function() ns.OutOfCombat(ns.UndoReset) end, false,
 		"Bring back the controller layout from before the last reset. Also /lp undo.")
 	undoReset:SetPoint("RIGHT", undo, "LEFT", -8, 0)
-	local reset = ns.Button(page, "Reset layout...", 130, function() StaticPopup_Show("LEANPAD_SETUP") end, false,
+	local reset = ns.Button(page, "Reset layout...", 130, function() ns.ShowReset() end, false,
 		"Clear your controller bindings and start over on LeanPad's layout. Your current layout is saved first.")
 	reset:SetPoint("RIGHT", undoReset, "LEFT", -8, 0)
 	return page

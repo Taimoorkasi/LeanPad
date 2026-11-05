@@ -6,7 +6,7 @@ local _, ns = ...
 -- setup when the character switches away, and at logout or reload, which is when WoW writes saved variables anyway.
 
 -- LeanPad's own bookkeeping stays out of profiles.
-local BOOKKEEPING = { prompted = true, backup = true, undo = true, formPages = true, profiles = true }
+local BOOKKEEPING = { prompted = true, backup = true, undo = true, formPages = true, profiles = true, contextDefaults = true, gamepadUIKept = true }
 -- Every CVar the setup, play styles and settings page write, but the active pad: a device ID put back after
 -- the pads change could leave no controller working.
 local CVARS = {
@@ -35,6 +35,7 @@ local function padSlots(bindings)
 			if slot then slots[slot] = true end
 		end
 	end
+	ns.ExtraProfileSlots(slots)
 	return slots
 end
 

@@ -212,7 +212,7 @@ local function refreshButton(button, key, prefix, hideNumbers)
 	clearButton(button)
 	ns.SetGlyph(button, key)
 
-	local action = GetBindingAction(prefix .. key)
+	local action = ns.BindingAction(prefix .. key)
 	local slot = ns.SlotForCommand(action)
 	if slot and C_ActionBar.HasAction(slot) then
 		button.slot = slot
@@ -421,7 +421,7 @@ local function aim(twin, key, layers)
 		twin:SetAttribute(mod .. "action*", nil)
 	end
 	for mod, prefix in pairs(layers) do
-		local action = GetBindingAction(prefix .. key)
+		local action = ns.BindingAction(prefix .. key)
 		local index = action:match("^ACTIONBUTTON(%d+)$")
 		local slot = not index and ns.SlotForCommand(action)
 		twin:SetAttribute(mod .. "type*", (index or slot) and "action" or ATTRIBUTE_NOOP)

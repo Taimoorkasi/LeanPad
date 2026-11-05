@@ -77,10 +77,13 @@ function ns.Button(parent, text, width, onClick, primary, tooltip)
 	return button
 end
 
+-- Forever.lua replaces this while Blizzard's Gamepad UI is on.
+function ns.ContextMenu(owner, generator) MenuUtil.CreateContextMenu(owner, generator) end
+
 -- A flat dropdown: getLabel names the current choice, fill(root) adds the menu's entries.
 function ns.Dropdown(parent, width, getLabel, fill)
 	local dropdown = ns.Button(parent, "", width, function(self)
-		MenuUtil.CreateContextMenu(self, function(_, root) fill(root) end)
+		ns.ContextMenu(self, function(_, root) fill(root) end)
 	end)
 	dropdown:SetHeight(28)
 	local chevron = dropdown:CreateTexture(nil, "ARTWORK")

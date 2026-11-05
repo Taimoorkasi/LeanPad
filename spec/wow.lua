@@ -33,6 +33,9 @@ end
 
 function Widget:GetName() return self.name end
 function Widget:SetScript(script, handler) self.scripts[script] = handler end
+function Widget:GetScript(script) return self.scripts[script] end
+function Widget:GetID() return self.id end
+function Widget:IsVisible() return self.shown end
 function Widget:SetPoint(...) self.point = { ... } end
 function Widget:ClearAllPoints() self.point = nil end
 function Widget:GetPoint() return unpack(self.point) end
@@ -104,6 +107,11 @@ function Widget:CreateLine() return newWidget("Line", nil, self) end
 function Widget:SetBackdropColor(...) self.backdropColor = { ... } end
 function Widget:SetFontObject(font) self.font = font end
 function Widget:GetTextWidth() return 40 end
+function Widget:GetStringWidth() return self.stringWidth or 40 end
+function Widget:SetScrollChild(child) self.scrollChild = child end
+function Widget:SetVerticalScroll(offset) self.verticalScroll = offset end
+function Widget:GetVerticalScroll() return self.verticalScroll or 0 end
+function Widget:GetVerticalScrollRange() return self.scrollRange or 0 end
 function Widget:SetHighlightTexture(texture) self:GetHighlightTexture().texture = texture end
 function Widget:GetHighlightTexture()
 	self.highlight = self.highlight or newWidget("Texture", nil, self)
@@ -201,6 +209,7 @@ function M.reset()
 
 	LeanPadDB, LeanPadCharDB = nil, nil
 	LeanPadControllerFrame, LeanPadCrossbar = nil, nil
+	C_GamepadUI, InputUtil, GamepadMode, GamepadMainActionBarFrame, GamepadActionBarBindingUtil, C_CVar, hooksecurefunc = nil, nil, nil, nil, nil, nil, nil
 	SLASH_LEANPAD1 = nil
 	SlashCmdList = {}
 	StaticPopupDialogs = {}
@@ -509,7 +518,7 @@ end
 function M.tocFiles()
 	local files = {}
 	for line in io.lines("LeanPad/LeanPad.toc") do
-		line = line:gsub("%s+$", "")
+		line = line:gsub("%s*%[.-%]", ""):gsub("%s+$", "") -- inline directives such as [AllowLoadGameType ...]
 		if line ~= "" and not line:find("^#") then table.insert(files, line) end
 	end
 	return files
@@ -554,6 +563,89 @@ end
 -- Sets up a loaded, ready addon: account and per-character saved variables in place and ADDON_LOADED fired.
 function M.boot(savedVariables, perCharacter)
 	M.reset()
+	local ns = M.loadAddon()
+	LeanPadDB, LeanPadCharDB = savedVariables, perCharacter
+	M.addonLoaded("LeanPad")
+	return ns, M.state
+end
+
+-- WoW: Forever's Gamepad UI: bindings in their own context, and Blizzard's gamepad bars with storage slots numbered
+-- as GetGamepadStorageSlotIndexFromPageAndPageUnitSlotID does, which skips the top bar's right half on every page.
+local function fakeGamepadUI()
+	local w = M.state
+	local FIRST_SLOT, SLOTS_PER_PAGE, RESERVED_FROM, RESERVED = 200, 32, 5, 4
+	Enum.BindingContext = { GamepadModeInGameCore = 9 }
+	Enum.InputDeviceInterfaceType = { Mkb = 0, Gamepad = 1 }
+	C_GamepadUI = {}
+	C_CVar = { SetTempCVar = function(name, value) w.tempCVars[name] = value end }
+	w.tempCVars, w.hooks, w.gamepadUI, w.gamepadPage, w.modifiers = {}, {}, true, 1, {}
+	w.context = {
+		PADDLEFT = "GAMEPADACTIONBUTTON1", PADDUP = "GAMEPADACTIONBUTTON2", PADDRIGHT = "GAMEPADACTIONBUTTON3", PADDDOWN = "GAMEPADACTIONBUTTON4",
+		PAD3 = "GAMEPADACTIONBUTTON5", PAD4 = "GAMEPADACTIONBUTTON6", PAD2 = "GAMEPADACTIONBUTTON7", PAD1 = "GAMEPADACTIONBUTTON8",
+		PADLTRIGGER = "GAMEPADLEFTMOD", PADRTRIGGER = "GAMEPADRIGHTMOD", PADRSTICK = "TOGGLEPINGSYSTEM",
+	}
+	InputUtil = { IsGamepadUIEnabled = function() return w.gamepadUI end }
+	GamepadMode = {
+		IsLeftModifierDown = function() return w.modifiers.left end,
+		IsRightModifierDown = function() return w.modifiers.right end,
+		OnCrossBarModifierChanged = function() end,
+	}
+	GamepadActionBarBindingUtil = {
+		GetGamepadStorageSlotIndexFromPageAndPageUnitSlotID = function(page, id)
+			if page > 3 or (id >= RESERVED_FROM and id < RESERVED_FROM + RESERVED) then return end
+			local slot = FIRST_SLOT + (SLOTS_PER_PAGE - RESERVED) * (page - 1) + id - 1
+			return id >= RESERVED_FROM and slot - RESERVED or slot
+		end,
+	}
+	hooksecurefunc = function(owner, method, hook) table.insert(w.hooks, { owner = owner, method = method, hook = hook }) end
+
+	local function makeBar(firstID, fixedAction)
+		local bar = { alpha = 1, buttons = {} }
+		function bar:SetAlpha(alpha) self.alpha = alpha end
+		function bar:GetActionButtonByIndex(index) return self.buttons[index] end
+		function bar:IsBarActivelyOverridingActionBar(other) return self.overriding == other end
+		for index = 1, 8 do
+			local id = firstID and firstID + index - 1
+			bar.buttons[index] = {
+				action = fixedAction and fixedAction + index,
+				GetGamepadPageUnitSlotID = function() return id end,
+			}
+		end
+		return bar
+	end
+	local unit = {
+		actionBars = {
+			topBar = makeBar(1), leftBar = makeBar(9), rightBar = makeBar(17), bottomBar = makeBar(25),
+			possessBar = makeBar(nil, 900), stanceBar = makeBar(nil, 920),
+		},
+	}
+	unit.GetCurrentPage = function() return w.gamepadPage end
+	unit.SetCurrentPage = function() end
+	GamepadMainActionBarFrame = { PageUnit = unit }
+
+	local bindingAction, setBinding, bindingKey = GetBindingAction, SetBinding, GetBindingKey
+	GetBindingAction = function(key, _, context)
+		if context then return w.context[key] or "" end
+		return bindingAction(key)
+	end
+	SetBinding = function(key, action, context)
+		if not context then return setBinding(key, action) end
+		w.context[key] = action
+	end
+	GetBindingKey = function(command, _, context)
+		if not context then return bindingKey(command) end
+		local keys = {}
+		for key, action in pairs(w.context) do
+			if action == command then table.insert(keys, key) end
+		end
+		table.sort(keys)
+		return unpack(keys)
+	end
+end
+
+function M.bootForever(savedVariables, perCharacter)
+	M.reset()
+	fakeGamepadUI()
 	local ns = M.loadAddon()
 	LeanPadDB, LeanPadCharDB = savedVariables, perCharacter
 	M.addonLoaded("LeanPad")

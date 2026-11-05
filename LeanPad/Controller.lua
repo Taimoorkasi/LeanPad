@@ -71,6 +71,20 @@ function ns.ModifierKeys()
 	return keys
 end
 
+-- The layer buttons set now, with their names, for the editor's toolbar.
+function ns.LayerKeyNames()
+	local names = {}
+	for _, entry in ipairs(emulatedModifiers()) do table.insert(names, { entry.key, MODIFIER_NAMES[entry.modifier] }) end
+	return names
+end
+
+-- The settings page's layer button rows: what each one sets, its label, and the key it holds.
+local LAYER_BUTTONS = {
+	{ "GamePadEmulateShift", "Layer 1, acts as Shift" }, { "GamePadEmulateCtrl", "Layer 2, acts as Ctrl" }, { "GamePadEmulateAlt", "Layer 3, acts as Alt" },
+}
+function ns.LayerButtons() return LAYER_BUTTONS end
+function ns.LayerButtonKey(id) return GetCVar(id) or "none" end
+
 function ns.HeldPrefix()
 	return prefixOf({ ["ALT-"] = IsAltKeyDown(), ["CTRL-"] = IsControlKeyDown(), ["SHIFT-"] = IsShiftKeyDown() })
 end
@@ -119,9 +133,11 @@ local function mainBarPage()
 	return page
 end
 
+function ns.LivePage() return mainBarPage() end
+
 -- The editor can show another form's page of Action Bar 1 than the one in play; nil follows the game.
 local viewedPage
-function ns.MainBarPage() return viewedPage or mainBarPage() end
+function ns.MainBarPage() return viewedPage or ns.LivePage() end
 
 -- The action slot a binding command fires. Action Bar 1 follows the page; Bars 2-8 keep theirs, read off the button.
 function ns.SlotForCommand(command)
@@ -196,14 +212,14 @@ local function slotName(slot)
 end
 
 -- Blizzard's mouse-button commands are hidden bindings with no name string, so GetBindingName echoes the command.
-local HIDDEN_NAMES = { CAMERAORSELECTORMOVE = "Left-click: select, camera", TURNORACTION = "Right-click: interact, turn" }
+ns.HIDDEN_NAMES = { CAMERAORSELECTORMOVE = "Left-click: select, camera", TURNORACTION = "Right-click: interact, turn" }
 local function bindingName(action)
-	return HIDDEN_NAMES[action] or GetBindingName(action)
+	return ns.HIDDEN_NAMES[action] or GetBindingName(action)
 end
 
 -- A binding's action as the player knows it, and its icon: the slot's spell, an empty slot, or the command itself.
 function ns.ActionInfo(binding)
-	local action = GetBindingAction(binding)
+	local action = ns.BindingAction(binding)
 	if action == "" then return end
 	local slot = ns.SlotForCommand(action)
 	if not slot then return bindingName(action) end
@@ -253,7 +269,7 @@ end
 
 function ns.WriteCVar(cvar, value)
 	ns.OutOfCombat(function()
-		SetCVar(cvar, value)
+		ns.WritePadCVar(cvar, value)
 		ns.Saved()
 	end)
 end
@@ -284,7 +300,7 @@ end
 -- does; dropped anywhere but a slot, it is gone.
 function ns.PickupFromButton(binding)
 	if InCombatLockdown() then return print("LeanPad: action bars can't change in combat.") end
-	local slot = ns.SlotForCommand(GetBindingAction(binding))
+	local slot = ns.SlotForCommand(ns.BindingAction(binding))
 	if slot and C_ActionBar.HasAction(slot) then PickupAction(slot) end
 end
 
@@ -311,7 +327,7 @@ end
 
 -- The bar slot a binding fires, binding the button to the first free slot of its layer's own bar when it has none.
 function ns.EnsureSlot(binding)
-	local slot = ns.SlotForCommand(GetBindingAction(binding))
+	local slot = ns.SlotForCommand(ns.BindingAction(binding))
 	if slot then return slot end
 	local prefix = binding:match("^(.-)PAD[%u%d]+$")
 	local bar = prefix and ns.LAYER_BARS[prefix]
@@ -390,12 +406,13 @@ end
 local QUICK_COMMANDS = { "LEANPAD_TOGGLE_CURSOR", "INTERACTTARGET" }
 
 function ns.BuildAssignMenu(root, binding)
-	root:CreateTitle(GetBindingText(binding))
-	if GetBindingAction(binding) ~= "" then
+	root:CreateTitle(ns.BindingTitle(binding))
+	if ns.BindingAction(binding) ~= "" then
 		root:CreateButton(UNBIND, function() ns.Assign(binding, nil) end)
 	end
 	spellMenu(root:CreateButton("Spells"), binding)
 	macroMenu(root:CreateButton("Macros"), binding)
+	if ns.SlotOnly(binding) then return end
 	local slots, commands = root:CreateButton("Bar slots"), root:CreateButton("Commands")
 	-- The commands a pad needs most come first, before Blizzard's long categories: the cursor toggle, and Interact,
 	-- which loots, talks and picks things up with soft targeting.
@@ -550,7 +567,7 @@ function ns.OffBars()
 	local off, bars = {}, {}
 	for key in pairs(ns.PADS.playstation.keys) do
 		for _, layer in ipairs(ns.Layers()) do
-			local bar = ns.BarOff(GetBindingAction(layer.prefix .. key))
+			local bar = ns.BarOff(ns.BindingAction(layer.prefix .. key))
 			if bar and not off[bar] then
 				off[bar] = true
 				table.insert(bars, bar)
@@ -674,7 +691,7 @@ end
 local function fillStrip()
 	local key = selected
 	local binding = currentPrefix() .. key
-	local action = GetBindingAction(binding)
+	local action = ns.BindingAction(binding)
 	ns.SetGlyph(strip, key)
 	strip.Key:SetText(ns.KeyName(key))
 	strip.Layer:SetText(layers[tabIndex].label .. " layer")
@@ -756,8 +773,8 @@ local function refresh()
 		end
 	end
 	local modifiers = {}
-	for _, entry in ipairs(emulatedModifiers()) do
-		table.insert(modifiers, ns.Glyphed(entry.key, MODIFIER_NAMES[entry.modifier], 18))
+	for _, entry in ipairs(ns.LayerKeyNames()) do
+		table.insert(modifiers, ns.Glyphed(entry[1], entry[2], 18))
 	end
 	toolbar.Modifiers:SetText(#modifiers > 0 and table.concat(modifiers, "   ") or "none")
 	toolbar.Device:SetText(deviceLine())
@@ -807,7 +824,7 @@ local function placeHere()
 end
 
 -- The Change... menu beside the tabs: which pad button acts as Shift, Ctrl and Alt.
-local function layerMenu(_, root)
+function ns.LayerMenu(_, root)
 	for _, modifier in ipairs(TAB_ORDER) do
 		local submenu = root:CreateButton(MODIFIER_NAMES[modifier] .. " button")
 		ns.Radios(submenu, ns.KeyOptions(ns.MODIFIER_KEYS), function() return GetCVar(MODIFIER_CVARS[modifier]) or "none" end,
@@ -862,7 +879,7 @@ local function buildStrip()
 	strip.Note:SetWidth(440)
 
 	strip.Change = ns.Button(strip, "Change action...", COL, function(self)
-		MenuUtil.CreateContextMenu(self, function(_, root) ns.BuildAssignMenu(root, currentPrefix() .. selected) end)
+		ns.ContextMenu(self, function(_, root) ns.BuildAssignMenu(root, currentPrefix() .. selected) end)
 	end, true)
 	strip.Change:SetPoint("TOPRIGHT")
 	strip.Clear = ns.Button(strip, "Clear", COL, function() ns.Assign(currentPrefix() .. selected, nil) end)
@@ -896,7 +913,7 @@ local function buildEditor()
 		if #options == 1 then root:CreateTitle("Shift into a form to add it.") end
 	end)
 	toolbar.Page:SetPoint("LEFT", toolbar.Device, "RIGHT", 16, 0)
-	local change =ns.Button(editor, "Change...", 84, function(self) MenuUtil.CreateContextMenu(self, layerMenu) end)
+	local change =ns.Button(editor, "Change...", 84, function(self) ns.ContextMenu(self, ns.LayerMenu) end)
 	change:SetHeight(28)
 	change:SetPoint("RIGHT", editor, "TOPRIGHT", -MARGIN, -TOOLBAR_Y)
 	toolbar.Modifiers = ns.Text(editor, 13, C.text)
@@ -950,7 +967,7 @@ local function buildEditor()
 	local footer = ns.Rule(editor)
 	footer:SetPoint("TOPLEFT", 0, -FOOTER_Y)
 	footer:SetPoint("TOPRIGHT", 0, -FOOTER_Y)
-	local reset = ns.Button(editor, "Reset to default layout...", 190, function() StaticPopup_Show("LEANPAD_SETUP") end)
+	local reset = ns.Button(editor, "Reset to default layout...", 190, function() ns.ShowReset() end)
 	reset:SetPoint("TOPLEFT", MARGIN, -(FOOTER_Y + 8))
 	status = ns.Text(editor, 12, C.muted, "CENTER")
 	editor.Status = status

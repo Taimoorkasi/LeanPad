@@ -61,9 +61,16 @@ function ns.OutOfCombat(fn)
 	EventUtil.RegisterOnceFrameEventAndCallback("PLAYER_REGEN_ENABLED", fn)
 end
 
-local function bind(key, action)
-	SetBinding(key, action ~= "" and action or nil)
-end
+-- What Forever.lua replaces for Blizzard's Gamepad UI; on retail these are plain bindings, CVars and the setup prompt.
+function ns.UsesGamepadUI() return false end
+function ns.BindingAction(binding) return GetBindingAction(binding) end
+function ns.BindingTitle(binding) return GetBindingText(binding) end
+function ns.SlotOnly() return false end
+function ns.BindKey(key, action) SetBinding(key, action ~= "" and action or nil) end
+function ns.ExtraPadBindings() end
+function ns.ExtraProfileSlots() end
+function ns.WritePadCVar(cvar, value) SetCVar(cvar, value) end
+function ns.ShowReset() StaticPopup_Show("LEANPAD_SETUP") end
 
 -- Every gamepad binding on any modifier, key to action; keyboard and mouse keys are left alone.
 local function padBindings()
@@ -74,11 +81,12 @@ local function padBindings()
 			if binding[k]:gsub("^.*%-", ""):match("^PAD") then found[binding[k]] = binding[1] end
 		end
 	end
+	ns.ExtraPadBindings(found)
 	return found
 end
 
 local function clearPad()
-	for key in pairs(padBindings()) do SetBinding(key, nil) end
+	for key in pairs(padBindings()) do ns.BindKey(key, "") end
 end
 
 -- Bar addons such as ElvUI point bar keys at their own buttons, which fire nothing on a bar they have turned off.
@@ -89,6 +97,7 @@ local claimer = CreateFrame("Frame")
 local function claimPad()
 	if InCombatLockdown() then return EventUtil.RegisterOnceFrameEventAndCallback("PLAYER_REGEN_ENABLED", claimPad) end
 	ClearOverrideBindings(claimer)
+	if ns.UsesGamepadUI() then return end -- pad keys belong to Blizzard's gamepad bars there
 	for key, action in pairs(padBindings()) do
 		if action:find("^MULTIACTIONBAR%dBUTTON%d+$") then SetOverrideBinding(claimer, true, key, action) end
 	end
@@ -108,7 +117,7 @@ end
 local function putBack(saved)
 	if saved.all then clearPad() end
 	for cvar, value in pairs(saved.cvars) do SetCVar(cvar, value) end
-	for key, action in pairs(saved.bindings) do bind(key, action) end
+	for key, action in pairs(saved.bindings) do ns.BindKey(key, action) end
 	SaveBindings(GetCurrentBindingSet())
 end
 ns.Snapshot, ns.PutBack = snapshot, putBack
@@ -122,7 +131,7 @@ function ns.Apply()
 	db.undo = before
 	clearPad()
 	for cvar, value in pairs(ns.CVARS) do SetCVar(cvar, value) end
-	for key, action in pairs(ns.BINDINGS) do bind(key, action) end
+	for key, action in pairs(ns.BINDINGS) do ns.BindKey(key, action) end
 	SaveBindings(GetCurrentBindingSet())
 	print("LeanPad: controller set up. Show Action Bars 2-4 to see the LT, RT and LT+RT layers. Undo reset brings back your previous layout.")
 end
@@ -224,7 +233,7 @@ function ns.ApplyPlaystyle()
 	local preset = style and ns.PLAYSTYLES[style]
 	if not preset then return end
 	ns.OutOfCombat(function()
-		for cvar, value in pairs(preset) do SetCVar(cvar, value) end
+		for cvar, value in pairs(preset) do ns.WritePadCVar(cvar, value) end
 	end)
 end
 

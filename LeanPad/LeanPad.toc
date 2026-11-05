@@ -1,4 +1,4 @@
-## Interface: 120105
+## Interface: 120105, 16001
 ## Title: LeanPad
 ## Notes: Lean controller play on WoW's native gamepad layer.
 ## Author: tamui
@@ -18,3 +18,4 @@ Options.lua
 Crossbar.lua
 Profiles.lua
 Settings.lua
+Forever.lua [AllowLoadGameType forever, camelot]
