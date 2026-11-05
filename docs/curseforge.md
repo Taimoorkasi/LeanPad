@@ -1,6 +1,8 @@
 # LeanPad
 
-Lean controller play on World of Warcraft's own gamepad layer.
+Lean controller play on World of Warcraft's own gamepad layer, for retail and WoW: Forever.
+
+**On WoW: Forever?** Turn off Blizzard's Gamepad UI for the full experience. [See what changes](#wow-forever).
 
 WoW already has a full gamepad layer built in: controller buttons are ordinary key bindings, the triggers can act as Shift and Ctrl, and there is a native gamepad cursor and soft targeting. LeanPad configures that layer for you instead of rebuilding it. Your actions stay on Blizzard's own action bars, so Blizzard draws the cooldowns, glows and range, and your layout keeps working if you turn the addon off.
 
@@ -32,6 +34,8 @@ Seven styles, picked from *View* on the settings page. The square grid sits unde
 - **Three crossbar layers.** Hold LT, RT or both to reach a full D-pad and face-button set on its own action bar. Layer buttons only switch layers, as in FFXIV.
 - **Controller editor.** A drawing of your PlayStation or Xbox pad with every button labelled. Press a button to see and change what it does.
 - **Crossbar HUD.** Your controller actions in controller-shaped clusters with cooldowns and charges. Drag, size and snap the whole bar, each set or each button.
+- **Show empty buttons.** Optionally draws every button in the layout as a faint socket before anything is bound. On by default on Forever.
+- **Answer quests with the pad.** A confirms, B backs out and the D-pad chooses a quest, a line or a reward, whose tooltip shows as you pick it. On by default on Forever, and you can turn it on for retail in the settings.
 - **Play styles.** Tank, Melee, Ranged, Healer, or Auto by spec, so your character moves the way your role needs in combat.
 - **Combat-safe.** Bindings and settings are only written out of combat, and nothing runs while you are idle.
 
@@ -42,6 +46,23 @@ Seven styles, picked from *View* on the settings page. The square grid sits unde
 Install, log in, and accept the setup prompt. Then type `/lp` to open the editor, or `/lp settings` for the settings page. LeanPad is also in the minimap's addon compartment.
 
 Using ConsolePort? Turn it off first: both addons manage the gamepad bindings and settings.
+
+## WoW: Forever
+
+Forever has its own controller interface, Blizzard's Gamepad UI, which replaces the action bars and takes over the controller's buttons. LeanPad works with it on or off, but you only get all of LeanPad with it off.
+
+To turn it off, untick *Enable Gamepad UI* in *Options > Gameplay > Gamepad (Alpha)*. The game doesn't let addons change this setting, so LeanPad reminds you when you log in, then offers its layout setup once it's off.
+
+| | Gamepad UI off | Gamepad UI on |
+| --- | --- | --- |
+| Spells on A, B, X and Y on the Base layer | Yes | No, Blizzard keeps those four |
+| Spells on the bumpers, stick clicks, View and Menu | Yes | No, commands only |
+| Commands such as map or bags on the LT and RT layers | Yes | No, spells and macros only |
+| Clicking the crossbar with the mouse | Every view | The Base layer only in views that swap as you hold a layer button |
+| Answering quests with the pad | LeanPad's prompts | Blizzard's own |
+| Blizzard's radial menus, controller menu navigation and group targeting | No, use the cursor for windows | Yes |
+
+Your settings and profiles on Forever are separate from retail's.
 
 ## Reporting a problem
 

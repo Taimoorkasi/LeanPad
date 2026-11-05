@@ -2,7 +2,9 @@
 
 # LeanPad
 
-A lean controller addon for retail World of Warcraft (Midnight, 12.1.5).
+A lean controller addon for retail World of Warcraft (Midnight, 12.1.5) and WoW: Forever (1.60.1).
+
+> **On WoW: Forever, turn off Blizzard's Gamepad UI for the full experience.** Untick *Enable Gamepad UI* in *Options > Gameplay > Gamepad (Alpha)*. LeanPad reminds you when you log in. [See what changes](#wow-forever).
 
 WoW already has a full gamepad layer built in: controller buttons are ordinary key bindings, the triggers can act as Shift and Ctrl, and there is a native gamepad cursor and soft targeting. LeanPad configures that layer for you instead of rebuilding it. You get a one-click setup, a crossbar-style layout across three trigger layers, a visual controller editor with its own settings page, and a movable crossbar HUD. It has no libraries and no code running while you are idle; its only art is its own controller drawings and command icons.
 
@@ -38,6 +40,8 @@ Square rows show every layer at once, one row each, the held one in front:
 - **Profiles.** Save your whole setup, settings, bindings, controller CVars and the bar slots your pad fires, as a profile such as Tank, DPS or Healer, and switch from the settings page's *Profile* menu or `/lp profile <name>`. Link a spec to a profile and LeanPad switches when you change spec. Profiles are shared by all your characters; each remembers its own.
 - **Play styles.** Tank keeps the body facing the camera in combat, so you never show the pack your back. Melee and Ranged strafe but spin to run when you push straight back. Healer runs free, since heals need no facing, and gets friendly soft targeting. Auto follows your spec.
 - **Crossbar HUD.** Shows your controller actions in controller-shaped clusters, with cooldowns, charges, usability, range, proc glows and a blink on every press. Seven styles: the D-pad and face-button clusters, as one set that swaps as you hold a layer button or all layers at once; one row, ordered by hand, which can stay faint until a layer is held; a square grid under the character; and a row per layer, square or round. Unlock it from the settings page or Blizzard's Edit Mode to drag the bar, each set or each button, with grid and neighbour snapping, and scroll over a set to size it. Turn its mouse on to click sockets as you would action bar buttons, drop spells onto them and read their tooltips.
+- **Answer quests with the pad.** While a quest or NPC window is open, A confirms, B backs out and the D-pad chooses a quest, a line or a reward, with the buttons named under the window in place of Blizzard's own. Choosing a reward highlights it and shows its tooltip, as hovering with the mouse does. A quest with several rewards won't complete until you pick one, and PvP quests and quests that cost gold hand you the cursor to confirm. On by default on Forever and off on retail, under *Quests* on the settings page.
+- **Show empty buttons.** A crossbar setting that draws every button in the layout as a faint socket before anything is bound, as Blizzard's Show Empty Action Bars does. On by default on Forever and off on retail.
 - **Blizzard's Settings panel.** *AddOns > LeanPad* opens the editor and its settings page, runs setup and undoes it.
 - **Icons for every command.** Targeting, interact, jump, bags, menus and the rest have faces of their own, so the crossbar and the editor never show a blank socket for a command that lives on no action bar.
 
@@ -47,18 +51,39 @@ Square rows show every layer at once, one row each, the held one in front:
 
 ## Requirements
 
-- World of Warcraft retail, interface 120105 (12.1.5)
+- World of Warcraft retail, interface 120105 (12.1.5), or WoW: Forever, interface 16001 (1.60.1)
 - A controller that WoW's built-in gamepad support recognises
 
 ## Installation
 
 1. Download the latest release, or clone this repository.
-2. Copy the `LeanPad` folder (the one containing `LeanPad.toc`) into `World of Warcraft\_retail_\Interface\AddOns\`.
+2. Copy the `LeanPad` folder (the one containing `LeanPad.toc`) into `World of Warcraft\_retail_\Interface\AddOns\`, or `World of Warcraft\_forever_\Interface\AddOns\` for WoW: Forever.
 3. Start the game, or type `/reload` if it is already running.
 
 On your first login, LeanPad asks whether to set up the controller. You can run setup again any time from the editor's settings page or *Settings > AddOns > LeanPad*. LeanPad is also listed in the minimap's addon compartment.
 
 > **Using ConsolePort?** Disable it before using LeanPad. Both addons manage the gamepad bindings and CVars, and they will overwrite each other.
+
+## WoW: Forever
+
+Forever has its own controller interface, Blizzard's **Gamepad UI**, which replaces the action bars and takes over the controller's buttons. LeanPad works with it on or off, but you only get all of LeanPad with it off.
+
+To turn it off, untick *Enable Gamepad UI* in *Options > Gameplay > Gamepad (Alpha)*. The game doesn't let addons change this setting, so you do it yourself.
+
+If it's on when you log in, LeanPad reminds you. Press A or **Got it**, and LeanPad offers its layout setup as soon as you've unticked it. Press B or **Keep it on, don't ask again**, and LeanPad stops asking.
+
+| | Gamepad UI off | Gamepad UI on |
+| --- | --- | --- |
+| Spells on A, B, X and Y on the Base layer | Yes | No, Blizzard keeps those four |
+| Spells on the bumpers, stick clicks, View and Menu | Yes | No, commands only |
+| Commands such as map or bags on the LT and RT layers | Yes | No, spells and macros only |
+| Clicking the crossbar with the mouse | Every view | The Base layer only in views that swap as you hold a layer button |
+| Answering quests with the pad | LeanPad's prompts | Blizzard's own |
+| Blizzard's radial menus, controller menu navigation and group targeting | No, use the cursor for windows | Yes |
+
+With the Gamepad UI on, LeanPad's layers are Blizzard's own bars (Base, LT, RT and LT+RT are its top, left, right and bottom bars, across its three pages), and LeanPad's crossbar stands in for them.
+
+Your settings and profiles on Forever are separate from retail's, as each game keeps its own.
 
 ## Usage
 
@@ -125,7 +150,7 @@ New-Item -ItemType Junction -Path "<WoW>\_retail_\Interface\AddOns\LeanPad" -Tar
 
 Ground rules for changes:
 
-- Check every API against the `live` branch of [Gethe/wow-ui-source](https://github.com/Gethe/wow-ui-source).
+- Check every API against the `live` branch of [Gethe/wow-ui-source](https://github.com/Gethe/wow-ui-source), and the `forever` branch for WoW: Forever. `LeanPad/Forever.lua` loads only on Forever.
 - Only write CVars and bindings out of combat, from code the player triggered.
 - Never compare or do arithmetic on combat values; in Midnight they may be secret.
 - No `OnUpdate` while idle and no embedded libraries.

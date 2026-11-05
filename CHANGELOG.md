@@ -4,6 +4,18 @@ All notable changes to LeanPad are documented here. The format is based on [Keep
 
 ## [Unreleased]
 
+### Added
+
+- **WoW: Forever support.** With Forever's Gamepad UI on, LeanPad's crossbar and editor work on Blizzard's gamepad bars and keep its menus, radials and targeting: Base, LT, RT and LT+RT are its top, left, right and bottom bars, across its three pages. With the Gamepad UI off, LeanPad works as it does on retail. If the Gamepad UI is on when you log in, LeanPad suggests turning it off, since LeanPad does more without it, says where the setting is, and offers its layout setup once you have.
+- **Answer quests with the pad.** While a quest or NPC window is open, A confirms, B backs out and the D-pad chooses a quest, a gossip line or a reward, with the buttons named under the window in place of Blizzard's own. Choosing a reward highlights it and shows its tooltip, as hovering with the mouse does. On by default on Forever and off on retail, under *Quests* on the settings page. It steps aside for a cursor you bring up, in combat, and for Blizzard's Gamepad UI, which does this itself.
+- **Show empty buttons.** A new crossbar setting draws every button in the layout as a faint socket before anything is bound, as Blizzard's Show Empty Action Bars does. On by default on Forever and off on retail.
+
+### Changed
+
+- **Stick clicks on the crossbar** now show only when they hold a bar action, not a command such as Interact.
+- **Crossbar proportions.** The D-pad and face diamonds are wider than tall, and the stacked sockets between them are spaced so their glyphs clear the button above. Buttons you've dragged stay where you put them.
+- **Clearer Jump and Interact icons.** Interact uses the game's own interact cursor, Jump is a new drawing, and on Forever Jump uses Blizzard's gamepad icon.
+
 ## [0.6.0] - 2026-10-26
 
 ### Added

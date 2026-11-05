@@ -8,6 +8,7 @@ A lean controller addon for retail World of Warcraft (Midnight, live client 12.1
 > - **Crossbar is a mirror, not a bar.** Actions stay on Blizzard's bars and the crossbar only displays them, so there are no secure buttons and no override bindings yet. The state-header crossbar described below is not built.
 > - **Layer buttons are pure.** As in FFXIV and WoW: Forever, a layer button opens its layer and fires nothing, because the client's tap window would otherwise fire its base action on a short hold.
 > - **Play styles** set the combat facing angle and soft-target arcs per role, from the spec. They are not in the original scope.
+> - **WoW: Forever (November 2026).** `Forever.lua` loads only there and maps LeanPad's layers onto Blizzard's gamepad bars while its Gamepad UI is on. LeanPad draws its own menus in that mode, because a Blizzard menu opened by an addon taints the Gamepad UI's focus state. Addons can't switch the Gamepad UI themselves, so LeanPad asks the player to. The line budget rose to 4k to cover this and the quest prompts.
 > - **Not built yet:** profiles and import/export, the healer unit cursor, the utility ring and auto-fill.
 
 ## Blizzard's engine already does most of ConsolePort's input work
