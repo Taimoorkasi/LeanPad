@@ -2,6 +2,8 @@
 # to main. This workflow sees a version with no tag yet, runs the tests, tags it v0.3.0, and tools/release.sh zips
 # LeanPad/ and uploads it to GitHub Releases and CurseForge (project ID in the TOC). Pushing a v* tag by hand
 # releases that tag the same way, and Run workflow on GitHub re-releases the newest changelog version.
+# A beta is a pushed tag with a suffix, such as v0.7.0-beta.1, from any branch: tools/release.sh publishes it for
+# WoW: Forever only. Its changelog heading doesn't count as the newest release here, so it never releases from main.
 # Needs the CF_API_KEY repository secret.
 name: Release
 

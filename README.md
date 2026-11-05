@@ -188,6 +188,8 @@ To release, turn the changelog's *Unreleased* notes into a dated version section
 
 The release workflow in `.github/workflows/release.yml` sees a version with no tag yet, runs the tests, tags it `v0.3.0`, and `tools/release.sh` zips the `LeanPad/` folder, stamps the version into the TOC and uploads the zip to GitHub Releases and CurseForge, with that version's changelog section as the notes. Pushes that leave the newest version unchanged release nothing. Pushing a `v*` tag by hand releases that tag the same way, and *Run workflow* on the Actions page re-releases the newest version. It needs the `CF_API_KEY` repository secret. To check a release without publishing, run `DRY_RUN=1 tools/release.sh 0.3.0` from the repository root.
 
+To release a beta, add a changelog section with a suffixed version, such as `## [0.7.0-beta.1] - 2026-11-05`, commit it, and push the tag `v0.7.0-beta.1` from any branch. A version with a suffix is uploaded as a beta for WoW: Forever only and marked as a pre-release on GitHub, so it never reaches retail players. If CurseForge doesn't list Forever's game version, the run stops before publishing anything. Merging that changelog section into `main` releases nothing, as only plain `x.y.z` headings count there.
+
 The reasoning behind the design is in [docs/WoW controller addon design.md](docs/WoW%20controller%20addon%20design.md).
 
 ## Reporting a problem

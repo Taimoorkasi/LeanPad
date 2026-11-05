@@ -34,21 +34,19 @@ game="$(game_version "$(sed -n 1p <<< "$interfaces")")"
 forever="$(game_version "$(sed -n 2p <<< "$interfaces")")"
 project="$(grep -m1 '^## X-Curse-Project-ID:' "$toc" | tr -dc '0-9')"
 
-echo "LeanPad $version for WoW $game and Forever $forever: $out/$zip, CurseForge project $project"
+# A version with a suffix, such as 0.7.0-beta.1, is a beta for Forever only, so it never reaches retail players.
+release_type="release"
+case "$version" in *-*) release_type="beta" ;; esac
+
+echo "LeanPad $version ($release_type) for WoW $game and Forever $forever: $out/$zip, CurseForge project $project"
 if [ -n "${DRY_RUN:-}" ]; then
 	unzip -l "$out/$zip"
 	cat "$out/notes.md"
 	exit 0
 fi
 
-# GitHub: create the release for the tag, or replace its zip when re-releasing.
-if gh release view "v$version" > /dev/null 2>&1; then
-	gh release upload "v$version" "$out/$zip" --clobber
-else
-	gh release create "v$version" "$out/$zip" --title "LeanPad $version" --notes-file "$out/notes.md"
-fi
-
-# CurseForge: retail game versions are type 517; when the exact patch isn't listed yet, take the newest retail one.
+# CurseForge's versions come first, so a beta it can't take stops before anything is published.
+# Retail game versions are type 517; when the exact patch isn't listed yet, take the newest retail one.
 cf="https://wow.curseforge.com"
 versions="$(curl -fsS -H "X-Api-Token: $CF_API_TOKEN" "$cf/api/game/versions")"
 game_id="$(jq -r --arg v "$game" '
@@ -56,14 +54,32 @@ game_id="$(jq -r --arg v "$game" '
 	| (($retail | map(select(.name == $v)) | first) // ($retail | max_by(.id))) | .id' <<< "$versions")"
 # Forever's type ID isn't known here, so its version is matched by name; 1.60.x names no other client.
 forever_id="$(jq -r --arg v "$forever" 'map(select(.name == $v)) | first | .id // empty' <<< "$versions")"
-if [ -z "$forever_id" ]; then
+if [ "$release_type" = "beta" ]; then
+	if [ -z "$forever_id" ]; then
+		echo "CurseForge lists no game version $forever, so this beta can't be published for Forever. Nothing was published." >&2
+		exit 1
+	fi
+	game_ids="[$forever_id]"
+elif [ -n "$forever_id" ]; then
+	game_ids="[$game_id,$forever_id]"
+else
 	echo "CurseForge lists no game version $forever; uploading for retail only" >&2
+	game_ids="[$game_id]"
 fi
-jq -n --rawfile notes "$out/notes.md" --arg name "LeanPad $version" --argjson game "$game_id" --arg forever "$forever_id" \
-	'{changelog: $notes, changelogType: "markdown", displayName: $name, releaseType: "release",
-		gameVersions: ([$game] + (if $forever == "" then [] else [$forever | tonumber] end))}' \
+
+# GitHub: create the release for the tag, or replace its zip when re-releasing.
+if gh release view "v$version" > /dev/null 2>&1; then
+	gh release upload "v$version" "$out/$zip" --clobber
+elif [ "$release_type" = "beta" ]; then
+	gh release create "v$version" "$out/$zip" --title "LeanPad $version" --notes-file "$out/notes.md" --prerelease
+else
+	gh release create "v$version" "$out/$zip" --title "LeanPad $version" --notes-file "$out/notes.md"
+fi
+
+jq -n --rawfile notes "$out/notes.md" --arg name "LeanPad $version" --arg type "$release_type" --argjson games "$game_ids" \
+	'{changelog: $notes, changelogType: "markdown", displayName: $name, releaseType: $type, gameVersions: $games}' \
 	> "$out/metadata.json"
 curl -fsS -H "X-Api-Token: $CF_API_TOKEN" -F "metadata=<$out/metadata.json" -F "file=@$out/$zip" \
 	"$cf/api/projects/$project/upload-file"
 echo
-echo "Uploaded to CurseForge project $project for WoW $game (version id $game_id)"
+echo "Uploaded $release_type to CurseForge project $project (version ids $game_ids)"
