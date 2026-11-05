@@ -4,6 +4,8 @@ All notable changes to LeanPad are documented here. The format is based on [Keep
 
 ## [Unreleased]
 
+## [0.7.0-beta.1] - 2026-11-05
+
 ### Added
 
 - **WoW: Forever support.** With Forever's Gamepad UI on, LeanPad's crossbar and editor work on Blizzard's gamepad bars and keep its menus, radials and targeting: Base, LT, RT and LT+RT are its top, left, right and bottom bars, across its three pages. With the Gamepad UI off, LeanPad works as it does on retail. If the Gamepad UI is on when you log in, LeanPad suggests turning it off, since LeanPad does more without it, says where the setting is, and offers its layout setup once you have.
