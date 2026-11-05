@@ -15,6 +15,8 @@ All notable changes to LeanPad are documented here. The format is based on [Keep
 - **Stick clicks on the crossbar** now show only when they hold a bar action, not a command such as Interact.
 - **Crossbar proportions.** The D-pad and face diamonds are wider than tall, and the stacked sockets between them are spaced so their glyphs clear the button above. Buttons you've dragged stay where you put them.
 - **Clearer Jump and Interact icons.** Interact uses the game's own interact cursor, Jump is a new drawing, and on Forever Jump uses Blizzard's gamepad icon.
+- **Auto play style on Forever** treats Mage, Hunter, Priest and Warlock as ranged. Each class there has one spec, so choose a tank or healer style by hand.
+- **GitHub's source archives** no longer include the design notes.
 
 ## [0.6.0] - 2026-10-26
 
