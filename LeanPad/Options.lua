@@ -224,6 +224,15 @@ local function buildLeft(x, y)
 	for i, cvar in ipairs(SOFT_TARGETS) do
 		y = row(x, y, SOFT_TARGET_LABELS[i], cvarChoice(softTargetOptions(), cvar, "0"))
 	end
+	y = y + GAP
+	y = heading(x, y, "Quests")
+	local quests = ns.Checkbox(page, ns.QuestPromptsEnabled, function(on)
+		ns.db.questPrompts = on
+		ns.Saved()
+	end)
+	table.insert(controls, quests)
+	y = row(x, y, "Answer quests with the pad", quests)
+	y = note(x, y, "A and B answer quests and NPCs, and the D-pad chooses. Not used with Blizzard's Gamepad UI, which has its own.", 2)
 	local addon = ns.BarAddon()
 	if addon then note(x, y + 8, ns.BarAddonNote(addon), 3) end
 end

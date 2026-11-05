@@ -372,6 +372,37 @@ function M.reset()
 	}
 	w.cursorControl = false
 	SetGamePadCursorControl = function(enabled) w.cursorControl = enabled end
+	-- The quest window's state in w.quest, and each call the addon answers it with in w.questCalls.
+	w.quest = { completable = true, choices = {}, available = {}, active = {}, gossipAvailable = {}, gossipActive = {}, gossipOptions = {} }
+	w.questCalls = {}
+	local function questCall(name) return function(...) table.insert(w.questCalls, { name, ... }) end end
+	QuestFrame = { autoQuest = false }
+	QuestInfoFrame = { rewardsFrame = { RewardButtons = {} } }
+	QuestInfoItem_OnClick = function(button) w.quest.clicked = button end
+	GossipFrame = { GreetingPanel = { GoodbyeButton = newWidget("Button") } }
+	QuestFrameAcceptButton, QuestFrameDeclineButton, QuestFrameCompleteButton, QuestFrameCompleteQuestButton = newWidget("Button"), newWidget("Button"), newWidget("Button"), newWidget("Button")
+	QuestFrameGoodbyeButton, QuestFrameGreetingGoodbyeButton, QuestFrameCloseButton, GossipFrameCloseButton = newWidget("Button"), newWidget("Button"), newWidget("Button"), newWidget("Button")
+	AcceptQuest, AcknowledgeAutoAcceptQuest, CompleteQuest, GetQuestReward, CloseQuest =
+		questCall("AcceptQuest"), questCall("AcknowledgeAutoAcceptQuest"), questCall("CompleteQuest"), questCall("GetQuestReward"), questCall("CloseQuest")
+	SelectAvailableQuest, SelectActiveQuest = questCall("SelectAvailableQuest"), questCall("SelectActiveQuest")
+	QuestFlagsPVP = function() return w.quest.pvp end
+	GetQuestMoneyToGet = function() return w.quest.money end
+	IsQuestCompletable = function() return w.quest.completable end
+	GetNumQuestChoices = function() return #w.quest.choices end
+	GetQuestItemInfo = function(_, index) return w.quest.choices[index][1], w.quest.choices[index][2] end
+	GetNumAvailableQuests = function() return #w.quest.available end
+	GetNumActiveQuests = function() return #w.quest.active end
+	GetAvailableTitle = function(index) return w.quest.available[index] end
+	GetActiveTitle = function(index) return w.quest.active[index] end
+	C_GossipInfo = {
+		GetAvailableQuests = function() return w.quest.gossipAvailable end,
+		GetActiveQuests = function() return w.quest.gossipActive end,
+		GetOptions = function() return w.quest.gossipOptions end,
+		SelectAvailableQuest = questCall("GossipAvailable"),
+		SelectActiveQuest = questCall("GossipActive"),
+		SelectOptionByIndex = questCall("GossipOption"),
+		CloseGossip = questCall("CloseGossip"),
+	}
 	SetCursorPosition = function(x, y) w.cursorPosition = { x, y } end
 	-- Where the mouse is, in screen pixels as the client gives it; specs set w.mouseAt.
 	GetCursorPosition = function() return unpack(w.mouseAt) end
