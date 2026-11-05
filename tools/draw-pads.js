@@ -124,8 +124,8 @@ const icons = {
 	IconTargetEnemy: [el("circle", { cx: 32, cy: 32, r: 14, fill: "none", stroke: ICON_INK, "stroke-width": 4.5 }),
 		line("M32 8 V16 M32 48 V56 M8 32 H16 M48 32 H56"), el("circle", { cx: 32, cy: 32, r: 4, fill: ICON_ACCENT })],
 	IconTargetFriend: [el("circle", { cx: 32, cy: 23, r: 8, fill: "none", stroke: ICON_INK, "stroke-width": 4.5 }), line("M16 52 C16 40 24 36 32 36 C40 36 48 40 48 52")],
-	IconInteract: [line("M32 44 V22", { "stroke-width": 9 }), line("M20 20 C24 12 40 12 44 20"), line("M14 28 C18 14 46 14 50 28", { stroke: ICON_ACCENT })],
-	IconJump: [line("M32 46 V18 M22 28 L32 18 L42 28"), line("M18 52 H46", { stroke: ICON_ACCENT })],
+	// A figure in mid-leap above the ground.
+	IconJump: [el("circle", { cx: 34, cy: 11, r: 5.5, fill: ICON_INK }), line("M33 20 L30 31 M30 31 L20 33 L18 41 M30 31 L41 35 L44 42 M32 22 L21 15 M32 22 L45 17"), line("M20 55 H44", { stroke: ICON_ACCENT })],
 	IconAutorun: [line("M20 20 L32 32 L20 44"), line("M34 20 L46 32 L34 44", { stroke: ICON_ACCENT })],
 	IconCursor: [el("path", { d: "M20 14 L20 46 L28 39 L34 51 L40 48 L34 36 L44 36 Z", fill: ICON_INK, stroke: ICON_FILL, "stroke-width": 2, "stroke-linejoin": "round" })],
 	IconBags: [el("rect", { x: 18, y: 26, width: 28, height: 24, rx: 5, fill: "none", stroke: ICON_INK, "stroke-width": 4.5 }), line("M24 26 C24 14 40 14 40 26", { stroke: ICON_ACCENT })],
