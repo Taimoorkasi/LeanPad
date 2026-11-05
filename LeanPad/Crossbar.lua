@@ -4,20 +4,21 @@ local addonName, ns = ...
 -- shoulder, trigger and stick click columns between them.
 -- Along the centre line the gaps are even: 32 from the D-pad's right button to the first socket, between the two
 -- sockets, and from the second socket to the face diamond.
+-- The diamonds are wider than tall, as a controller's are, and their glyphs clear the button above.
 ns.CROSSBAR = {
-	PADDUP = { -163, 46 }, PADDLEFT = { -209, 0 }, PADDRIGHT = { -117, 0 }, PADDDOWN = { -163, -46 },
-	PADLSHOULDER = { -39, 54 }, PADLTRIGGER = { -39, 0 }, PADLSTICK = { -39, -54 },
-	PADRSHOULDER = { 39, 54 }, PADRTRIGGER = { 39, 0 }, PADRSTICK = { 39, -54 },
-	PAD4 = { 163, 46 }, PAD3 = { 117, 0 }, PAD2 = { 209, 0 }, PAD1 = { 163, -46 },
+	PADDUP = { -171, 42 }, PADDLEFT = { -225, 0 }, PADDRIGHT = { -117, 0 }, PADDDOWN = { -171, -42 },
+	PADLSHOULDER = { -39, 60 }, PADLTRIGGER = { -39, 0 }, PADLSTICK = { -39, -60 },
+	PADRSHOULDER = { 39, 60 }, PADRTRIGGER = { 39, 0 }, PADRSTICK = { 39, -60 },
+	PAD4 = { 171, 42 }, PAD3 = { 117, 0 }, PAD2 = { 225, 0 }, PAD1 = { 171, -42 },
 }
 -- Between the diamonds each side stacks only the sockets it shows, centred on the diamonds' line: one socket
 -- sits level with the D-pad and face buttons, two straddle that line, three fill the column.
 ns.CROSSBAR_INNER = { { -39, "PADLSHOULDER", "PADLTRIGGER", "PADLSTICK" }, { 39, "PADRSHOULDER", "PADRTRIGGER", "PADRSTICK" } }
-ns.CROSSBAR_CLUSTER_SIZE = { 470, 220 }
+ns.CROSSBAR_CLUSTER_SIZE = { 500, 220 }
 -- Cluster centres from the bar's centre, in ns.Layers() order: Base on top, then the first modifier left,
 -- the second right and both together below, as WoW: Forever lays out its controller bars.
 -- shortcut: only the first four layers get a cluster, so Alt layers are not drawn in the all-layers view; add slots if Alt is used.
-ns.CROSSBAR_CLUSTERS = { { 0, 60 }, { -420, 60 }, { 420, 60 }, { 0, -135 } }
+ns.CROSSBAR_CLUSTERS = { { 0, 60 }, { -440, 60 }, { 440, 60 }, { 0, -135 } }
 ns.CROSSBAR_BUTTON_SIZE = 46
 ns.CROSSBAR_BLINK = 0.25 -- seconds a press blink takes to fade
 ns.CROSSBAR_IDLE_SCALE = 0.75
@@ -318,7 +319,7 @@ local function placeSockets(cluster)
 		end
 		for i, button in ipairs(shown) do
 			button:ClearAllPoints()
-			button:SetPoint("CENTER", cluster.frame, "CENTER", side[1], ((#shown + 1) / 2 - i) * (ns.CROSSBAR_BUTTON_SIZE + 8))
+			button:SetPoint("CENTER", cluster.frame, "CENTER", side[1], ((#shown + 1) / 2 - i) * (ns.CROSSBAR_BUTTON_SIZE + 14))
 		end
 	end
 end

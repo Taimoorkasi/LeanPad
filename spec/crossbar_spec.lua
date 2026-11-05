@@ -135,14 +135,14 @@ describe("Crossbar", function()
 			assert.same({ "CENTER", clusters()[1], "CENTER", 39, 0 }, buttonFor("PADRSHOULDER").point)
 			w.bindings["SHIFT-PADRSTICK"] = "ACTIONBUTTON1" -- two straddle the line
 			bar:Fire("OnEvent", "UPDATE_BINDINGS")
-			assert.same({ "CENTER", clusters()[1], "CENTER", 39, 27 }, buttonFor("PADRSHOULDER").point)
-			assert.same({ "CENTER", clusters()[1], "CENTER", 39, -27 }, buttonFor("PADRSTICK").point)
+			assert.same({ "CENTER", clusters()[1], "CENTER", 39, 30 }, buttonFor("PADRSHOULDER").point)
+			assert.same({ "CENTER", clusters()[1], "CENTER", 39, -30 }, buttonFor("PADRSTICK").point)
 			w.cvars.GamePadEmulateCtrl = "none" -- RT is a plain button again: three fill the column
 			w.bindings.PADRTRIGGER = "ACTIONBUTTON1"
 			bar:Fire("OnEvent", "CVAR_UPDATE")
-			assert.same({ "CENTER", clusters()[1], "CENTER", 39, 54 }, buttonFor("PADRSHOULDER").point)
+			assert.same({ "CENTER", clusters()[1], "CENTER", 39, 60 }, buttonFor("PADRSHOULDER").point)
 			assert.same({ "CENTER", clusters()[1], "CENTER", 39, 0 }, buttonFor("PADRTRIGGER").point)
-			assert.same({ "CENTER", clusters()[1], "CENTER", 39, -54 }, buttonFor("PADRSTICK").point)
+			assert.same({ "CENTER", clusters()[1], "CENTER", 39, -60 }, buttonFor("PADRSTICK").point)
 		end)
 
 		it("give commands off the bars a face with a badge, and no cooldown or press", function()
