@@ -1,3 +1,4 @@
 *.sh text eol=lf
 *.tga binary
 *.png binary
+docs/WoW[[:space:]]controller[[:space:]]addon[[:space:]]design.md export-ignore
