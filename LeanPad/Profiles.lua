@@ -19,8 +19,8 @@ for _, preset in pairs(ns.PLAYSTYLES) do
 end
 
 local function specID()
-	local spec = GetSpecialization()
-	return spec and GetSpecializationInfo(spec)
+	local spec = C_SpecializationInfo.GetSpecialization()
+	return spec and C_SpecializationInfo.GetSpecializationInfo(spec)
 end
 
 -- The bar slots pad bindings fire: Bar 1's on its normal page and every learned form's, the others' own.

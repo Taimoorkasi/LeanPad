@@ -203,16 +203,17 @@ ns.PLAYSTYLES = {
 local RANGED_SPECS = {
 	[62] = true, [63] = true, [64] = true, [102] = true, [253] = true, [254] = true, [258] = true,
 	[262] = true, [265] = true, [266] = true, [267] = true, [1467] = true, [1473] = true,
+	[1482] = true, [1485] = true, [1487] = true, [1490] = true, -- Forever's one spec per class: Mage, Hunter, Priest, Warlock
 }
 
 -- The style the current spec plays, or nil before a spec is chosen.
 function ns.SpecStyle()
-	local spec = GetSpecialization()
+	local spec = C_SpecializationInfo.GetSpecialization()
 	if not spec then return end
 	local role = GetSpecializationRole(spec)
 	if role == "TANK" then return "tank" end
 	if role == "HEALER" then return "healer" end
-	return RANGED_SPECS[GetSpecializationInfo(spec)] and "ranged" or "melee"
+	return RANGED_SPECS[C_SpecializationInfo.GetSpecializationInfo(spec)] and "ranged" or "melee"
 end
 
 -- Writes the chosen style's CVars; Auto follows the spec. Unset means the player keeps their own values.

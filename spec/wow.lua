@@ -293,11 +293,14 @@ function M.reset()
 	C_Timer = { After = function(seconds, callback) table.insert(w.timers, { seconds = seconds, callback = callback }) end }
 	-- A Beast Mastery hunter until a spec says otherwise.
 	w.spec, w.specID, w.role = 1, 253, "DAMAGER"
-	GetSpecialization = function() return w.spec end
-	-- The class's specs in w.specList; the current one, w.spec, reads as w.specID.
+	-- The class's specs in w.specList; the current one, w.spec, reads as w.specID. The bare GetSpecialization names are
+	-- a deprecated alias only retail loads, so they stay out of the fake.
 	w.specList = { { 253, "Beast Mastery" }, { 254, "Marksmanship" }, { 255, "Survival" } }
+	C_SpecializationInfo = {
+		GetSpecialization = function() return w.spec end,
+		GetSpecializationInfo = function(index) return index == w.spec and w.specID or w.specList[index][1], w.specList[index][2] end,
+	}
 	GetNumSpecializations = function() return #w.specList end
-	GetSpecializationInfo = function(index) return index == w.spec and w.specID or w.specList[index][1], w.specList[index][2] end
 	GetSpecializationRole = function() return w.role end
 	EventRegistry = { RegisterCallback = function(_, event, callback) w.callbacks[event] = callback end }
 	-- Like the client's: an error goes to the error handler and the caller carries on.

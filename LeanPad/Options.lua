@@ -312,7 +312,7 @@ local function profileMenu(root)
 	local links = { { false, NONE } }
 	for _, option in ipairs(names) do table.insert(links, option) end
 	for index = 1, GetNumSpecializations() do
-		local spec, specName = GetSpecializationInfo(index)
+		local spec, specName = C_SpecializationInfo.GetSpecializationInfo(index)
 		local submenu = root:CreateButton(("%s: %s"):format(specName, ns.char.specs[spec] or NONE))
 		ns.Radios(submenu, links, function() return ns.char.specs[spec] or false end, function(name) ns.LinkSpec(spec, name) end)
 	end
