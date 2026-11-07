@@ -10,6 +10,15 @@ WoW already has a full gamepad layer built in: controller buttons are ordinary k
 
 Your actions stay on Blizzard's own action bars, so Blizzard draws the cooldowns, glows and range, and the layout keeps working if you disable the addon.
 
+### New in 0.7.0
+
+- **Talk to NPCs and do quests from the pad**, in LeanPad's own dialogue window, made for reading: the NPC in 3D beside their words, rewards as tiles, and A, B and the D-pad to answer. Put it in any of nine places, at the size and text size you like.
+- **Pop-ups from the pad.** A, B, X and Y press the buttons of Blizzard's pop-ups, the dungeon queue pop and ready checks, named under each one.
+- **Settings in two tabs**, *Controls* and *Dialogue*, and an (i) on every setting that says what it does.
+- **WoW: Forever support**, and fixes. See the [changelog](CHANGELOG.md).
+
+![LeanPad's dialogue window offering a quest: its title, the letter's words, the gold reward, and Decline and Accept on B and A](docs/images/dialogue-quest.png)
+
 **Easy binding setup.** Press a button on your pad and see what it does on every layer, then change it in one step.
 
 ![The LeanPad controller editor with Circle selected, showing Swipe on Action Bar 1 and its other layers](docs/images/easy-binding-setup.png)
@@ -18,7 +27,7 @@ Your actions stay on Blizzard's own action bars, so Blizzard draws the cooldowns
 
 ![The LeanPad editor's Change action menu listing Guardian spells](docs/images/easy-binding-mapping.png)
 
-**Easy to understand settings.** Layer buttons, pad, labels, cursor, crossbar and soft targeting on one page next to the editor.
+**Easy to understand settings.** Layer buttons, pad, labels, cursor, crossbar and soft targeting on the *Controls* tab next to the editor, and the dialogue window and pop-ups on the *Dialogue* tab.
 
 ![The LeanPad settings page](docs/images/easy-to-understand-settings.png)
 
@@ -36,7 +45,7 @@ Square rows show every layer at once, one row each, the held one in front:
 - **Undo.** Setup and every reset save your controller settings and bindings first. *Undo reset* (`/lp undo`) brings back the layout the last reset replaced; *Undo setup* (`/lp restore`) returns to how things were before LeanPad.
 - **Three crossbar layers.** LT, RT and LT+RT each map the D-pad and face buttons onto 8 slots of their own action bar. The layer buttons only open layers and fire nothing themselves, as in FFXIV.
 - **Controller editor.** `/lp` shows a drawing of your controller (PlayStation or Xbox, detected from the pad) with every bound button labelled around it, one layer at a time. Press any button, holding a layer button first for its layer, and LeanPad shows what it does: the spell on the slot, where it lives and what the same button does on the other layers. From there, pick a spell or macro straight from the menu and LeanPad finds it a bar slot, pick a bar slot or command by hand, clear it, or drag a spell onto it. Cursor users can click the drawing instead. The Menu button closes the editor.
-- **Settings page.** The editor's Settings button opens LeanPad's own page: which pad to use, Xbox or PlayStation labels, the layer buttons, a play style per role or by spec, soft targeting, the crossbar's view, size, opacity and position, and the native cursor's clicks, speed and behaviour.
+- **Settings page.** The editor's Settings button opens LeanPad's own page, in two tabs. *Controls*: which pad to use, Xbox or PlayStation labels, the layer buttons, a play style per role or by spec, soft targeting, the crossbar's view, size, opacity and position, and the native cursor's clicks, speed and behaviour. *Dialogue*: the dialogue window and pop-ups. Hover the (i) after any setting to see what it does.
 - **Profiles.** Save your whole setup, settings, bindings, controller CVars and the bar slots your pad fires, as a profile such as Tank, DPS or Healer, and switch from the settings page's *Profile* menu or `/lp profile <name>`. Link a spec to a profile and LeanPad switches when you change spec. Profiles are shared by all your characters; each remembers its own.
 - **Play styles.** Tank keeps the body facing the camera in combat, so you never show the pack your back. Melee and Ranged strafe but spin to run when you push straight back. Healer runs free, since heals need no facing, and gets friendly soft targeting. Auto follows your spec. On Forever, where each class has one spec, Auto can't always tell a tank or healer, so pick those styles by hand.
 - **Crossbar HUD.** Shows your controller actions in controller-shaped clusters, with cooldowns, charges, usability, range, proc glows and a blink on every press. Seven styles: the D-pad and face-button clusters, as one set that swaps as you hold a layer button or all layers at once; one row, ordered by hand, which can stay faint until a layer is held; a square grid under the character; and a row per layer, square or round. Unlock it from the settings page or Blizzard's Edit Mode to drag the bar, each set or each button, with grid and neighbour snapping, and scroll over a set to size it. Turn its mouse on to click sockets as you would action bar buttons, drop spells onto them and read their tooltips. Stick clicks only get a socket when they hold a bar action, unless *Show empty buttons* is on.

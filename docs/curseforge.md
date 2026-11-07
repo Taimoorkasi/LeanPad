@@ -6,6 +6,15 @@ Lean controller play on World of Warcraft's own gamepad layer, for retail and Wo
 
 WoW already has a full gamepad layer built in: controller buttons are ordinary key bindings, the triggers can act as Shift and Ctrl, and there is a native gamepad cursor and soft targeting. LeanPad configures that layer for you instead of rebuilding it. Your actions stay on Blizzard's own action bars, so Blizzard draws the cooldowns, glows and range, and your layout keeps working if you turn the addon off.
 
+## New in 0.7.0
+
+- **Talk to NPCs and do quests from the pad.** LeanPad's own dialogue window, made for reading: the NPC in 3D beside their words, which write themselves in, rewards as tiles in their quality's colour, and A, B and the D-pad to answer. Put it in any of nine places on screen, at the size and text size you like.
+- **Pop-ups from the pad.** A, B, X and Y press the buttons of Blizzard's pop-ups, the dungeon queue pop and ready checks, named under each one, such as Release Spirit and Recap when you die.
+- **Settings in two tabs**, *Controls* and *Dialogue*, and an (i) on every setting that says what it does, with a live preview of the dialogue window.
+- **WoW: Forever support**, plus fixes: Edit Mode can reach the frames under the crossbar again, and the cursor toggle no longer errors.
+
+![LeanPad's dialogue window offering a quest](https://raw.githubusercontent.com/Taimoorkasi/LeanPad/main/docs/images/dialogue-quest.png)
+
 ## Easy binding setup
 
 Press a button on your pad and see what it does on every layer. Pick a spell or macro straight from your spellbook and LeanPad puts it on the button for you.
@@ -16,7 +25,7 @@ Press a button on your pad and see what it does on every layer. Pick a spell or 
 
 ## Easy to understand settings
 
-Layer buttons, which pad to use, Xbox or PlayStation labels, the cursor, the crossbar and soft targeting, all on one page next to the editor.
+Layer buttons, which pad to use, Xbox or PlayStation labels, the cursor, the crossbar and soft targeting on the *Controls* tab, and the dialogue window and pop-ups on the *Dialogue* tab, all next to the editor. Hover the (i) after any setting to see what it does.
 
 ![The LeanPad settings page](https://raw.githubusercontent.com/Taimoorkasi/LeanPad/main/docs/images/easy-to-understand-settings.png)
 
@@ -35,7 +44,8 @@ Seven styles, picked from *View* on the settings page. The square grid sits unde
 - **Controller editor.** A drawing of your PlayStation or Xbox pad with every button labelled. Press a button to see and change what it does.
 - **Crossbar HUD.** Your controller actions in controller-shaped clusters with cooldowns and charges. Drag, size and snap the whole bar, each set or each button.
 - **Show empty buttons.** Optionally draws every button in the layout as a faint socket before anything is bound. On by default on Forever.
-- **Answer quests with the pad.** A confirms, B backs out and the D-pad chooses a quest, a line or a reward, whose tooltip shows as you pick it. On by default on Forever, and you can turn it on for retail in the settings.
+- **Dialogue window.** Talk to NPCs and do quests from the pad: A confirms, B backs out, the D-pad chooses a quest, a line or a reward, whose tooltip shows as you pick it, and the bumpers scroll long text. In combat, new conversations open in Blizzard's windows. On by default on Forever; turn it on for retail on the *Dialogue* tab.
+- **Pop-ups from the pad.** A, B, X and Y press a pop-up's buttons, left to right, the dungeon queue and ready checks included. They count as your own clicks, so entering a dungeon works.
 - **Play styles.** Tank, Melee, Ranged, Healer, or Auto by spec, so your character moves the way your role needs in combat.
 - **Combat-safe.** Bindings and settings are only written out of combat, and nothing runs while you are idle.
 
@@ -43,7 +53,7 @@ Seven styles, picked from *View* on the settings page. The square grid sits unde
 
 ## Getting started
 
-Install, log in, and accept the setup prompt. Then type `/lp` to open the editor, or `/lp settings` for the settings page. LeanPad is also in the minimap's addon compartment.
+Install, log in, and accept the setup prompt. Then type `/lp` to open the editor, or `/lp settings` for the settings page. LeanPad is also in the minimap's addon compartment. On retail, turn on the dialogue window and pop-ups on the settings' *Dialogue* tab.
 
 Using ConsolePort? Turn it off first: both addons manage the gamepad bindings and settings.
 
@@ -59,7 +69,7 @@ To turn it off, untick *Enable Gamepad UI* in *Options > Gameplay > Gamepad (Alp
 | Spells on the bumpers, stick clicks, View and Menu | Yes | No, commands only |
 | Commands such as map or bags on the LT and RT layers | Yes | No, spells and macros only |
 | Clicking the crossbar with the mouse | Every view | The Base layer only in views that swap as you hold a layer button |
-| Answering quests with the pad | LeanPad's prompts | Blizzard's own |
+| Answering quests with the pad | LeanPad's dialogue window | Blizzard's own |
 | Blizzard's radial menus, controller menu navigation and group targeting | No, use the cursor for windows | Yes |
 
 Your settings and profiles on Forever are separate from retail's.
