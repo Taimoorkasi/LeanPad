@@ -10,16 +10,22 @@ describe("Options page", function()
 	end
 
 	-- The control on a row, found through its label: both sit on the row's centre line.
-	local function controlFor(label)
-		local text = find("FontString", function(widget) return widget.parent == page and widget.text == label end)
+	-- On the Controls tab unless another is given.
+	local function controlFor(label, on)
+		on = on or page.Controls
+		local text = find("FontString", function(widget) return widget.parent == on and widget.text == label end)
 		assert.is_truthy(text, label)
 		return find("Button", function(widget)
-			return widget.parent == page and widget.point[1] == "RIGHT" and widget.point[4] == text.point[4] + 432 and widget.point[5] == text.point[5]
+			return widget.parent == on and widget.point[1] == "RIGHT" and widget.point[4] == text.point[4] + 432 and widget.point[5] == text.point[5]
 		end)
 	end
 
-	local function button(text)
-		return find("Button", function(widget) return widget.parent == page and widget.text == text end)
+	-- On the page itself or its Controls tab unless another is given.
+	local function button(text, on)
+		return find("Button", function(widget)
+			if on then return widget.parent == on and widget.text == text end
+			return (widget.parent == page or widget.parent == page.Controls) and widget.text == text
+		end)
 	end
 
 	local function labels(description)
@@ -49,6 +55,24 @@ describe("Options page", function()
 		assert.is_false(page:IsShown())
 	end)
 
+	it("says what every setting does, on hovering the (i) after its label", function()
+		local label = find("FontString", function(widget) return widget.parent == page.Controls and widget.text == "Gamepad input" end)
+		label.Info:Fire("OnEnter")
+		assert.equal("Gamepad input", w.tooltip.text)
+		assert.equal("Turns WoW's own gamepad support on or off. LeanPad needs it on.", w.tooltip.lines[1])
+		label.Info:Fire("OnLeave")
+		assert.is_nil(w.tooltip)
+		local rows = 0
+		for _, widget in ipairs(w.widgets) do
+			local onTab = widget.parent == page.Controls or widget.parent == page.Dialogue
+			if widget.kind == "FontString" and onTab and widget.font == ns.Font(13, ns.COLORS.text2) then
+				assert.is_truthy(rawget(widget, "Info"), widget.text)
+				rows = rows + 1
+			end
+		end
+		assert.is_true(rows > 25)
+	end)
+
 	it("switches empty crossbar buttons on and off, starting off on retail", function()
 		local box = controlFor("Show empty buttons")
 		assert.is_false(box.Check:IsShown())
@@ -57,16 +81,68 @@ describe("Options page", function()
 		assert.is_true(box.Check:IsShown())
 	end)
 
-	it("switches LeanPad's dialogue window on, taking Blizzard's events at once, and its camera", function()
-		local box = controlFor("Answer NPCs, quests and pop-ups with the pad")
-		assert.is_false(box.Check:IsShown())
-		box:Fire("OnClick")
-		assert.is_true(ns.db.questPrompts)
-		assert.is_nil(QuestFrame.events.QUEST_DETAIL)
-		local camera = controlFor("Zoom in on the NPC while talking")
-		assert.is_false(camera.Check:IsShown())
-		camera:Fire("OnClick")
-		assert.is_true(ns.db.dialogueCamera)
+	describe("the Dialogue tab", function()
+		local dialogue
+
+		before_each(function()
+			button("Dialogue", page):Fire("OnClick")
+			dialogue = page.Dialogue
+		end)
+
+		it("swaps the Controls tab for its own settings, lit and underlined, and back", function()
+			local tabs = page.Tabs
+			assert.is_true(dialogue:IsShown())
+			assert.is_false(page.Controls:IsShown())
+			assert.is_true(tabs[2].Underline:IsShown())
+			assert.is_false(tabs[1].Underline:IsShown())
+			assert.is_nil(button("Undo setup", dialogue)) -- the layout's actions stay with the controls
+			tabs[1]:Fire("OnClick")
+			assert.is_true(page.Controls:IsShown())
+			assert.is_false(dialogue:IsShown())
+		end)
+
+		it("switches the window on, taking Blizzard's events at once, and pop-ups apart from it", function()
+			local box = controlFor("Talk and do quests in LeanPad's window", dialogue)
+			assert.is_false(box.Check:IsShown())
+			box:Fire("OnClick")
+			assert.is_true(ns.db.questPrompts)
+			assert.is_nil(QuestFrame.events.QUEST_DETAIL)
+			assert.equal("Saved", page.Saved.text:match("Saved$"))
+			local popups = controlFor("Answer pop-ups with the pad", dialogue)
+			popups:Fire("OnClick")
+			assert.is_true(ns.db.padPopups)
+			StaticPopup1:Show()
+			assert.equal("StaticPopup1Button1", w.overrides.PAD1.click)
+		end)
+
+		it("sets where the window shows and how large, the NPC in 3D, text writing itself in and the camera", function()
+			local position = controlFor("Position", dialogue)
+			assert.equal("Bottom centre", position.Label:GetText())
+			position:Fire("OnClick")
+			assert.equal(9, #w.menu.root.entries)
+			wow.entry(w.menu.root, "Top left").callback()
+			assert.equal("TOPLEFT", ns.db.dialoguePosition)
+			controlFor("Size", dialogue):Fire("OnClick")
+			wow.entry(w.menu.root, "125%").callback()
+			assert.equal(1.25, ns.db.dialogueScale)
+			for label, key in pairs({ ["Show the NPC in 3D, talking"] = "dialogueModel", ["Text writes itself in"] = "dialogueReveal" }) do
+				controlFor(label, dialogue):Fire("OnClick")
+				assert.is_false(ns.db[key])
+			end
+			controlFor("Zoom the camera in on the NPC", dialogue):Fire("OnClick")
+			assert.is_true(ns.db.dialogueCamera)
+		end)
+
+		it("previews the window in place, and closes the preview on leaving", function()
+			local preview = controlFor("See it in place", dialogue)
+			preview:Fire("OnClick")
+			assert.is_true(ns.DialoguePreviewing())
+			preview:Fire("OnClick")
+			assert.is_false(ns.DialoguePreviewing())
+			preview:Fire("OnClick")
+			ns.ShowSettingsTab("Controls")
+			assert.is_false(ns.DialoguePreviewing())
+		end)
 	end)
 
 	it("switches gamepad input on and off", function()
@@ -168,7 +244,7 @@ describe("Options page", function()
 	end)
 
 	it("takes the cursor's start spot as x, y from the screen's centre; blank keeps it where it was", function()
-		local start = find("Frame", function(widget) return widget.parent == page and widget.X end)
+		local start = find("Frame", function(widget) return widget.parent == page.Controls and widget.X end)
 		assert.equal("", start.X:GetText())
 		start.X:SetText("200")
 		start.X:Fire("OnEnterPressed") -- Enter drops focus, which commits
@@ -189,7 +265,7 @@ describe("Options page", function()
 	end)
 
 	it("picks the cursor's start spot on screen: centre lines, a ring on the spot set now, a click sets it", function()
-		local start = find("Frame", function(widget) return widget.parent == page and widget.X end)
+		local start = find("Frame", function(widget) return widget.parent == page.Controls and widget.X end)
 		UIParent.width, UIParent.height, UIParent.effectiveScale = 1920, 1080, 0.5
 		start.Pick:Fire("OnClick")
 		local picker = LeanPadCursorPicker
@@ -281,12 +357,12 @@ describe("Options page", function()
 	end)
 
 	it("names the bar addon that runs the action bars, if any", function()
-		assert.is_nil(find("FontString", function(widget) return widget.parent == page and (widget.text or ""):find("runs your action bars") end))
+		assert.is_nil(find("FontString", function(widget) return widget.parent == page.Controls and (widget.text or ""):find("runs your action bars") end))
 		ns, w = wow.boot(nil)
 		w.addons.Dominos = true
 		ns.OpenOptions()
 		page = LeanPadControllerFrame.Options
-		assert.is_truthy(find("FontString", function(widget) return widget.parent == page and widget.text == ns.BarAddonNote("Dominos") end))
+		assert.is_truthy(find("FontString", function(widget) return widget.parent == page.Controls and widget.text == ns.BarAddonNote("Dominos") end))
 	end)
 
 	it("sizes its own window on top of the UI scale, and keeps the size for next time", function()
