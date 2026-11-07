@@ -4,19 +4,30 @@ All notable changes to LeanPad are documented here. The format is based on [Keep
 
 ## [Unreleased]
 
-### Changed
+## [0.7.0] - 2026-11-08
 
-- **Quests and NPCs in LeanPad's own window.** It replaces the prompt bar under Blizzard's windows, which could show Blizzard's Accept and Decline alongside the pad's, sit in the wrong place, or lose track going from an NPC's gossip into a quest. The window shows the NPC, their words, the choices and the rewards. A confirms, B backs out, the D-pad chooses, the bumpers scroll, and a chosen reward shows its tooltip and comparison. PvP quests and quests that cost gold take a second press of A instead of the cursor. In combat, new conversations open in Blizzard's windows. Quests from items, areas and the adventure map, and NPCs with their own frames, still use Blizzard's.
+Everything since 0.6.0, the 0.7.0-beta.1 changes for WoW: Forever included.
 
 ### Added
 
-- **Pop-ups from the pad.** A and B press a pop-up's two buttons, named under it, including the dungeon queue pop and ready checks. The presses count as your own clicks, so entering a dungeon works. Pop-ups that show in combat wait for the cursor. Part of the *Quests* setting, now named *Answer NPCs, quests and pop-ups with the pad*.
-- **Every reward in the dialogue window:** currency choices, currencies, spells not known yet, honor and renown, alongside items, gold and XP. Currencies and spells show their own tooltips.
-- **Zoom in on the NPC while talking**, an option under *Quests*, off by default. The camera returns once the conversation ends.
+- **Talk to NPCs and do quests from the pad, in LeanPad's own window.** It stands in for Blizzard's gossip and quest windows: the NPC beside their words in 3D, talking, or as a round portrait, the quest's title in Blizzard's quest lettering, and the words in a column short enough to read at a glance, writing themselves in. A confirms, B backs out, the D-pad chooses and the bumpers scroll long text; the first A shows text still writing in. Rewards show as tiles in their quality's colour, every kind of them: items, currency choices, currencies, spells not known yet, gold, XP, honor and renown. Choosing one shows its tooltip and how it compares with what you wear, and a quest with several won't complete until you pick one. PvP quests and quests that cost gold take a second press of A. Escape and the Menu button end the conversation. In combat, new conversations open in Blizzard's windows, so the pad stays on your abilities. Quests from items, areas and the adventure map, and NPCs with frames of their own, still use Blizzard's. On by default on Forever and off on retail.
+- **Pop-ups from the pad.** The buttons showing on Blizzard's pop-ups, the dungeon queue pop and ready checks go to A, B, X and Y from left to right, named under the pop-up, such as Release Spirit and Recap when you die. The presses count as your own clicks, so entering a dungeon works. Pop-ups that show in combat wait for the cursor.
+- **Settings in two tabs, Controls and Dialogue**, and every setting says what it does when you hover the (i) after its name. *Dialogue* sets the window on or off, its place (any of nine, from top left to bottom right), its size and text size, the 3D NPC, the writing-in, an optional camera zoom on the NPC, and pop-ups. *Show or hide* previews the window in place, following changes as you make them.
+- **WoW: Forever support.** With Forever's Gamepad UI on, LeanPad's crossbar and editor work on Blizzard's gamepad bars and keep its menus, radials and targeting: Base, LT, RT and LT+RT are its top, left, right and bottom bars, across its three pages. With the Gamepad UI off, LeanPad works as it does on retail. If the Gamepad UI is on when you log in, LeanPad suggests turning it off, since LeanPad does more without it, says where the setting is, and offers its layout setup once you have.
+- **Show empty buttons.** A crossbar setting that draws every button in the layout as a faint socket before anything is bound, as Blizzard's Show Empty Action Bars does. On by default on Forever and off on retail.
+
+### Changed
+
+- **Stick clicks on the crossbar** show only when they hold a bar action, not a command such as Interact.
+- **Crossbar proportions.** The D-pad and face diamonds are wider than tall, and the stacked sockets between them are spaced so their glyphs clear the button above. Buttons you've dragged stay where you put them.
+- **Clearer Jump and Interact icons.** Interact uses the game's own interact cursor, Jump is a new drawing, and on Forever Jump uses Blizzard's gamepad icon.
+- **Auto play style on Forever** treats Mage, Hunter, Priest and Warlock as ranged. Each class there has one spec, so choose a tank or healer style by hand.
+- **GitHub's source archives** no longer include the design notes.
 
 ### Fixed
 
 - In Edit Mode, the unlocked crossbar no longer blocks clicks on the frames under its empty space. Only the strip with its hint and *Reset layout* takes the mouse.
+- *Toggle gamepad cursor* no longer raises an error on every press when a start spot is set. The game now refuses to move the cursor from a key binding, so the cursor comes up where it was instead.
 
 ## [0.7.0-beta.1] - 2026-11-05
 

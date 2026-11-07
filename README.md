@@ -40,7 +40,8 @@ Square rows show every layer at once, one row each, the held one in front:
 - **Profiles.** Save your whole setup, settings, bindings, controller CVars and the bar slots your pad fires, as a profile such as Tank, DPS or Healer, and switch from the settings page's *Profile* menu or `/lp profile <name>`. Link a spec to a profile and LeanPad switches when you change spec. Profiles are shared by all your characters; each remembers its own.
 - **Play styles.** Tank keeps the body facing the camera in combat, so you never show the pack your back. Melee and Ranged strafe but spin to run when you push straight back. Healer runs free, since heals need no facing, and gets friendly soft targeting. Auto follows your spec. On Forever, where each class has one spec, Auto can't always tell a tank or healer, so pick those styles by hand.
 - **Crossbar HUD.** Shows your controller actions in controller-shaped clusters, with cooldowns, charges, usability, range, proc glows and a blink on every press. Seven styles: the D-pad and face-button clusters, as one set that swaps as you hold a layer button or all layers at once; one row, ordered by hand, which can stay faint until a layer is held; a square grid under the character; and a row per layer, square or round. Unlock it from the settings page or Blizzard's Edit Mode to drag the bar, each set or each button, with grid and neighbour snapping, and scroll over a set to size it. Turn its mouse on to click sockets as you would action bar buttons, drop spells onto them and read their tooltips. Stick clicks only get a socket when they hold a bar action, unless *Show empty buttons* is on.
-- **Talk to NPCs and do quests from the pad.** LeanPad's own window replaces Blizzard's gossip and quest windows: the NPC's portrait and words, the quests and lines to choose, and the rewards: items, currencies, spells, gold, XP, honor and renown. A confirms, B backs out, the D-pad chooses and the bumpers scroll long text. Choosing a reward shows its tooltip and how it compares with what you wear. A quest with several rewards won't complete until you pick one, and PvP quests and quests that cost gold take a second press of A. Optionally, the camera zooms in on the NPC while you talk. Blizzard's pop-ups, the dungeon queue pop and ready checks answer to A and B too, named under the pop-up. In combat, new conversations open in Blizzard's windows and pop-ups wait for the cursor, so the pad stays on your abilities. On by default on Forever and off on retail, under *Quests* on the settings page.
+- **Talk to NPCs and do quests from the pad.** LeanPad's own window replaces Blizzard's gossip and quest windows: a card at any of nine places on screen, with the NPC in 3D, talking, beside their words, which write themselves in, in a column short enough to read at a glance and at the text size you choose. It lists the quests and lines to choose, and shows the rewards as tiles: items, currencies, spells, gold, XP, honor and renown. A confirms, B backs out, the D-pad chooses and the bumpers scroll long text. Choosing a reward shows its tooltip and how it compares with what you wear. A quest with several rewards won't complete until you pick one, and PvP quests and quests that cost gold take a second press of A. In combat, new conversations open in Blizzard's windows, so the pad stays on your abilities. The *Dialogue* tab of the settings sets where it shows, how large, the text size, the 3D NPC, the writing-in and an optional camera zoom, with a live preview. On by default on Forever and off on retail.
+- **Answer pop-ups from the pad.** The buttons on Blizzard's pop-ups, the dungeon queue pop and ready checks go to A, B, X and Y from left to right, named under the pop-up, such as Release Spirit and Recap when you die. They count as your own clicks, so entering a dungeon works. In combat pop-ups wait for the cursor. A setting of its own on the *Dialogue* tab.
 - **Show empty buttons.** A crossbar setting that draws every button in the layout as a faint socket before anything is bound, as Blizzard's Show Empty Action Bars does. On by default on Forever and off on retail.
 - **Blizzard's Settings panel.** *AddOns > LeanPad* opens the editor and its settings page, runs setup and undoes it.
 - **Icons for every command.** Targeting, jump, bags, menus and the rest have faces of their own, and Interact uses the game's own interact cursor, so the crossbar and the editor never show a blank socket for a command that lives on no action bar.
@@ -132,6 +133,30 @@ Button names use Xbox labels.
 Click the right stick to bring up the gamepad cursor when you need to click on an NPC, object or window; A then left-clicks and B right-clicks. Click it again to hide the cursor.
 
 To see a layer on screen, turn on Action Bars 2-4 in *Settings > Action Bars* and place them in Edit Mode, or use LeanPad's crossbar HUD.
+
+### How do I…
+
+With LeanPad's layout, which the setup pop-up applies on first login, or *Reset layout...* on the *Controls* tab at any time. Xbox labels. The NPC, quest and pop-up rows also need those settings on, on the *Dialogue* tab: off by default on retail, on by default on Forever.
+
+| To | Press |
+| --- | --- |
+| Jump | A |
+| Talk to an NPC, loot, or open a door or chest | B, on the nearest one, which the pad picks for you |
+| Target an enemy | D-pad right for the nearest, D-pad left for the previous one |
+| Use a spell on Action Bar 1 | X, Y, LB, RB, D-pad up or down |
+| Use a spell on Action Bars 2-4 | Hold LT, RT or both, then a D-pad or face button |
+| Run without holding the stick | Left stick click |
+| Click something on screen | Right stick click brings up the cursor; A left-clicks, B right-clicks. Click the stick again to hide it |
+| Open or close your bags | View |
+| Open the world map, character pane or spellbook | LT+View, RT+View, LT+Menu |
+| Close everything that's open, like Esc | Menu. Press it again, with nothing open, for the game menu |
+| Answer an NPC or a quest | A selects, accepts or completes; B says goodbye or declines; the D-pad chooses; LB and RB scroll long text |
+| Pick a quest reward | D-pad to it, which shows its tooltip, then A |
+| Answer a pop-up, the dungeon queue or a ready check | A, B, X and Y press its buttons from left to right |
+| Release your spirit | A. Recap is the next button, on B |
+| Change what a button does | `/lp`, press the button, then *Change action* |
+| Change LeanPad's settings | `/lp settings`, with *Controls* and *Dialogue* tabs |
+| Go back to your old layout | `/lp undo` for the one before the last reset, `/lp restore` for the one before LeanPad |
 
 ## Development
 
