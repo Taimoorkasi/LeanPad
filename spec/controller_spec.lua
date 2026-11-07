@@ -196,12 +196,27 @@ describe("Controller", function()
 			assert.same({ "|cff66788aEmpty slot|r" }, { ns.ActionInfo("PAD2") })
 		end)
 
+		it("uses every command icon drawn into Art/ for some command", function()
+			local used = {}
+			for _, icon in pairs(ns.COMMAND_ICONS) do
+				if icon.texture then used[icon.texture:match("([^\\]+)$")] = true end
+			end
+			local files = io.popen("ls LeanPad/Art/Icon*.tga")
+			for file in files:lines() do
+				local name = file:match("(Icon%w+)%.tga$")
+				assert.is_true(used[name] == true, name .. " is drawn but no command uses it")
+			end
+			files:close()
+		end)
+
 		it("gives commands off the bars a face: LeanPad's own icons, Blizzard's atlases for its panels, badges for next, previous and party", function()
 			local art = "Interface\\AddOns\\LeanPad\\Art\\"
 			assert.same({ texture = art .. "IconTargetEnemy", badge = "|A:common-icon-forwardarrow:12:12|a" }, ns.CommandIcon("TARGETNEARESTENEMY"))
 			assert.same({ texture = art .. "IconTargetEnemy", badge = "|A:common-icon-backarrow:12:12|a" }, ns.CommandIcon("TARGETPREVIOUSENEMY"))
 			assert.same({ texture = art .. "IconTargetFriend", badge = "3" }, ns.CommandIcon("TARGETPARTYMEMBER3"))
 			assert.same({ texture = art .. "IconJump" }, ns.CommandIcon("JUMP"))
+			assert.same({ texture = art .. "IconAutorun" }, ns.CommandIcon("TOGGLEAUTORUN"))
+			assert.same({ texture = art .. "IconCursor" }, ns.CommandIcon("LEANPAD_TOGGLE_CURSOR"))
 			assert.same({ atlas = "UI-HUD-MicroMenu-SpecTalents-Up" }, ns.CommandIcon("TOGGLETALENTS"))
 			assert.is_nil(ns.CommandIcon("SITORSTAND"))
 			assert.is_nil(ns.CommandIcon(""))

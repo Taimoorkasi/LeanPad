@@ -238,7 +238,8 @@ ns.COMMAND_ICONS = {
 	TARGETNEARESTFRIEND = own("TargetFriend", NEXT), TARGETPREVIOUSFRIEND = own("TargetFriend", PREVIOUS), TARGETSELF = own("TargetFriend"),
 	TARGETPARTYMEMBER1 = own("TargetFriend", "1"), TARGETPARTYMEMBER2 = own("TargetFriend", "2"),
 	TARGETPARTYMEMBER3 = own("TargetFriend", "3"), TARGETPARTYMEMBER4 = own("TargetFriend", "4"),
-	INTERACTTARGET = { texture = "Interface\\Cursor\\Interact" }, JUMP = own("Jump"), -- the cursor the game shows over what you can interact with TOGGLEAUTORUN = own("Autorun"), LEANPAD_TOGGLE_CURSOR = own("Cursor"),
+	INTERACTTARGET = { texture = "Interface\\Cursor\\Interact" }, -- the cursor the game shows over what you can interact with
+	JUMP = own("Jump"), TOGGLEAUTORUN = own("Autorun"), LEANPAD_TOGGLE_CURSOR = own("Cursor"),
 	OPENALLBAGS = own("Bags"), TOGGLEGAMEMENU = own("Menu"), TOGGLEWORLDMAP = own("Map"), TOGGLESPELLBOOK = own("Spellbook"),
 	TOGGLECHARACTER0 = own("Character"),
 	TOGGLETALENTS = micro("SpecTalents"), TOGGLEQUESTLOG = micro("Questlog"), TOGGLECOLLECTIONS = micro("Collections"),

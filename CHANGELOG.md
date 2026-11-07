@@ -4,6 +4,10 @@ All notable changes to LeanPad are documented here. The format is based on [Keep
 
 ## [Unreleased]
 
+### Fixed
+
+- *Auto-run* and *Toggle gamepad cursor* show their icons in the editor again, instead of a blank button.
+
 ## [0.7.0] - 2026-11-08
 
 Everything since 0.6.0, the 0.7.0-beta.1 changes for WoW: Forever included.
