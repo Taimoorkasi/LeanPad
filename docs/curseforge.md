@@ -13,7 +13,11 @@ WoW already has a full gamepad layer built in: controller buttons are ordinary k
 - **Settings in two tabs**, *Controls* and *Dialogue*, and an (i) on every setting that says what it does, with a live preview of the dialogue window.
 - **WoW: Forever support**, plus fixes: Edit Mode can reach the frames under the crossbar again, and the cursor toggle no longer errors.
 
+![LeanPad's dialogue window: an NPC in 3D beside their words](https://raw.githubusercontent.com/Taimoorkasi/LeanPad/main/docs/images/dialogue-npc.png)
+
 ![LeanPad's dialogue window offering a quest](https://raw.githubusercontent.com/Taimoorkasi/LeanPad/main/docs/images/dialogue-quest.png)
+
+![A pop-up with LeanPad's A and B prompts](https://raw.githubusercontent.com/Taimoorkasi/LeanPad/main/docs/images/popup.png)
 
 ## Easy binding setup
 
@@ -27,7 +31,9 @@ Press a button on your pad and see what it does on every layer. Pick a spell or 
 
 Layer buttons, which pad to use, Xbox or PlayStation labels, the cursor, the crossbar and soft targeting on the *Controls* tab, and the dialogue window and pop-ups on the *Dialogue* tab, all next to the editor. Hover the (i) after any setting to see what it does.
 
-![The LeanPad settings page](https://raw.githubusercontent.com/Taimoorkasi/LeanPad/main/docs/images/easy-to-understand-settings.png)
+![The LeanPad settings page on its Controls tab](https://raw.githubusercontent.com/Taimoorkasi/LeanPad/main/docs/images/easy-to-understand-settings.png)
+
+![The Dialogue tab of LeanPad's settings](https://raw.githubusercontent.com/Taimoorkasi/LeanPad/main/docs/images/settings-dialogue.png)
 
 ## Crossbar layouts
 

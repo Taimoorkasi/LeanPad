@@ -17,7 +17,11 @@ Your actions stay on Blizzard's own action bars, so Blizzard draws the cooldowns
 - **Settings in two tabs**, *Controls* and *Dialogue*, and an (i) on every setting that says what it does.
 - **WoW: Forever support**, and fixes. See the [changelog](CHANGELOG.md).
 
+![LeanPad's dialogue window: an NPC in 3D beside their words, with quests and lines to choose](docs/images/dialogue-npc.png)
+
 ![LeanPad's dialogue window offering a quest: its title, the letter's words, the gold reward, and Decline and Accept on B and A](docs/images/dialogue-quest.png)
+
+![A pop-up with LeanPad's A and B prompts named under it](docs/images/popup.png)
 
 **Easy binding setup.** Press a button on your pad and see what it does on every layer, then change it in one step.
 
@@ -29,7 +33,9 @@ Your actions stay on Blizzard's own action bars, so Blizzard draws the cooldowns
 
 **Easy to understand settings.** Layer buttons, pad, labels, cursor, crossbar and soft targeting on the *Controls* tab next to the editor, and the dialogue window and pop-ups on the *Dialogue* tab.
 
-![The LeanPad settings page](docs/images/easy-to-understand-settings.png)
+![The LeanPad settings page on its Controls tab](docs/images/easy-to-understand-settings.png)
+
+![The Dialogue tab: the window's place, size, text size and 3D NPC, pop-ups, and the preview](docs/images/settings-dialogue.png)
 
 **Crossbar layouts.** Seven styles, picked from *View* on the settings page. The square grid sits under your character and swaps as you hold a layer button:
 
@@ -173,6 +179,8 @@ With LeanPad's layout, which the setup pop-up applies on first login, or *Reset 
 docker build -t leanpad-test spec
 docker run --rm -v "${PWD}:/src" leanpad-test
 ```
+
+The screenshots in `docs/images` are taken in game by `tools/LeanPadShots`, a developer addon that is never packaged. Link it into `_retail_\Interface\AddOns` next to LeanPad, then `/lpshots` photographs the settings tabs, the dialogue preview and a demo pop-up, then you `/reload` to save; `/lpshots auto` photographs each conversation page as you play, until you `/reload`. `cd tools && npm install && npm run shots` crops them into `docs/images`, where the README and CurseForge page point. Turn on LeanPad's dialogue window and pop-ups first, so they're in the shots.
 
 The tests run [busted](https://lunarmodules.github.io/busted/) on Lua 5.1, the version the WoW client embeds. The run fails if line coverage of `LeanPad/` drops below 100%. `spec/wow.lua` fakes the WoW API, so every new API the addon calls needs a stub there.
 
