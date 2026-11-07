@@ -1,6 +1,6 @@
 -- Developer tool, never packaged: takes the screenshots for LeanPad's README and CurseForge page, so they need no
--- hand work. /lpshots tours what can be staged (the settings tabs, the dialogue preview, a demo pop-up) and reloads
--- to save; /lpshots auto photographs each conversation page as you play, once its text has written in. Each shot is
+-- hand work. /lpshots tours what can be staged (the settings tabs, the dialogue preview, a demo pop-up), then you
+-- /reload to save; /lpshots auto photographs each conversation page as you play, once its text has written in. Each shot is
 -- saved with the frame's rectangle in screen pixels, for tools/screenshots.js to find the file and crop it.
 -- It reaches LeanPad only through its globals: its slash command, frames and settings buttons.
 
@@ -32,8 +32,8 @@ end
 local function nextStep()
 	local step = table.remove(steps, 1)
 	if not step then
-		say("tour done, reloading to save. Then run: cd tools && npm run shots")
-		return C_Timer.After(1, ReloadUI)
+		-- shortcut: ReloadUI from this timer didn't reload on retail 12.1.5, so the player types it.
+		return say("tour done: /reload to save, then run: cd tools && npm run shots")
 	end
 	step()
 end

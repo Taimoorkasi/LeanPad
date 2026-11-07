@@ -40,12 +40,13 @@ function shots(text) {
 	}));
 }
 
-// The screenshot written closest to the shot's time, if one is near enough.
+// The first screenshot written after the shot, if one is near enough. The game's time() drops the fraction, so the
+// file always comes after the shot's second, and the shot before it can sit closer in absolute terms.
 function screenshotFor(shot, screenshots) {
 	let best;
 	for (const file of screenshots) {
-		const gap = Math.abs(file.time - shot.time);
-		if (gap <= NEAR && (!best || gap < best.gap)) best = { ...file, gap };
+		const gap = file.time - shot.time;
+		if (gap >= 0 && gap <= NEAR && (!best || gap < best.gap)) best = { ...file, gap };
 	}
 	return best && best.path;
 }
