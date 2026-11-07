@@ -4,7 +4,7 @@ local addonName, ns = ...
 -- bumpers scroll long text. Out of combat it stands in for Blizzard's gossip and quest windows, which stop hearing the
 -- events that open them. In combat they hear them again, as the pad belongs to the player's bindings there; a window
 -- already open stays, for the mouse. With Blizzard's Gamepad UI on, or another dialogue addon, it stays out.
--- shortcut: rewards list items, gold and XP; currencies, spells and reputation show in the text only. Add them if missed.
+-- shortcut: titles, skill points and plain faction reputation show in the quest text only. Add them if missed.
 local CONFIRM_KEY, BACK_KEY = "PAD1", "PAD2"
 local MOVE = { PADDUP = -1, PADDLEFT = -1, PADDDOWN = 1, PADDRIGHT = 1 }
 local SCROLL = { PADLSHOULDER = -1, PADRSHOULDER = 1 }
@@ -68,18 +68,41 @@ end
 
 local function questIcon(complete) return complete and "QuestTurnin" or "Quest-In-Progress-Icon-yellow" end
 
+local function counted(name, amount)
+	return name and amount and amount > 1 and ("%s x%d"):format(name, amount) or name
+end
+
 -- Quest items of one kind, each with its tooltip.
 local function addItems(list, kind, count)
 	for i = 1, count do
 		local name, texture, amount = GetQuestItemInfo(kind, i)
-		add(list, name and amount and amount > 1 and ("%s x%d"):format(name, amount) or name, texture, nil, { kind, i })
+		add(list, counted(name, amount), texture, nil, { kind, i })
 	end
 end
 
+-- Choices first, so a pick's index is the reward's: items, or currencies where the loot type says so; then fixed
+-- items, currencies and spells not known yet.
 local function rewards()
-	local list = {}
-	addItems(list, "choice", GetNumQuestChoices())
+	local list, questID = {}, GetQuestID()
+	for i = 1, GetNumQuestChoices() do
+		if GetQuestItemInfoLootType("choice", i) == 1 then
+			local info = C_QuestOffer.GetQuestRewardCurrencyInfo("choice", i)
+			add(list, counted(info.name, info.totalRewardAmount), info.texture, nil, { "choice", i, "currency" })
+		else
+			local name, texture, amount = GetQuestItemInfo("choice", i)
+			add(list, counted(name, amount), texture, nil, { "choice", i })
+		end
+	end
 	addItems(list, "reward", GetNumQuestRewards())
+	for i, info in ipairs(C_QuestInfoSystem.GetQuestRewardCurrencies(questID) or {}) do
+		add(list, counted(info.name, info.totalRewardAmount), info.texture, nil, { "reward", i, "currency" })
+	end
+	for _, spellID in ipairs(C_QuestInfoSystem.GetQuestRewardSpells(questID) or {}) do
+		local info = C_QuestInfoSystem.GetQuestRewardSpellInfo(questID, spellID)
+		if info and not C_SpellBook.IsSpellInSpellBook(spellID, Enum.SpellBookSpellBank.Player, true) then
+			add(list, info.name, info.texture, nil, { "spell", spellID, "spell" })
+		end
+	end
 	return list
 end
 
@@ -195,9 +218,14 @@ end
 local function moneyLine()
 	local parts = {}
 	if mode == "detail" or mode == "complete" then
-		local money, xp = GetRewardMoney(), GetRewardXP()
+		local money, xp, honor = GetRewardMoney(), GetRewardXP(), GetRewardHonor()
 		if money > 0 then table.insert(parts, GetMoneyString(money)) end
 		if xp > 0 then table.insert(parts, xp .. " XP") end
+		if honor > 0 then table.insert(parts, honor .. " Honor") end
+		for _, rep in ipairs(C_QuestOffer.GetQuestOfferMajorFactionReputationRewards() or {}) do
+			local faction = C_MajorFactions.GetMajorFactionData(rep.factionID)
+			if faction then table.insert(parts, ("%s +%d"):format(faction.name, rep.rewardAmount)) end
+		end
 	end
 	if mode == "progress" or mode == "complete" then
 		local cost = GetQuestMoneyToGet()
@@ -217,9 +245,16 @@ local function showTip()
 	hideTip()
 	local entry = entries[pick]
 	if not (entry and entry.item) then return end
+	local kind, index, of = unpack(entry.item)
 	GameTooltip:SetOwner(rows[pick], "ANCHOR_RIGHT")
-	GameTooltip:SetQuestItem(entry.item[1], entry.item[2])
-	GameTooltip_ShowCompareItem(GameTooltip)
+	if of == "currency" then
+		GameTooltip:SetQuestCurrency(kind, index)
+	elseif of == "spell" then
+		GameTooltip:SetSpellByID(index)
+	else
+		GameTooltip:SetQuestItem(kind, index)
+		GameTooltip_ShowCompareItem(GameTooltip)
+	end
 	GameTooltip:Show()
 	tipShown = true
 end

@@ -320,6 +320,31 @@ describe("Dialogue window", function()
 			assert.is_nil(w.tooltip)
 		end)
 
+		it("offers a currency among the choices, with its own tooltip", function()
+			w.quest.choices = { { "Sword", 101, 1 }, {} }
+			w.quest.currencyChoices[2] = { name = "Valorstones", texture = 201, totalRewardAmount = 25 }
+			fire("QUEST_DETAIL")
+			assert.same({ "Sword", "Valorstones x25" }, labels())
+			press("PADDUP")
+			assert.same({ "choice", 2 }, w.tooltip.questCurrency)
+			assert.is_nil(w.tooltip.compared)
+		end)
+
+		it("lists fixed currencies and spells not known yet, and honor and renown with the gold", function()
+			w.quest.currencies = { { name = "Resonance Crystals", texture = 202, totalRewardAmount = 100 } }
+			w.quest.spells = { { 301, { name = "Portal", texture = 203 } }, { 302, { name = "Known", texture = 204 } }, { 303 } }
+			w.quest.knownSpells[302] = true
+			w.quest.honor = 50
+			w.quest.reputation = { { factionID = 2590, rewardAmount = 250 }, { factionID = 1, rewardAmount = 10 } }
+			fire("QUEST_DETAIL")
+			assert.same({ "Resonance Crystals x100", "Portal" }, labels())
+			assert.equal("50 Honor    Council of Dornogal +250", window().Money.text)
+			press("PADDDOWN")
+			assert.same({ "reward", 1 }, w.tooltip.questCurrency)
+			press("PADDDOWN")
+			assert.equal(301, w.tooltip.spell)
+		end)
+
 		it("accepts on A and declines on B", function()
 			fire("QUEST_DETAIL")
 			assert.equal("Accept", confirmText())

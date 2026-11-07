@@ -68,6 +68,14 @@ function Widget:RegisterEvent(event) self.events[event] = true end
 function Widget:UnregisterEvent(event) self.events[event] = nil end
 function Widget:GetStringHeight() return self.stringHeight or 20 end
 function Widget:SetHitRectInsets(...) self.hitRect = { ... } end
+-- A hooked script runs after the frame's own, as HookScript does.
+function Widget:HookScript(script, hook)
+	local own = self.scripts[script]
+	self.scripts[script] = function(...)
+		if own then own(...) end
+		hook(...)
+	end
+end
 function Widget:UnregisterAllEvents() self.events = {} end
 function Widget:EnableGamePadButton(enable) self.gamePadButton = enable end
 function Widget:SetPropagateKeyboardInput(propagate) self.propagate = propagate end
@@ -327,6 +335,7 @@ function M.reset()
 		w.cleared = w.cleared + 1
 	end
 	C_SpellBook = {
+		IsSpellInSpellBook = function(id) return w.quest.knownSpells[id] == true end,
 		GetNumSpellBookSkillLines = function() return #w.skillLines end,
 		GetSpellBookSkillLineInfo = function(index) return w.skillLines[index] end,
 		GetSpellBookItemInfo = function(index) return w.spellBook[index] end,
@@ -357,6 +366,8 @@ function M.reset()
 		SetOwner = function(_, owner, anchor) w.tooltip = { owner = owner, anchor = anchor } end,
 		SetAction = function(_, slot) w.tooltip.slot = slot end,
 		SetQuestItem = function(_, kind, index) w.tooltip.questItem = { kind, index } end,
+		SetQuestCurrency = function(_, kind, index) w.tooltip.questCurrency = { kind, index } end,
+		SetSpellByID = function(_, id) w.tooltip.spell = id end,
 		SetText = function(_, text) w.tooltip.text = text end,
 		Show = function() w.tooltip.shown = true end,
 		Hide = function() w.tooltip = nil end,
@@ -436,6 +447,41 @@ function M.reset()
 		SelectOptionByIndex = questCall("GossipOption"),
 		CloseGossip = questCall("CloseGossip"),
 	}
+	-- Rewards beyond items: currency choices by loot type 1 in w.quest.currencyChoices (index to info), fixed currencies,
+	-- spells (each { id, info }, known when in w.quest.knownSpells), honor and major faction reputation.
+	w.quest.currencyChoices, w.quest.currencies, w.quest.spells, w.quest.knownSpells, w.quest.reputation, w.quest.honor = {}, nil, nil, {}, nil, 0
+	GetQuestID = function() return 77 end
+	GetRewardHonor = function() return w.quest.honor end
+	GetQuestItemInfoLootType = function(_, index) return w.quest.currencyChoices[index] and 1 or 0 end
+	C_QuestOffer = {
+		GetQuestRewardCurrencyInfo = function(_, index) return w.quest.currencyChoices[index] end,
+		GetQuestOfferMajorFactionReputationRewards = function() return w.quest.reputation end,
+	}
+	C_QuestInfoSystem = {
+		GetQuestRewardCurrencies = function() return w.quest.currencies end,
+		GetQuestRewardSpells = function()
+			if not w.quest.spells then return nil end
+			local ids = {}
+			for _, spell in ipairs(w.quest.spells) do table.insert(ids, spell[1]) end
+			return ids
+		end,
+		GetQuestRewardSpellInfo = function(_, id)
+			for _, spell in ipairs(w.quest.spells) do
+				if spell[1] == id then return spell[2] end
+			end
+		end,
+	}
+	C_MajorFactions = { GetMajorFactionData = function(id) return id == 2590 and { name = "Council of Dornogal" } or nil end }
+	-- Blizzard's pop-ups, queue pop and ready check, hidden until a spec shows them, each with its two buttons.
+	local function dialog(name, first, second)
+		local frame = newWidget("Frame", name)
+		frame.shown = false
+		for _, button in ipairs({ { first, "Accept" }, { second, "Cancel" } }) do newWidget("Button", button[1]).text = button[2] end
+		return frame
+	end
+	for i = 1, 4 do dialog("StaticPopup" .. i, "StaticPopup" .. i .. "Button1", "StaticPopup" .. i .. "Button2") end
+	dialog("LFGDungeonReadyDialog", "LFGDungeonReadyDialogEnterDungeonButton", "LFGDungeonReadyDialogLeaveQueueButton")
+	dialog("ReadyCheckFrame", "ReadyCheckFrameYesButton", "ReadyCheckFrameNoButton")
 	-- The NPC talked to, as the unit tokens npc and questnpc; w.quest.npc nil when there is none, as for a quest from an item.
 	UnitExists = function() return w.quest.npc ~= nil end
 	UnitName = function() return w.quest.npc end
@@ -473,6 +519,7 @@ function M.reset()
 	-- Override bindings by key, each with its owner and whether it is a priority one.
 	w.overrides = {}
 	SetOverrideBinding = function(owner, priority, key, action) w.overrides[key] = { owner = owner, priority = priority, action = action } end
+	SetOverrideBindingClick = function(owner, priority, key, button) w.overrides[key] = { owner = owner, priority = priority, click = button } end
 	ClearOverrideBindings = function(owner)
 		for key, override in pairs(w.overrides) do
 			if override.owner == owner then w.overrides[key] = nil end
