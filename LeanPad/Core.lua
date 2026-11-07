@@ -25,7 +25,9 @@ function LeanPad_ToggleCursor()
 	local spot = ns.db.cursorStart
 	if on and type(spot) == "table" then
 		local scale = UIParent:GetEffectiveScale()
-		SetCursorPosition((UIParent:GetWidth() / 2 + spot[1]) * scale, (UIParent:GetHeight() / 2 + spot[2]) * scale)
+		-- shortcut: 12.1.5 can refuse this from a binding (RequiresLimitedInput), leaving the cursor where it was; move
+		-- it from a pad frame's OnGamePadButtonDown instead if players miss the start spot.
+		pcall(SetCursorPosition, (UIParent:GetWidth() / 2 + spot[1]) * scale, (UIParent:GetHeight() / 2 + spot[2]) * scale)
 	end
 end
 

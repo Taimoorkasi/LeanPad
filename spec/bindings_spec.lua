@@ -50,4 +50,12 @@ describe("Bindings.xml", function()
 		run()
 		assert.is_nil(w.cursorPosition)
 	end)
+
+	it("still brings the cursor up when the client refuses to move it from a binding", function()
+		local run = assert(loadstring(bindings().LEANPAD_TOGGLE_CURSOR.body))
+		LeanPadDB.cursorStart = { 0, 0 }
+		SetCursorPosition = function() error("Predicate check failed: RequiresLimitedInput") end
+		assert.has_no.errors(run)
+		assert.is_true(w.cursorControl)
+	end)
 end)
