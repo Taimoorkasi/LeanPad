@@ -12,6 +12,7 @@ local NO_OP_METHODS = {
 	"SetAllPoints", "SetDrawSwipe", "SetFont", "SetTextColor", "SetNormalFontObject", "SetHighlightFontObject", "SetDisabledFontObject",
 	"SetNormalAtlas", "SetHighlightAtlas", "SetSpacing", "SetDegrees", "SetScaleFrom", "SetScaleTo",
 	"SetTextInsets", "SetAutoFocus", "SetMaxLetters", "SetFrameStrata", "RegisterForClicks", "SetWordWrap",
+	"SetShadowOffset", "SetShadowColor", "SetMaxLines", "SetPortraitZoom",
 }
 
 local Widget = {}
@@ -68,6 +69,15 @@ function Widget:RegisterEvent(event) self.events[event] = true end
 function Widget:UnregisterEvent(event) self.events[event] = nil end
 function Widget:GetStringHeight() return self.stringHeight or 20 end
 function Widget:SetHitRectInsets(...) self.hitRect = { ... } end
+function Widget:SetMask(mask) self.mask = mask end
+function Widget:SetGradient(orientation, from, to) self.gradient = { orientation, from, to } end
+function Widget:SetUnit(unit) self.unit = unit end
+function Widget:SetAnimation(animation) self.animation = animation end
+-- Like the client's: whether the fade's start still falls inside the text.
+function Widget:SetAlphaGradient(start)
+	self.alphaGradient = start
+	return start < #(self.text or "")
+end
 -- A hooked script runs after the frame's own, as HookScript does.
 function Widget:HookScript(script, hook)
 	local own = self.scripts[script]
@@ -307,7 +317,11 @@ function M.reset()
 	GetShapeshiftFormInfo = function(index) return w.forms[index].icon, index == w.form, true, w.forms[index].spell end
 	IsStealthed = function() return w.stealthed end
 	C_AddOns = { IsAddOnLoaded = function(name) return w.addons[name] == true end }
-	C_Item = { GetItemNameByID = function(id) return "item:" .. id end, PickupItem = function(id) pickup("item", id) end }
+	C_Item = {
+		GetItemNameByID = function(id) return "item:" .. id end,
+		PickupItem = function(id) pickup("item", id) end,
+		GetItemQualityColor = function(quality) return quality / 10, quality / 10, quality / 10 end,
+	}
 	GetCVarBool = function(name) return w.cvars[name] == "1" end
 	RunNextFrame = function(callback) table.insert(w.nextFrame, callback) end
 	C_Timer = { After = function(seconds, callback) table.insert(w.timers, { seconds = seconds, callback = callback }) end }
@@ -369,6 +383,10 @@ function M.reset()
 		SetQuestCurrency = function(_, kind, index) w.tooltip.questCurrency = { kind, index } end,
 		SetSpellByID = function(_, id) w.tooltip.spell = id end,
 		SetText = function(_, text) w.tooltip.text = text end,
+		AddLine = function(_, text)
+			w.tooltip.lines = w.tooltip.lines or {}
+			table.insert(w.tooltip.lines, text)
+		end,
 		Show = function() w.tooltip.shown = true end,
 		Hide = function() w.tooltip = nil end,
 	}
@@ -473,13 +491,21 @@ function M.reset()
 	}
 	C_MajorFactions = { GetMajorFactionData = function(id) return id == 2590 and { name = "Council of Dornogal" } or nil end }
 	-- Blizzard's pop-ups, queue pop and ready check, hidden until a spec shows them, each with its two buttons.
-	local function dialog(name, first, second)
+	-- Buttons past the second start hidden, as on most of Blizzard's pop-ups.
+	local LABELS = { "Accept", "Cancel", "Third", "Fourth" }
+	local function dialog(name, ...)
 		local frame = newWidget("Frame", name)
 		frame.shown = false
-		for _, button in ipairs({ { first, "Accept" }, { second, "Cancel" } }) do newWidget("Button", button[1]).text = button[2] end
+		for i, button in ipairs({ ... }) do
+			local widget = newWidget("Button", button)
+			widget.text, widget.shown = LABELS[i], i <= 2
+		end
 		return frame
 	end
-	for i = 1, 4 do dialog("StaticPopup" .. i, "StaticPopup" .. i .. "Button1", "StaticPopup" .. i .. "Button2") end
+	for i = 1, 4 do
+		local name = "StaticPopup" .. i
+		dialog(name, name .. "Button1", name .. "Button2", name .. "Button3", name .. "Button4")
+	end
 	dialog("LFGDungeonReadyDialog", "LFGDungeonReadyDialogEnterDungeonButton", "LFGDungeonReadyDialogLeaveQueueButton")
 	dialog("ReadyCheckFrame", "ReadyCheckFrameYesButton", "ReadyCheckFrameNoButton")
 	-- The NPC talked to, as the unit tokens npc and questnpc; w.quest.npc nil when there is none, as for a quest from an item.
@@ -487,6 +513,9 @@ function M.reset()
 	UnitName = function() return w.quest.npc end
 	SetPortraitTexture = function(texture, unit) texture.portrait = unit end
 	GetMoneyString = function(money) return money .. "c" end
+	CreateColor = function(r, g, b, a) return { r, g, b, a } end
+	QuestTitleFont = { GetFont = function() return "Fonts\\MORPHEUS.TTF", 24, "" end }
+	QuestFont = { GetFont = function() return "Fonts\\FRIZQT__.TTF", 13, "" end }
 	-- Camera distance in w.zoom; zooming moves it at once.
 	w.zoom = 15
 	GetCameraZoom = function() return w.zoom end

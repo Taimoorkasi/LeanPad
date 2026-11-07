@@ -20,7 +20,7 @@ describe("Dialogue window", function()
 	local function rows()
 		local found = {}
 		for _, widget in ipairs(w.widgets) do
-			if widget.kind == "Button" and widget.parent == window() and rawget(widget, "Label") then
+			if widget.kind == "Button" and widget.parent == window().Content and rawget(widget, "Label") then
 				if widget:IsShown() then table.insert(found, widget) end
 			end
 		end
@@ -40,8 +40,9 @@ describe("Dialogue window", function()
 		end
 	end
 
+	-- Text writing itself in has specs of its own; elsewhere it shows at once, so the first A answers.
 	before_each(function()
-		ns, w = wow.boot({ questPrompts = true }, nil)
+		ns, w = wow.boot({ questPrompts = true, dialogueReveal = false }, nil)
 	end)
 	after_each(wow.restore)
 
@@ -198,11 +199,13 @@ describe("Dialogue window", function()
 			fire("GOSSIP_SHOW")
 		end)
 
-		it("shows the NPC, their words and quests before options in Blizzard's order", function()
-			assert.equal("Marshal Dughan", window().Name.text)
-			assert.equal("npc", window().Portrait.portrait)
+		it("shows the NPC in 3D and by name, their words, and quests before options in Blizzard's order", function()
+			assert.equal("Marshal Dughan", window().Headline.text)
+			assert.equal("", window().Kicker.text)
+			assert.equal("npc", window().Model.unit)
+			assert.is_true(window().Model:IsShown())
+			assert.is_false(window().Portrait:IsShown())
 			assert.equal("Well met", window().Body.text)
-			assert.equal("", window().Title.text)
 			assert.same({ "Boars", "Wolves", "Bears", "Tell me more", "Train me" }, labels())
 		end)
 
@@ -312,10 +315,12 @@ describe("Dialogue window", function()
 			w.quest.rewards = { { "Potion", 102, 3 }, { nil, 103, 1 } }
 			w.quest.rewardMoney, w.quest.xp = 500, 1200
 			fire("QUEST_DETAIL")
-			assert.equal("A Quest", window().Title.text)
+			assert.equal("A Quest", window().Headline.text)
+			assert.equal("Marshal Dughan", window().Kicker.text)
 			assert.equal("Quest text\n\n|cfff6b73cObjectives|r\nKill ten boars", window().Body.text)
 			assert.same({ "Sword", "Potion x3", "..." }, labels())
 			assert.equal(101, rows()[1].Icon.texture)
+			assert.equal("REWARDS", window().Section.text)
 			assert.equal("500c    1200 XP", window().Money.text)
 			assert.is_nil(w.tooltip)
 		end)
@@ -409,8 +414,10 @@ describe("Dialogue window", function()
 		it("names no NPC for a quest offered with nobody there", function()
 			w.quest.npc = nil
 			fire("QUEST_DETAIL")
-			assert.equal("", window().Name.text)
+			assert.equal("", window().Kicker.text)
+			assert.is_false(window().Model:IsShown())
 			assert.equal("Interface\\QuestFrame\\UI-QuestLog-BookIcon", window().Portrait.texture)
+			assert.equal("Interface\\CharacterFrame\\TempPortraitAlphaMask", window().Portrait.mask)
 		end)
 
 		it("redraws as item details arrive, and ignores them when closed", function()
@@ -542,7 +549,7 @@ describe("Dialogue window", function()
 			fire("QUEST_DETAIL")
 			fire("GOSSIP_CLOSED")
 			assert.is_true(shown())
-			assert.equal("A Quest", window().Title.text)
+			assert.equal("A Quest", window().Headline.text)
 		end)
 
 		it("survives a quest finishing as its gossip reopens", function()
@@ -565,6 +572,135 @@ describe("Dialogue window", function()
 		it("is one of the windows Escape closes", function()
 			fire("QUEST_DETAIL")
 			assert.same({ "LeanPadDialogue" }, UISpecialFrames)
+		end)
+	end)
+
+	describe("the look", function()
+		it("shows the NPC talking once their model loads", function()
+			fire("GOSSIP_SHOW")
+			window().Model:Fire("OnModelLoaded")
+			assert.equal(60, window().Model.animation)
+		end)
+
+		it("shows a round portrait instead with 3D turned off", function()
+			ns.db.dialogueModel = false
+			fire("GOSSIP_SHOW")
+			assert.is_false(window().Model:IsShown())
+			assert.equal("npc", window().Portrait.portrait)
+		end)
+
+		it("heads rewards to choose, rewards to take and items needed, colouring items by quality", function()
+			w.quest.choices = { { "Sword", 101, 1, 3 }, { "Axe", 104, 1 } }
+			fire("QUEST_COMPLETE")
+			assert.equal("CHOOSE ONE REWARD", window().Section.text)
+			w.quest.required = { { "Boar Hide", 105, 10, 1 } }
+			fire("QUEST_PROGRESS")
+			assert.equal("REQUIRED", window().Section.text)
+			fire("GOSSIP_SHOW")
+			assert.equal("", window().Section.text)
+		end)
+
+		it("sits at bottom centre over the action bars by default, or at any of nine places, at the size set", function()
+			fire("QUEST_DETAIL")
+			assert.same({ "BOTTOM", UIParent, "BOTTOM", 0, 100 }, window().point)
+			for point, spot in pairs({ TOPLEFT = { 20, -20 }, TOP = { 0, -20 }, RIGHT = { -20, 0 }, CENTER = { 0, 0 }, BOTTOMRIGHT = { -20, 100 } }) do
+				ns.db.dialoguePosition = point
+				ns.PlaceDialogue()
+				assert.same({ point, UIParent, point, spot[1], spot[2] }, window().point)
+			end
+			ns.db.dialoguePosition, ns.db.dialogueScale = "raised", 1.1 -- a place from before the nine reads as bottom centre
+			ns.PlaceDialogue()
+			assert.equal("BOTTOM", window().point[1])
+			assert.equal(1.1, window().scale)
+		end)
+
+		it("fades into the world on every side, dark against the middle and clear at the edge", function()
+			fire("QUEST_DETAIL")
+			local fades = window().Fades
+			assert.equal(4, #fades)
+			for i, darkFirst in ipairs({ true, false, false, true }) do
+				assert.equal(darkFirst and 0.92 or 0, fades[i].gradient[2][4])
+				assert.equal(darkFirst and 0 or 0.92, fades[i].gradient[3][4])
+			end
+		end)
+
+		it("is placed only once built", function()
+			assert.has_no.errors(ns.PlaceDialogue)
+		end)
+	end)
+
+	describe("text writing itself in", function()
+		before_each(function()
+			ns.db.dialogueReveal = nil
+			fire("QUEST_DETAIL")
+		end)
+
+		it("fades in from the start, a little more each frame, and stops once it's all shown", function()
+			assert.equal(0, window().Body.alphaGradient)
+			window().Reveal:Fire("OnUpdate", 0.1)
+			assert.equal(9, window().Body.alphaGradient)
+			window().Reveal:Fire("OnUpdate", 10)
+			assert.equal(100000, window().Body.alphaGradient)
+			assert.is_nil(window().Reveal.scripts.OnUpdate)
+		end)
+
+		it("shows it all on the first A, and answers on the next", function()
+			press("PAD1")
+			assert.equal(0, #w.questCalls)
+			assert.equal(100000, window().Body.alphaGradient)
+			press("PAD1")
+			assert.same({ "AcceptQuest" }, lastCall())
+		end)
+
+		it("stops when the window closes", function()
+			fire("QUEST_FINISHED")
+			assert.is_nil(window().Reveal.scripts.OnUpdate)
+		end)
+	end)
+
+	describe("the preview", function()
+		it("shows the window with the player standing in, closing on B without touching a conversation", function()
+			ns.db.dialogueCamera = true
+			ns.PreviewDialogue(true)
+			assert.is_true(ns.DialoguePreviewing())
+			assert.equal("player", window().Model.unit)
+			assert.equal("A word before you go", window().Headline.text)
+			assert.equal(3, #labels())
+			assert.equal("Close", window().Back.text)
+			assert.equal(15, w.zoom)
+			press("PAD1")
+			fire("QUEST_FINISHED")
+			assert.is_true(shown())
+			press("PAD2")
+			assert.is_false(shown())
+			assert.equal(0, #w.questCalls)
+		end)
+
+		it("gives way to a real conversation, and never replaces one", function()
+			ns.PreviewDialogue(true)
+			fire("QUEST_DETAIL")
+			assert.is_false(ns.DialoguePreviewing())
+			ns.PreviewDialogue(true)
+			assert.equal("A Quest", window().Headline.text)
+			ns.PreviewDialogue(false)
+			assert.is_true(shown())
+		end)
+
+		it("closes when asked, or with Escape", function()
+			ns.PreviewDialogue(true)
+			ns.PreviewDialogue(false)
+			assert.is_false(shown())
+			ns.PreviewDialogue(true)
+			window():Hide()
+			assert.is_false(ns.DialoguePreviewing())
+			assert.equal(0, #w.questCalls)
+		end)
+
+		it("follows a change of look while it shows", function()
+			ns.PreviewDialogue(true)
+			ns.db.dialogueModel = false
+			ns.PlaceDialogue()
+			assert.equal("player", window().Portrait.portrait)
 		end)
 	end)
 

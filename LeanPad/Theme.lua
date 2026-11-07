@@ -12,22 +12,22 @@ local C = ns.COLORS
 ns.MUTED_HEX = "|cff66788a"
 
 local fonts, fontCount = {}, 0
--- One font object per size and colour, shared by every text that uses it.
-function ns.Font(size, color)
-	local key = size .. table.concat(color, ",")
+-- One font object per size, colour and face, shared by every text that uses it. Arial Narrow unless a face is given.
+function ns.Font(size, color, face)
+	local key = size .. table.concat(color, ",") .. (face or "")
 	if not fonts[key] then
 		fontCount = fontCount + 1
 		local font = CreateFont("LeanPadFont" .. fontCount)
-		font:SetFont("Fonts\\ARIALN.TTF", size, "")
+		font:SetFont(face or "Fonts\\ARIALN.TTF", size, "")
 		font:SetTextColor(unpack(color))
 		fonts[key] = font
 	end
 	return fonts[key]
 end
 
-function ns.Text(parent, size, color, justify)
+function ns.Text(parent, size, color, justify, face)
 	local text = parent:CreateFontString(nil, "ARTWORK")
-	text:SetFontObject(ns.Font(size, color))
+	text:SetFontObject(ns.Font(size, color, face))
 	text:SetJustifyH(justify or "LEFT")
 	return text
 end
