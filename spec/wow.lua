@@ -65,6 +65,9 @@ function Widget:SetUseCircularEdge(circular) self.circularEdge = circular end
 function Widget:Clear() self.duration = nil end
 function Widget:CreateMaskTexture() return newWidget("MaskTexture", nil, self) end
 function Widget:RegisterEvent(event) self.events[event] = true end
+function Widget:UnregisterEvent(event) self.events[event] = nil end
+function Widget:GetStringHeight() return self.stringHeight or 20 end
+function Widget:SetHitRectInsets(...) self.hitRect = { ... } end
 function Widget:UnregisterAllEvents() self.events = {} end
 function Widget:EnableGamePadButton(enable) self.gamePadButton = enable end
 function Widget:SetPropagateKeyboardInput(propagate) self.propagate = propagate end
@@ -208,7 +211,7 @@ function M.reset()
 	M.state = w
 
 	LeanPadDB, LeanPadCharDB = nil, nil
-	LeanPadControllerFrame, LeanPadCrossbar = nil, nil
+	LeanPadControllerFrame, LeanPadCrossbar, LeanPadDialogue = nil, nil, nil
 	C_GamepadUI, InputUtil, GamepadMode, GamepadMainActionBarFrame, GamepadActionBarBindingUtil, C_CVar, hooksecurefunc = nil, nil, nil, nil, nil, nil, nil
 	SLASH_LEANPAD1 = nil
 	SlashCmdList = {}
@@ -353,10 +356,12 @@ function M.reset()
 	GameTooltip = {
 		SetOwner = function(_, owner, anchor) w.tooltip = { owner = owner, anchor = anchor } end,
 		SetAction = function(_, slot) w.tooltip.slot = slot end,
+		SetQuestItem = function(_, kind, index) w.tooltip.questItem = { kind, index } end,
 		SetText = function(_, text) w.tooltip.text = text end,
 		Show = function() w.tooltip.shown = true end,
 		Hide = function() w.tooltip = nil end,
 	}
+	GameTooltip_ShowCompareItem = function(tooltip) w.tooltip.compared = tooltip == GameTooltip end
 	PlaceAction = function(slot) table.insert(w.placed, slot) end
 	PickupAction = function(slot) table.insert(w.pickups, { "action", slot }) end
 	IsAltKeyDown = function() return w.held.alt end
@@ -372,37 +377,75 @@ function M.reset()
 	}
 	w.cursorControl = false
 	SetGamePadCursorControl = function(enabled) w.cursorControl = enabled end
-	-- The quest window's state in w.quest, and each call the addon answers it with in w.questCalls.
-	w.quest = { completable = true, choices = {}, available = {}, active = {}, gossipAvailable = {}, gossipActive = {}, gossipOptions = {} }
-	w.questCalls = {}
+	-- The quest window's state in w.quest, and each call the addon answers it with in w.questCalls. Item lists hold
+	-- { name, texture, amount }; active quests { title, complete }.
+	w.quest = {
+		completable = true, choices = {}, rewards = {}, required = {}, available = {}, active = {},
+		gossipAvailable = {}, gossipActive = {}, gossipOptions = {}, handlers = {}, money = 0, rewardMoney = 0, xp = 0,
+		text = "Quest text", objectives = "Kill ten boars", progress = "Got them?", reward = "Well done", greeting = "Hello",
+		gossip = "Well met", title = "A Quest", npc = "Marshal Dughan",
+	}
+	w.questCalls, w.forwarded = {}, {}
 	local function questCall(name) return function(...) table.insert(w.questCalls, { name, ... }) end end
-	QuestFrame = { autoQuest = false }
-	QuestInfoFrame = { rewardsFrame = { RewardButtons = {} } }
-	QuestInfoItem_OnClick = function(button) w.quest.clicked = button end
-	GossipFrame = { GreetingPanel = { GoodbyeButton = newWidget("Button") } }
-	QuestFrameAcceptButton, QuestFrameDeclineButton, QuestFrameCompleteButton, QuestFrameCompleteQuestButton = newWidget("Button"), newWidget("Button"), newWidget("Button"), newWidget("Button")
-	QuestFrameGoodbyeButton, QuestFrameGreetingGoodbyeButton, QuestFrameCloseButton, GossipFrameCloseButton = newWidget("Button"), newWidget("Button"), newWidget("Button"), newWidget("Button")
+	-- Blizzard's quest window and gossip dispatcher, each hearing its opening events; one handed an event records it.
+	local function forwardTo(frame, events)
+		for _, event in ipairs(events) do frame:RegisterEvent(event) end
+		frame:SetScript("OnEvent", function(self, event, ...) table.insert(w.forwarded, { self, event, ... }) end)
+	end
+	QuestFrame = newWidget("Frame", "QuestFrame")
+	forwardTo(QuestFrame, { "QUEST_GREETING", "QUEST_DETAIL", "QUEST_PROGRESS", "QUEST_COMPLETE", "QUEST_FINISHED" })
+	CustomGossipFrameManager = newWidget("Frame", "CustomGossipFrameManager")
+	forwardTo(CustomGossipFrameManager, { "GOSSIP_SHOW", "GOSSIP_CLOSED" })
+	CustomGossipFrameManager.GetHandler = function(_, textureKit) return textureKit and w.quest.handlers[textureKit] end
 	AcceptQuest, AcknowledgeAutoAcceptQuest, CompleteQuest, GetQuestReward, CloseQuest =
 		questCall("AcceptQuest"), questCall("AcknowledgeAutoAcceptQuest"), questCall("CompleteQuest"), questCall("GetQuestReward"), questCall("CloseQuest")
 	SelectAvailableQuest, SelectActiveQuest = questCall("SelectAvailableQuest"), questCall("SelectActiveQuest")
 	QuestFlagsPVP = function() return w.quest.pvp end
+	QuestGetAutoAccept = function() return w.quest.autoAccept end
+	QuestIsFromAreaTrigger = function() return w.quest.areaTrigger end
+	QuestIsFromAdventureMap = function() return w.quest.adventureMap end
 	GetQuestMoneyToGet = function() return w.quest.money end
+	GetRewardMoney = function() return w.quest.rewardMoney end
+	GetRewardXP = function() return w.quest.xp end
 	IsQuestCompletable = function() return w.quest.completable end
+	GetTitleText = function() return w.quest.title end
+	GetQuestText = function() return w.quest.text end
+	GetObjectiveText = function() return w.quest.objectives end
+	GetProgressText = function() return w.quest.progress end
+	GetRewardText = function() return w.quest.reward end
+	GetGreetingText = function() return w.quest.greeting end
 	GetNumQuestChoices = function() return #w.quest.choices end
-	GetQuestItemInfo = function(_, index) return w.quest.choices[index][1], w.quest.choices[index][2] end
+	GetNumQuestRewards = function() return #w.quest.rewards end
+	GetNumQuestItems = function() return #w.quest.required end
+	local ITEM_LISTS = { choice = "choices", reward = "rewards", required = "required" }
+	GetQuestItemInfo = function(kind, index) return unpack(w.quest[ITEM_LISTS[kind]][index]) end
 	GetNumAvailableQuests = function() return #w.quest.available end
 	GetNumActiveQuests = function() return #w.quest.active end
 	GetAvailableTitle = function(index) return w.quest.available[index] end
-	GetActiveTitle = function(index) return w.quest.active[index] end
+	GetActiveTitle = function(index) return unpack(w.quest.active[index]) end
 	C_GossipInfo = {
+		GetText = function() return w.quest.gossip end,
 		GetAvailableQuests = function() return w.quest.gossipAvailable end,
 		GetActiveQuests = function() return w.quest.gossipActive end,
 		GetOptions = function() return w.quest.gossipOptions end,
+		GetNumAvailableQuests = function() return #w.quest.gossipAvailable end,
+		GetNumActiveQuests = function() return #w.quest.gossipActive end,
+		ForceGossip = function() return w.quest.forceGossip end,
 		SelectAvailableQuest = questCall("GossipAvailable"),
 		SelectActiveQuest = questCall("GossipActive"),
 		SelectOptionByIndex = questCall("GossipOption"),
 		CloseGossip = questCall("CloseGossip"),
 	}
+	-- The NPC talked to, as the unit tokens npc and questnpc; w.quest.npc nil when there is none, as for a quest from an item.
+	UnitExists = function() return w.quest.npc ~= nil end
+	UnitName = function() return w.quest.npc end
+	SetPortraitTexture = function(texture, unit) texture.portrait = unit end
+	GetMoneyString = function(money) return money .. "c" end
+	-- Camera distance in w.zoom; zooming moves it at once.
+	w.zoom = 15
+	GetCameraZoom = function() return w.zoom end
+	CameraZoomIn = function(amount) w.zoom = w.zoom - amount end
+	CameraZoomOut = function(amount) w.zoom = w.zoom + amount end
 	SetCursorPosition = function(x, y) w.cursorPosition = { x, y } end
 	-- Where the mouse is, in screen pixels as the client gives it; specs set w.mouseAt.
 	GetCursorPosition = function() return unpack(w.mouseAt) end

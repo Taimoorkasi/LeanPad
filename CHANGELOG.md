@@ -4,6 +4,18 @@ All notable changes to LeanPad are documented here. The format is based on [Keep
 
 ## [Unreleased]
 
+### Changed
+
+- **Quests and NPCs in LeanPad's own window.** It replaces the prompt bar under Blizzard's windows, which could show Blizzard's Accept and Decline alongside the pad's, sit in the wrong place, or lose track going from an NPC's gossip into a quest. The window shows the NPC, their words, the choices and the rewards. A confirms, B backs out, the D-pad chooses, the bumpers scroll, and a chosen reward shows its tooltip and comparison. PvP quests and quests that cost gold take a second press of A instead of the cursor. In combat, new conversations open in Blizzard's windows. Quests from items, areas and the adventure map, and NPCs with their own frames, still use Blizzard's.
+
+### Added
+
+- **Zoom in on the NPC while talking**, an option under *Quests*, off by default. The camera returns once the conversation ends.
+
+### Fixed
+
+- In Edit Mode, the unlocked crossbar no longer blocks clicks on the frames under its empty space. Only the strip with its hint and *Reset layout* takes the mouse.
+
 ## [0.7.0-beta.1] - 2026-11-05
 
 ### Added

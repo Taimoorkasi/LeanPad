@@ -228,11 +228,17 @@ local function buildLeft(x, y)
 	y = heading(x, y, "Quests")
 	local quests = ns.Checkbox(page, ns.QuestPromptsEnabled, function(on)
 		ns.db.questPrompts = on
+		ns.ClaimDialogues()
 		ns.Saved()
 	end)
 	table.insert(controls, quests)
-	y = row(x, y, "Answer quests with the pad", quests)
-	y = note(x, y, "A and B answer quests and NPCs, and the D-pad chooses. Not used with Blizzard's Gamepad UI, which has its own.", 2)
+	y = row(x, y, "LeanPad's window for NPCs and quests", quests)
+	local camera = ns.Checkbox(page, function() return ns.db.dialogueCamera == true end, function(on)
+		ns.db.dialogueCamera = on
+		ns.Saved()
+	end)
+	table.insert(controls, camera)
+	y = row(x, y, "Zoom in on the NPC while talking", camera)
 	local addon = ns.BarAddon()
 	if addon then note(x, y + 8, ns.BarAddonNote(addon), 3) end
 end

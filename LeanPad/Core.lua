@@ -27,7 +27,6 @@ function LeanPad_ToggleCursor()
 		local scale = UIParent:GetEffectiveScale()
 		SetCursorPosition((UIParent:GetWidth() / 2 + spot[1]) * scale, (UIParent:GetHeight() / 2 + spot[2]) * scale)
 	end
-	ns.UpdateQuestButtons()
 end
 
 SLASH_LEANPAD1 = "/lp"
