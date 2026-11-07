@@ -838,6 +838,11 @@ describe("Crossbar", function()
 			assert.is_false(bar.Outline:IsShown())
 		end)
 
+		it("takes the mouse only on its hint strip, leaving the frames under its empty space clickable", function()
+			wow.fire("PLAYER_ENTERING_WORLD")
+			assert.same({ 380, 380, 0, 310 }, LeanPadCrossbar.hitRect)
+		end)
+
 		it("unlocks with Blizzard's Edit Mode and locks again when it closes", function()
 			wow.fire("PLAYER_ENTERING_WORLD")
 			wow.trigger("EditMode.Enter")

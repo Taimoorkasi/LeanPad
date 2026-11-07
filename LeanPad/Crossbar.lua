@@ -723,6 +723,7 @@ local function build()
 	bar.Outline:SetBackdropBorderColor(unpack(ns.COLORS.accent))
 	local hint = ns.Text(bar.Outline, 14, ns.COLORS.accent, "CENTER")
 	hint:SetPoint("TOP", 0, -8)
+	hint:SetWidth(440)
 	hint:SetText("Drag the bar, a set or a single button; they snap to a grid and line up with neighbours, Shift drags freely. Scroll over a set to size it. Lock it on the settings page.")
 	local reset = ns.Button(bar.Outline, "Reset layout", 140, function()
 		ns.db.crossbarPoint = nil
@@ -733,11 +734,16 @@ local function build()
 	reset:SetPoint("TOP", hint, "BOTTOM", 0, -8)
 	bar.Outline:Hide()
 	applyMouse()
-	-- A reload in combat starts hearing the pad once combat ends.
-	if InCombatLockdown() then
-		EventUtil.RegisterOnceFrameEventAndCallback("PLAYER_REGEN_ENABLED", listen)
-	else
+	-- A reload in combat starts hearing the pad once combat ends. Unlocked, only the strip with the hint and Reset
+	-- takes the mouse, so in Edit Mode the frames under the bar's empty space stay clickable.
+	local function ready()
 		listen()
+		bar:SetHitRectInsets(380, 380, 0, 310)
+	end
+	if InCombatLockdown() then
+		EventUtil.RegisterOnceFrameEventAndCallback("PLAYER_REGEN_ENABLED", ready)
+	else
+		ready()
 	end
 	-- Listen only while shown, so a hidden crossbar costs nothing.
 	bar:SetScript("OnShow", function()
