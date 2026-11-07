@@ -1,16 +1,12 @@
 // Crops the shots LeanPad Shots took in game into docs/images, where the README and CurseForge page point.
 // Reads each shot's name, time and frame rectangle from the tool's saved variables, finds the screenshot WoW wrote
 // within a few seconds of that time, crops it to the frame with a margin and saves it as a PNG.
-// `npm run shots` reads retail; `npm run shots forever` reads WoW: Forever and names its images "<name>-forever.png".
-// The folders default to the standard install; set WOW_RETAIL or WOW_FOREVER if yours differ.
+// The WoW folder defaults to the standard install; set WOW_RETAIL to another _retail_ folder if yours differs.
 const fs = require("fs");
 const path = require("path");
 const { Jimp } = require("jimp");
 
-const FOREVER = process.argv[2] === "forever";
-const GAME = FOREVER
-	? process.env.WOW_FOREVER || "C:/Program Files (x86)/World of Warcraft/_forever_"
-	: process.env.WOW_RETAIL || "C:/Program Files (x86)/World of Warcraft/_retail_";
+const RETAIL = process.env.WOW_RETAIL || "C:/Program Files (x86)/World of Warcraft/_retail_";
 const OUT = path.join(__dirname, "..", "docs", "images");
 const MARGIN = 16; // pixels around the frame
 const NEAR = 10; // seconds a screenshot's file time may differ from the shot's
@@ -25,15 +21,9 @@ const FILES = {
 	popup: "popup.png",
 };
 
-// The shot's file in docs/images; Forever's sit beside retail's with a suffix, so neither overwrites the other.
-function outName(name, forever) {
-	const file = FILES[name];
-	return file && forever ? file.replace(/\.png$/, "-forever.png") : file;
-}
-
 // The newest LeanPadShots.lua among the accounts' saved variables.
 function savedVariables() {
-	const accounts = path.join(GAME, "WTF", "Account");
+	const accounts = path.join(RETAIL, "WTF", "Account");
 	const found = fs.readdirSync(accounts)
 		.map((account) => path.join(accounts, account, "SavedVariables", "LeanPadShots.lua"))
 		.filter((file) => fs.existsSync(file))
@@ -68,13 +58,13 @@ function crop(shot, width, height) {
 }
 
 async function main() {
-	const dir = path.join(GAME, "Screenshots");
+	const dir = path.join(RETAIL, "Screenshots");
 	const screenshots = fs.readdirSync(dir)
 		.filter((name) => /\.(jpe?g|png|tga)$/i.test(name))
 		.map((name) => ({ path: path.join(dir, name), time: fs.statSync(path.join(dir, name)).mtimeMs / 1000 }));
 	let saved = 0;
 	for (const shot of shots(fs.readFileSync(savedVariables(), "utf8"))) {
-		const file = screenshotFor(shot, screenshots), out = outName(shot.name, FOREVER);
+		const file = screenshotFor(shot, screenshots), out = FILES[shot.name];
 		if (!out) continue;
 		if (!file) {
 			console.log(`skipped ${shot.name}: no screenshot within ${NEAR}s of when it was taken`);
@@ -89,7 +79,7 @@ async function main() {
 	console.log(`${saved} image(s) saved.`);
 }
 
-module.exports = { shots, screenshotFor, crop, outName };
+module.exports = { shots, screenshotFor, crop };
 if (require.main === module) main().catch((error) => {
 	console.error(error.message);
 	process.exit(1);

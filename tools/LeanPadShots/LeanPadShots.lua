@@ -32,7 +32,7 @@ end
 local function nextStep()
 	local step = table.remove(steps, 1)
 	if not step then
-		say("tour done, reloading to save. Then run: cd tools && npm run shots (npm run shots forever on Forever)")
+		say("tour done, reloading to save. Then run: cd tools && npm run shots")
 		return C_Timer.After(1, ReloadUI)
 	end
 	step()
@@ -108,7 +108,7 @@ SLASH_LEANPADSHOTS1 = "/lpshots"
 SlashCmdList.LEANPADSHOTS = function(msg)
 	if msg == "auto" then
 		auto = not auto
-		return say(auto and "auto on: talk to NPCs and hand in quests; /reload when done, then npm run shots (add forever on Forever)." or "auto off.")
+		return say(auto and "auto on: talk to NPCs and hand in quests; /reload when done, then npm run shots." or "auto off.")
 	end
 	tour()
 end
