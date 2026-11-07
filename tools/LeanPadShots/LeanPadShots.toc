@@ -1,0 +1,7 @@
+## Interface: 120105, 16001
+## Title: LeanPad Shots
+## Notes: Developer tool, not part of LeanPad: takes the screenshots for LeanPad's README and CurseForge page.
+## Dependencies: LeanPad
+## SavedVariables: LeanPadShotsDB
+
+LeanPadShots.lua

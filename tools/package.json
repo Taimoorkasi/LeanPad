@@ -1,11 +1,13 @@
 {
   "name": "leanpad-tools",
   "private": true,
-  "description": "Generates LeanPad's controller art. Not part of the addon.",
+  "description": "Generates LeanPad's controller art and crops its documentation screenshots. Not part of the addon.",
   "scripts": {
-    "art": "node draw-pads.js"
+    "art": "node draw-pads.js",
+    "shots": "node screenshots.js"
   },
   "devDependencies": {
-    "@resvg/resvg-js": "2.6.2"
+    "@resvg/resvg-js": "2.6.2",
+    "jimp": "1.6.1"
   }
 }
