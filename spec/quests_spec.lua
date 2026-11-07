@@ -416,8 +416,7 @@ describe("Dialogue window", function()
 			fire("QUEST_DETAIL")
 			assert.equal("", window().Kicker.text)
 			assert.is_false(window().Model:IsShown())
-			assert.equal("Interface\\QuestFrame\\UI-QuestLog-BookIcon", window().Portrait.texture)
-			assert.equal("Interface\\CharacterFrame\\TempPortraitAlphaMask", window().Portrait.mask)
+			assert.is_false(window().Portrait:IsShown())
 		end)
 
 		it("redraws as item details arrive, and ignores them when closed", function()
@@ -587,6 +586,7 @@ describe("Dialogue window", function()
 			fire("GOSSIP_SHOW")
 			assert.is_false(window().Model:IsShown())
 			assert.equal("npc", window().Portrait.portrait)
+			assert.equal("Interface\\CharacterFrame\\TempPortraitAlphaMask", window().Portrait.mask)
 		end)
 
 		it("heads rewards to choose, rewards to take and items needed, colouring items by quality", function()
@@ -602,8 +602,8 @@ describe("Dialogue window", function()
 
 		it("sits at bottom centre over the action bars by default, or at any of nine places, at the size set", function()
 			fire("QUEST_DETAIL")
-			assert.same({ "BOTTOM", UIParent, "BOTTOM", 0, 100 }, window().point)
-			for point, spot in pairs({ TOPLEFT = { 20, -20 }, TOP = { 0, -20 }, RIGHT = { -20, 0 }, CENTER = { 0, 0 }, BOTTOMRIGHT = { -20, 100 } }) do
+			assert.same({ "BOTTOM", UIParent, "BOTTOM", 0, 140 }, window().point)
+			for point, spot in pairs({ TOPLEFT = { 40, -40 }, TOP = { 0, -40 }, RIGHT = { -40, 0 }, CENTER = { 0, 0 }, BOTTOMRIGHT = { -40, 140 } }) do
 				ns.db.dialoguePosition = point
 				ns.PlaceDialogue()
 				assert.same({ point, UIParent, point, spot[1], spot[2] }, window().point)
@@ -614,14 +614,37 @@ describe("Dialogue window", function()
 			assert.equal(1.1, window().scale)
 		end)
 
-		it("fades into the world on every side, dark against the middle and clear at the edge", function()
+		it("gives the words the NPC's room when they show as a portrait, or not at all", function()
 			fire("QUEST_DETAIL")
-			local fades = window().Fades
-			assert.equal(4, #fades)
-			for i, darkFirst in ipairs({ true, false, false, true }) do
-				assert.equal(darkFirst and 0.92 or 0, fades[i].gradient[2][4])
-				assert.equal(darkFirst and 0 or 0.92, fades[i].gradient[3][4])
-			end
+			assert.same({ "TOPLEFT", 194, -24 }, window().Content.point)
+			ns.db.dialogueModel = false
+			fire("QUEST_DETAIL")
+			assert.same({ "TOPLEFT", 108, -24 }, window().Content.point)
+			w.quest.npc = nil
+			fire("QUEST_DETAIL")
+			assert.same({ "TOPLEFT", 24, -24 }, window().Content.point)
+		end)
+
+		it("shows no picture for an object such as a missive, which has no face, but still names it", function()
+			w.quest.npc, w.quest.object = "Riftblade Maella's Summons", true
+			fire("QUEST_DETAIL")
+			assert.is_false(window().Model:IsShown())
+			assert.is_false(window().Portrait:IsShown())
+			assert.same({ "TOPLEFT", 24, -24 }, window().Content.point)
+			assert.equal("Riftblade Maella's Summons", window().Kicker.text)
+		end)
+
+		it("sets the words, title and choices at the text size chosen", function()
+			ns.db.dialogueTextSize = 22
+			fire("GOSSIP_SHOW")
+			assert.equal(ns.Font(22, ns.COLORS.text, "Fonts\\FRIZQT__.TTF"), window().Body.font)
+			assert.equal(ns.Font(31, ns.COLORS.text, "Fonts\\MORPHEUS.TTF"), window().Headline.font)
+		end)
+
+		it("puts away a cursor left up from clicking the NPC, so the pad answers", function()
+			w.cursorControl = true
+			fire("GOSSIP_SHOW")
+			assert.is_false(w.cursorControl)
 		end)
 
 		it("is placed only once built", function()

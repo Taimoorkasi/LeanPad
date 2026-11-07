@@ -41,6 +41,7 @@ local HELP = {
 	["Hide it"] = "Puts the cursor away when you move your character, or when either stick moves.",
 	["Touchpad moves it"] = "On pads with a touchpad, such as the DualSense, sliding a finger moves the cursor.",
 	["Talk and do quests in LeanPad's window"] = "Uses LeanPad's window instead of Blizzard's for talking to NPCs and doing quests, answered from the pad.",
+	["Text size"] = "How large the NPC's words, the quest's title and the choices are, without changing the window's other parts.",
 	["Show the NPC in 3D, talking"] = "The NPC stands beside their words as a 3D model, talking. Off shows a round portrait.",
 	["Text writes itself in"] = "The NPC's words appear a few letters at a time. A first shows them all, then answers.",
 	["Zoom the camera in on the NPC"] = "Moves the camera in close while you talk, and back out after.",
@@ -395,7 +396,8 @@ local function buildDialogue(x, y)
 	y = row(x, y, "Position", choice(ns.DIALOGUE_POSITIONS, ns.DialoguePosition, look("dialoguePosition")),
 		"Where on screen the window appears, at any of nine places.")
 	y = row(x, y, "Size", choice(WINDOW_SCALES, function() return tostring(ns.db.dialogueScale or 1) end, look("dialogueScale", tonumber)),
-		"How large the window and its words are.")
+		"How large the whole window is, its words included.")
+	y = row(x, y, "Text size", choice(ns.DIALOGUE_TEXT_SIZES, function() return tostring(ns.db.dialogueTextSize or 17) end, look("dialogueTextSize", tonumber)))
 	y = row(x, y, "Show the NPC in 3D, talking", checkbox(function() return ns.db.dialogueModel ~= false end, look("dialogueModel")))
 	y = row(x, y, "Text writes itself in", checkbox(function() return ns.db.dialogueReveal ~= false end, function(on) ns.db.dialogueReveal = on end))
 	y = row(x, y, "Zoom the camera in on the NPC", checkbox(function() return ns.db.dialogueCamera == true end, function(on) ns.db.dialogueCamera = on end))

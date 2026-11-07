@@ -9,7 +9,7 @@ local realPrint = print
 local NO_OP_METHODS = {
 	"SetSize", "SetWidth", "SetHeight", "SetJustifyH", "SetToplevel", "SetClampedToScreen", "SetMovable", "RegisterForDrag",
 	"SetThickness", "AddMaskTexture", "SetBlendMode", "SetBackdrop", "SetBackdropBorderColor", "StartMoving", "StopMovingOrSizing",
-	"SetAllPoints", "SetDrawSwipe", "SetFont", "SetTextColor", "SetNormalFontObject", "SetHighlightFontObject", "SetDisabledFontObject",
+	"SetAllPoints", "SetDrawSwipe", "SetFont", "SetNormalFontObject", "SetHighlightFontObject", "SetDisabledFontObject",
 	"SetNormalAtlas", "SetHighlightAtlas", "SetSpacing", "SetDegrees", "SetScaleFrom", "SetScaleTo",
 	"SetTextInsets", "SetAutoFocus", "SetMaxLetters", "SetFrameStrata", "RegisterForClicks", "SetWordWrap",
 	"SetShadowOffset", "SetShadowColor", "SetMaxLines", "SetPortraitZoom",
@@ -48,6 +48,8 @@ function Widget:GetWidth() return self.width or 0 end
 function Widget:GetHeight() return self.height or 0 end
 function Widget:GetEffectiveScale() return self.effectiveScale or 1 end
 function Widget:SetText(text) self.text = text end
+-- Like the client's, which rejects anything but a number for alpha.
+function Widget:SetTextColor(r, g, b, a) assert(a == nil or type(a) == "number", "bad argument #4 to 'SetTextColor'") end
 function Widget:GetText() return self.text end
 -- Losing focus fires OnEditFocusLost, as on a real EditBox.
 function Widget:ClearFocus() if self.scripts.OnEditFocusLost then self.scripts.OnEditFocusLost(self) end end
@@ -70,7 +72,6 @@ function Widget:UnregisterEvent(event) self.events[event] = nil end
 function Widget:GetStringHeight() return self.stringHeight or 20 end
 function Widget:SetHitRectInsets(...) self.hitRect = { ... } end
 function Widget:SetMask(mask) self.mask = mask end
-function Widget:SetGradient(orientation, from, to) self.gradient = { orientation, from, to } end
 function Widget:SetUnit(unit) self.unit = unit end
 function Widget:SetAnimation(animation) self.animation = animation end
 -- Like the client's: whether the fade's start still falls inside the text.
@@ -320,7 +321,7 @@ function M.reset()
 	C_Item = {
 		GetItemNameByID = function(id) return "item:" .. id end,
 		PickupItem = function(id) pickup("item", id) end,
-		GetItemQualityColor = function(quality) return quality / 10, quality / 10, quality / 10 end,
+		GetItemQualityColor = function(quality) return quality / 10, quality / 10, quality / 10, "ff" .. quality end,
 	}
 	GetCVarBool = function(name) return w.cvars[name] == "1" end
 	RunNextFrame = function(callback) table.insert(w.nextFrame, callback) end
@@ -510,10 +511,10 @@ function M.reset()
 	dialog("ReadyCheckFrame", "ReadyCheckFrameYesButton", "ReadyCheckFrameNoButton")
 	-- The NPC talked to, as the unit tokens npc and questnpc; w.quest.npc nil when there is none, as for a quest from an item.
 	UnitExists = function() return w.quest.npc ~= nil end
+	UnitIsGameObject = function() return w.quest.object == true end
 	UnitName = function() return w.quest.npc end
 	SetPortraitTexture = function(texture, unit) texture.portrait = unit end
 	GetMoneyString = function(money) return money .. "c" end
-	CreateColor = function(r, g, b, a) return { r, g, b, a } end
 	QuestTitleFont = { GetFont = function() return "Fonts\\MORPHEUS.TTF", 24, "" end }
 	QuestFont = { GetFont = function() return "Fonts\\FRIZQT__.TTF", 13, "" end }
 	-- Camera distance in w.zoom; zooming moves it at once.

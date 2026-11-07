@@ -9,16 +9,13 @@ local addonName, ns = ...
 local CONFIRM_KEY, BACK_KEY = "PAD1", "PAD2"
 local MOVE = { PADDUP = -1, PADDLEFT = -1, PADDDOWN = 1, PADDRIGHT = 1 }
 local SCROLL = { PADLSHOULDER = -1, PADRSHOULDER = 1 }
-local COLUMN, HEADER, FOOTER, LINE_HEIGHT, TEXT_HEIGHT, SCROLL_STEP = 600, 72, 48, 32, 140, 60
-local TILE_WIDTH, TILE_HEIGHT, TILES_PER_ROW, TILE_GAP = 192, 44, 3, 12
-local FADE, SLOT = 56, 190 -- the soft edge into the world on every side, and the room beside the words for the NPC
--- Each edge's gradient, laid against the solid middle: its two corners there, its direction, and whether it starts dark.
-local EDGES = {
-	{ "BOTTOMLEFT", "TOPLEFT", "BOTTOMRIGHT", "TOPRIGHT", "VERTICAL", true },
-	{ "TOPLEFT", "BOTTOMLEFT", "TOPRIGHT", "BOTTOMRIGHT", "VERTICAL", false },
-	{ "TOPRIGHT", "TOPLEFT", "BOTTOMRIGHT", "BOTTOMLEFT", "HORIZONTAL", false },
-	{ "TOPLEFT", "TOPRIGHT", "BOTTOMLEFT", "BOTTOMRIGHT", "HORIZONTAL", true },
-}
+-- A card: the NPC beside their words, a column narrow enough to read in one sweep (about 70 characters), text that
+-- scrolls only when long, and a footer bar for the prompts.
+local PAD, FOOTER, TEXT_HEIGHT, SCROLL_STEP, COLUMN = 24, 64, 260, 60, 540
+local TILE_GAP, TILE_HEIGHT, TILES_PER_ROW = 10, 44, 3
+local TILE_WIDTH = (COLUMN - (TILES_PER_ROW - 1) * TILE_GAP) / TILES_PER_ROW
+local MODEL_WIDTH, MODEL_HEIGHT, PORTRAIT = 170, 200, 64
+ns.DIALOGUE_TEXT_SIZES = { { "15", "Small" }, { "17", "Medium" }, { "19", "Large" }, { "22", "Largest" } }
 ns.DIALOGUE_POSITIONS = {
 	{ "TOPLEFT", "Top left" }, { "TOP", "Top centre" }, { "TOPRIGHT", "Top right" },
 	{ "LEFT", "Centre left" }, { "CENTER", "Centre" }, { "RIGHT", "Centre right" },
@@ -27,7 +24,6 @@ ns.DIALOGUE_POSITIONS = {
 local ZOOM_TO = 4 -- camera distance, in yards, that frames the NPC over the character's shoulder
 local TALK = 60 -- EmoteTalk in the client's AnimationData
 local REVEAL_SPEED, REVEAL_SOFTNESS, REVEAL_DONE = 90, 24, 100000 -- characters a second, how many fade in at once, past any text
-local BOOK_ICON = "Interface\\QuestFrame\\UI-QuestLog-BookIcon"
 local ROUND_MASK = "Interface\\CharacterFrame\\TempPortraitAlphaMask"
 local QUEST_PAGES = { QUEST_GREETING = "greeting", QUEST_DETAIL = "detail", QUEST_PROGRESS = "progress", QUEST_COMPLETE = "complete" }
 local UNITS = { gossip = "npc", preview = "player" } -- whom each page shows; quest pages show questnpc
@@ -36,6 +32,7 @@ local PREVIEW_TEXT = "This is where NPCs speak, at the size and in the place you
 local C = ns.COLORS
 
 local window, mode, pick, armed, claimed, zoomed, tipShown, revealAt = nil, nil, 0, false, false, nil, false, nil
+local besideHeight, questFace, titleFace = 0, nil, nil -- how tall the NPC beside the words stands, and Blizzard's quest faces
 local entries, lines, tiles = {}, {}, {}
 
 -- Saved choice, else this client's default: on for Forever, off for retail.
@@ -334,7 +331,7 @@ end
 local function line(i)
 	if lines[i] then return lines[i] end
 	local button = CreateFrame("Button", nil, window.Content)
-	button:SetSize(COLUMN, LINE_HEIGHT - 2)
+	button:SetWidth(COLUMN)
 	button.Lit = button:CreateTexture(nil, "BACKGROUND")
 	button.Lit:SetAllPoints()
 	button.Lit:SetColorTexture(C.hover[1], C.hover[2], C.hover[3], 0.75)
@@ -374,7 +371,7 @@ end
 
 -- The pad's prompts, as glyph and word; clickable too, for the mouse in combat.
 local function prompt(color, onClick)
-	local button = CreateFrame("Button", nil, window.Content)
+	local button = CreateFrame("Button", nil, window)
 	button:SetHeight(30)
 	button:SetNormalFontObject(ns.Font(16, color))
 	button:SetHighlightFontObject(ns.Font(16, C.accentHover))
@@ -389,20 +386,24 @@ local function setPrompt(button, key, label)
 	button:SetWidth(button:GetTextWidth() + 8)
 end
 
--- The NPC beside their words: in 3D, talking, unless turned off, else their portrait, else a book for a quest from an item.
+-- The NPC beside their words: in 3D, talking, unless turned off, else their portrait. With nobody to show, such as an
+-- item or a missive, which has no model or face, the words take the room; the object is still named.
 local function dress()
 	local unit = UNITS[mode] or "questnpc"
 	local hasUnit = UnitExists(unit)
-	local model = hasUnit and ns.db.dialogueModel ~= false
+	local shown = hasUnit and not UnitIsGameObject(unit)
+	local model = shown and ns.db.dialogueModel ~= false
 	window.Model:SetShown(model)
-	window.Portrait:SetShown(not model)
+	window.Portrait:SetShown(shown and not model)
 	if model then
 		window.Model:SetUnit(unit)
-	elseif hasUnit then
+	elseif shown then
 		SetPortraitTexture(window.Portrait, unit)
-	else
-		window.Portrait:SetTexture(BOOK_ICON)
 	end
+	local beside = model and MODEL_WIDTH or shown and PORTRAIT + 20 or 0
+	besideHeight = model and MODEL_HEIGHT or shown and PORTRAIT or 0
+	window.Content:SetPoint("TOPLEFT", PAD + beside, -PAD)
+	window:SetWidth(2 * PAD + beside + COLUMN)
 	-- Over a quest's title the NPC is named small, otherwise in the headline. UnitName goes straight to the text.
 	local named, plain = window.Headline, window.Kicker
 	if PAGES[mode].title then named, plain = window.Kicker, window.Headline end
@@ -413,6 +414,10 @@ end
 function ns.RefreshDialogue()
 	if not mode then return end
 	local page = PAGES[mode]
+	local size = ns.db.dialogueTextSize or 17
+	local lineHeight = size + 15
+	window.Headline:SetFontObject(ns.Font(size + 9, C.text, titleFace))
+	window.Body:SetFontObject(ns.Font(size, C.text, questFace))
 	if page.title then window.Headline:SetText(page.title()) end
 	window.Body:SetText(page.text() or "")
 	window.Body:SetAlphaGradient(revealAt or REVEAL_DONE, REVEAL_SOFTNESS)
@@ -430,7 +435,9 @@ function ns.RefreshDialogue()
 		button:SetShown(i <= shownLines)
 		if i <= shownLines then
 			local lit = i == pick
-			button:SetPoint("TOPLEFT", window.Scroll, "BOTTOMLEFT", 0, -(14 + (i - 1) * LINE_HEIGHT))
+			button:SetHeight(lineHeight - 2)
+			button:SetPoint("TOPLEFT", window.Scroll, "BOTTOMLEFT", 0, -(14 + (i - 1) * lineHeight))
+			button.Label:SetFontObject(ns.Font(size - 1, C.text, questFace))
 			button.Label:SetText(entry.text)
 			button.Label:SetTextColor(unpack(lit and C.text or C.text2))
 			setIcon(button.Icon, entry.icon)
@@ -438,7 +445,7 @@ function ns.RefreshDialogue()
 			button.Bar:SetShown(lit)
 		end
 	end
-	local y = 14 + shownLines * LINE_HEIGHT
+	local y = 14 + shownLines * lineHeight
 
 	local money = moneyLine()
 	if shownTiles > 0 or money ~= "" then
@@ -457,7 +464,8 @@ function ns.RefreshDialogue()
 			button:SetPoint("TOPLEFT", window.Scroll, "BOTTOMLEFT", column * (TILE_WIDTH + TILE_GAP), -(y + row * (TILE_HEIGHT + 8)))
 			button.Label:SetText(entry.text)
 			if entry.quality then
-				button.Label:SetTextColor(C_Item.GetItemQualityColor(entry.quality))
+				local r, g, b = C_Item.GetItemQualityColor(entry.quality) -- a fourth return, its hex string, is no alpha
+				button.Label:SetTextColor(r, g, b)
 			else
 				button.Label:SetTextColor(unpack(C.text))
 			end
@@ -468,9 +476,10 @@ function ns.RefreshDialogue()
 	end
 	y = y + math.ceil(shownTiles / TILES_PER_ROW) * (TILE_HEIGHT + 8)
 
-	local height = HEADER + textHeight + y + FOOTER
+	-- The header: the small name over the headline, its rule and the gap to the words, all growing with the text.
+	local height = size + 53 + textHeight + y
 	window.Content:SetHeight(height)
-	window:SetHeight(height + 2 * FADE)
+	window:SetHeight(PAD + math.max(height, besideHeight) + FOOTER)
 
 	local hints = {}
 	if #entries > 1 then table.insert(hints, ns.Glyphed("PADDUP", "Choose", 20)) end
@@ -482,7 +491,7 @@ function ns.RefreshDialogue()
 	if window.Confirm:IsShown() then
 		window.Back:SetPoint("RIGHT", window.Confirm, "LEFT", -28, 0)
 	else
-		window.Back:SetPoint("BOTTOMRIGHT")
+		window.Back:SetPoint("BOTTOMRIGHT", -PAD, 14)
 	end
 	showTip()
 end
@@ -552,8 +561,8 @@ end
 function ns.PlaceDialogue()
 	if not window then return end
 	local point = ns.DialoguePosition()
-	local x = point:find("LEFT") and 20 or point:find("RIGHT") and -20 or 0
-	local y = point:find("TOP") and -20 or point:find("BOTTOM") and 100 or 0
+	local x = point:find("LEFT") and 40 or point:find("RIGHT") and -40 or 0
+	local y = point:find("TOP") and -40 or point:find("BOTTOM") and 140 or 0
 	window:SetScale(ns.db.dialogueScale or 1)
 	window:ClearAllPoints()
 	window:SetPoint(point, UIParent, point, x, y)
@@ -564,53 +573,43 @@ function ns.PlaceDialogue()
 end
 
 local function build()
-	window = CreateFrame("Frame", "LeanPadDialogue", UIParent)
+	questFace, titleFace = (QuestFont:GetFont()), (QuestTitleFont:GetFont())
+	window = CreateFrame("Frame", "LeanPadDialogue", UIParent, "BackdropTemplate")
+	ns.Backdrop(window, C.bg, C.edge)
+	window:SetBackdropColor(C.bg[1], C.bg[2], C.bg[3], 0.94)
 	window:SetFrameStrata("DIALOG")
 	window:SetClampedToScreen(true)
-	window:SetWidth(2 * FADE + SLOT + COLUMN)
 	window:EnableMouse(true)
-	window.Solid = window:CreateTexture(nil, "BACKGROUND")
-	window.Solid:SetColorTexture(C.bg[1], C.bg[2], C.bg[3], 0.92)
-	window.Solid:SetPoint("TOPLEFT", FADE, -FADE)
-	window.Solid:SetPoint("BOTTOMRIGHT", -FADE, FADE)
-	-- Each edge fades out from the solid middle; the corners stay clear, where both fades are faint anyway.
-	local dark, clear = CreateColor(C.bg[1], C.bg[2], C.bg[3], 0.92), CreateColor(C.bg[1], C.bg[2], C.bg[3], 0)
-	window.Fades = {}
-	for i, side in ipairs(EDGES) do
-		local fade = window:CreateTexture(nil, "BACKGROUND")
-		fade:SetColorTexture(1, 1, 1)
-		fade:SetPoint(side[1], window.Solid, side[2])
-		fade:SetPoint(side[3], window.Solid, side[4])
-		if side[5] == "VERTICAL" then fade:SetHeight(FADE) else fade:SetWidth(FADE) end
-		fade:SetGradient(side[5], side[6] and dark or clear, side[6] and clear or dark)
-		window.Fades[i] = fade
-	end
+	window.Accent = window:CreateTexture(nil, "ARTWORK")
+	window.Accent:SetColorTexture(unpack(C.accent))
+	window.Accent:SetHeight(2)
+	window.Accent:SetPoint("TOPLEFT", 1, -1)
+	window.Accent:SetPoint("TOPRIGHT", -1, -1)
 	window.Content = CreateFrame("Frame", nil, window)
 	window.Content:SetWidth(COLUMN)
-	window.Content:SetPoint("TOPLEFT", FADE + SLOT, -FADE)
 	window.Model = CreateFrame("PlayerModel", nil, window)
-	window.Model:SetSize(SLOT, 210)
-	window.Model:SetPoint("TOPLEFT", FADE - 12, -FADE + 20)
+	window.Model:SetSize(MODEL_WIDTH, MODEL_HEIGHT)
+	window.Model:SetPoint("TOPLEFT", PAD - 12, -PAD + 4)
 	window.Model:SetScript("OnModelLoaded", function(self)
 		self:SetPortraitZoom(0.65)
 		self:SetAnimation(TALK)
 	end)
-	window.Portrait = window.Content:CreateTexture(nil, "ARTWORK")
-	window.Portrait:SetSize(72, 72)
-	window.Portrait:SetPoint("TOPRIGHT", window.Content, "TOPLEFT", -24, 0)
+	window.Portrait = window:CreateTexture(nil, "ARTWORK")
+	window.Portrait:SetSize(PORTRAIT, PORTRAIT)
+	window.Portrait:SetPoint("TOPLEFT", PAD, -PAD)
 	window.Portrait:SetMask(ROUND_MASK)
 	window.Kicker = text(window.Content, 13, C.accent)
 	window.Kicker:SetPoint("TOPLEFT")
 	window.Headline = text(window.Content, 26, C.text, QuestTitleFont)
-	window.Headline:SetPoint("TOPLEFT", 0, -18)
+	window.Headline:SetPoint("TOPLEFT", window.Kicker, "BOTTOMLEFT", 0, -4)
 	window.Headline:SetPoint("RIGHT")
 	window.Headline:SetWordWrap(false)
 	window.Rule = window.Content:CreateTexture(nil, "ARTWORK")
 	window.Rule:SetColorTexture(unpack(C.accent))
 	window.Rule:SetSize(48, 2)
-	window.Rule:SetPoint("TOPLEFT", 0, -56)
+	window.Rule:SetPoint("TOPLEFT", window.Headline, "BOTTOMLEFT", 0, -10)
 	window.Scroll = CreateFrame("ScrollFrame", nil, window.Content)
-	window.Scroll:SetPoint("TOPLEFT", 0, -HEADER)
+	window.Scroll:SetPoint("TOPLEFT", window.Rule, "BOTTOMLEFT", 0, -14)
 	window.Scroll:SetWidth(COLUMN)
 	window.Scroll:EnableMouseWheel(true)
 	window.Scroll:SetScript("OnMouseWheel", function(_, delta) scroll(-delta) end)
@@ -621,13 +620,19 @@ local function build()
 	window.Body:SetPoint("TOPLEFT")
 	window.Body:SetWidth(COLUMN)
 	window.Body:SetSpacing(5)
-	window.Section = text(window.Content, 11, C.accent)
-	window.Money = text(window.Content, 13, C.text2)
+	window.Section = text(window.Content, 12, C.accent)
+	window.Money = text(window.Content, 14, C.text)
 	window.Money:SetPoint("LEFT", window.Section, "RIGHT", 16, 0)
-	window.Hint = text(window.Content, 14, C.text2)
-	window.Hint:SetPoint("BOTTOMLEFT", 0, 8)
+	-- The footer bar: a hairline across the card, the D-pad's and bumpers' hints at its left, the prompts at its right.
+	window.Divider = window:CreateTexture(nil, "ARTWORK")
+	window.Divider:SetColorTexture(unpack(C.line))
+	window.Divider:SetHeight(1)
+	window.Divider:SetPoint("BOTTOMLEFT", PAD, FOOTER - 12)
+	window.Divider:SetPoint("BOTTOMRIGHT", -PAD, FOOTER - 12)
+	window.Hint = text(window, 14, C.text2)
+	window.Hint:SetPoint("BOTTOMLEFT", PAD, 22)
 	window.Confirm = prompt(C.accent, confirm)
-	window.Confirm:SetPoint("BOTTOMRIGHT")
+	window.Confirm:SetPoint("BOTTOMRIGHT", -PAD, 14)
 	window.Back = prompt(C.text2, back)
 	-- The pad listens on a child, hidden in combat, where frames can't take the pad from the player's bindings.
 	window.Input = CreateFrame("Frame", nil, window)
@@ -655,6 +660,8 @@ local function open(page)
 	if not window then build() end
 	mode, pick, armed = page, (page == "gossip" or page == "greeting" or page == "preview") and 1 or 0, false
 	revealAt = ns.db.dialogueReveal ~= false and 0 or nil
+	-- A cursor still up from clicking the NPC would keep every button, so the D-pad would fire bar slots instead.
+	if IsGamePadCursorControlEnabled() then SetGamePadCursorControl(false) end
 	window.Scroll:SetVerticalScroll(0)
 	dress()
 	ns.RefreshDialogue()
