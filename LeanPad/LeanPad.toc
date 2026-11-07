@@ -19,4 +19,5 @@ Crossbar.lua
 Profiles.lua
 Settings.lua
 Quests.lua
+Popups.lua
 Forever.lua [AllowLoadGameType forever, camelot]

@@ -58,7 +58,7 @@ describe("Options page", function()
 	end)
 
 	it("switches LeanPad's dialogue window on, taking Blizzard's events at once, and its camera", function()
-		local box = controlFor("LeanPad's window for NPCs and quests")
+		local box = controlFor("Answer NPCs, quests and pop-ups with the pad")
 		assert.is_false(box.Check:IsShown())
 		box:Fire("OnClick")
 		assert.is_true(ns.db.questPrompts)

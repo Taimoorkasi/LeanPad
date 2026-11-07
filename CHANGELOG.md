@@ -10,6 +10,8 @@ All notable changes to LeanPad are documented here. The format is based on [Keep
 
 ### Added
 
+- **Pop-ups from the pad.** A and B press a pop-up's two buttons, named under it, including the dungeon queue pop and ready checks. The presses count as your own clicks, so entering a dungeon works. Pop-ups that show in combat wait for the cursor. Part of the *Quests* setting, now named *Answer NPCs, quests and pop-ups with the pad*.
+- **Every reward in the dialogue window:** currency choices, currencies, spells not known yet, honor and renown, alongside items, gold and XP. Currencies and spells show their own tooltips.
 - **Zoom in on the NPC while talking**, an option under *Quests*, off by default. The camera returns once the conversation ends.
 
 ### Fixed

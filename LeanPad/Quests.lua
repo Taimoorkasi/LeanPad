@@ -346,10 +346,10 @@ local function scroll(step)
 end
 
 -- Only the buttons with something to do are taken; the rest reach their bindings. A cursor the player brought up
--- keeps every button, as its clicks are on them.
+-- keeps every button, as its clicks are on them, and so does a pop-up the pad answers, such as a gossip's confirm.
 local function onPress(self, key)
 	local handled = false
-	if not IsGamePadCursorControlEnabled() then
+	if not IsGamePadCursorControlEnabled() and not ns.PopupAnswering() then
 		if key == CONFIRM_KEY then
 			confirm()
 			handled = true

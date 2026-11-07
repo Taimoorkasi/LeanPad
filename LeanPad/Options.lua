@@ -229,10 +229,11 @@ local function buildLeft(x, y)
 	local quests = ns.Checkbox(page, ns.QuestPromptsEnabled, function(on)
 		ns.db.questPrompts = on
 		ns.ClaimDialogues()
+		ns.UpdatePopups()
 		ns.Saved()
 	end)
 	table.insert(controls, quests)
-	y = row(x, y, "LeanPad's window for NPCs and quests", quests)
+	y = row(x, y, "Answer NPCs, quests and pop-ups with the pad", quests)
 	local camera = ns.Checkbox(page, function() return ns.db.dialogueCamera == true end, function(on)
 		ns.db.dialogueCamera = on
 		ns.Saved()
