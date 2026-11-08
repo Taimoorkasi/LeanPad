@@ -4,6 +4,8 @@ All notable changes to LeanPad are documented here. The format is based on [Keep
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-11-09
+
 ### Changed
 
 - A spell picked for a button with no slot goes on Action Bars 5-8 when its layer's own bar is full, on the first free slot of a bar that's turned on, instead of not going anywhere.
@@ -151,7 +153,9 @@ First public release.
 - `/lp perf` readout from the in-game addon profiler.
 - In-combat requests to change bindings or CVars are queued until combat ends.
 
-[Unreleased]: https://github.com/Taimoorkasi/LeanPad/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/Taimoorkasi/LeanPad/compare/v0.7.1...HEAD
+[0.7.1]: https://github.com/Taimoorkasi/LeanPad/compare/v0.7.0...v0.7.1
+[0.7.0]: https://github.com/Taimoorkasi/LeanPad/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/Taimoorkasi/LeanPad/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/Taimoorkasi/LeanPad/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/Taimoorkasi/LeanPad/compare/v0.3.0...v0.4.0
