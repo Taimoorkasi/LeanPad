@@ -13,35 +13,35 @@ WoW already has a full gamepad layer built in: controller buttons are ordinary k
 - **Settings in two tabs**, *Controls* and *Dialogue*, and an (i) on every setting that says what it does, with a live preview of the dialogue window.
 - **WoW: Forever support**, plus fixes: Edit Mode can reach the frames under the crossbar again, and the cursor toggle no longer errors.
 
-![LeanPad's dialogue window: an NPC in 3D beside their words](https://raw.githubusercontent.com/Taimoorkasi/LeanPad/main/docs/images/dialogue-npc.png)
+![LeanPad's dialogue window: an NPC in 3D beside their words](https://raw.githubusercontent.com/tamuir/LeanPad/main/docs/images/dialogue-npc.png)
 
-![LeanPad's dialogue window offering a quest](https://raw.githubusercontent.com/Taimoorkasi/LeanPad/main/docs/images/dialogue-quest.png)
+![LeanPad's dialogue window offering a quest](https://raw.githubusercontent.com/tamuir/LeanPad/main/docs/images/dialogue-quest.png)
 
-![A pop-up with LeanPad's A and B prompts](https://raw.githubusercontent.com/Taimoorkasi/LeanPad/main/docs/images/popup.png)
+![A pop-up with LeanPad's A and B prompts](https://raw.githubusercontent.com/tamuir/LeanPad/main/docs/images/popup.png)
 
 ## Easy binding setup
 
 Press a button on your pad and see what it does on every layer. Pick a spell or macro straight from your spellbook and LeanPad puts it on the button for you.
 
-![The LeanPad controller editor](https://raw.githubusercontent.com/Taimoorkasi/LeanPad/main/docs/images/easy-binding-setup.png)
+![The LeanPad controller editor](https://raw.githubusercontent.com/tamuir/LeanPad/main/docs/images/easy-binding-setup.png)
 
-![The LeanPad editor's Change action menu listing Guardian spells](https://raw.githubusercontent.com/Taimoorkasi/LeanPad/main/docs/images/easy-binding-mapping.png)
+![The LeanPad editor's Change action menu listing Guardian spells](https://raw.githubusercontent.com/tamuir/LeanPad/main/docs/images/easy-binding-mapping.png)
 
 ## Easy to understand settings
 
 Layer buttons, which pad to use, Xbox or PlayStation labels, the cursor, the crossbar and soft targeting on the *Controls* tab, and the dialogue window and pop-ups on the *Dialogue* tab, all next to the editor. Hover the (i) after any setting to see what it does.
 
-![The LeanPad settings page on its Controls tab](https://raw.githubusercontent.com/Taimoorkasi/LeanPad/main/docs/images/easy-to-understand-settings.png)
+![The LeanPad settings page on its Controls tab](https://raw.githubusercontent.com/tamuir/LeanPad/main/docs/images/easy-to-understand-settings.png)
 
-![The Dialogue tab of LeanPad's settings](https://raw.githubusercontent.com/Taimoorkasi/LeanPad/main/docs/images/settings-dialogue.png)
+![The Dialogue tab of LeanPad's settings](https://raw.githubusercontent.com/tamuir/LeanPad/main/docs/images/settings-dialogue.png)
 
 ## Crossbar layouts
 
 Seven styles, picked from *View* on the settings page. The square grid sits under your character and swaps as you hold a layer button; square rows show every layer at once, one row each, the held one in front.
 
-![The square grid crossbar under the character](https://raw.githubusercontent.com/Taimoorkasi/LeanPad/main/docs/images/layout-square-grid.png)
+![The square grid crossbar under the character](https://raw.githubusercontent.com/tamuir/LeanPad/main/docs/images/layout-square-grid.png)
 
-![The square rows crossbar, one row per layer](https://raw.githubusercontent.com/Taimoorkasi/LeanPad/main/docs/images/layout-square-one-per-layer.png)
+![The square rows crossbar, one row per layer](https://raw.githubusercontent.com/tamuir/LeanPad/main/docs/images/layout-square-one-per-layer.png)
 
 ## Features
 
@@ -55,7 +55,7 @@ Seven styles, picked from *View* on the settings page. The square grid sits unde
 - **Play styles.** Tank, Melee, Ranged, Healer, or Auto by spec, so your character moves the way your role needs in combat.
 - **Combat-safe.** Bindings and settings are only written out of combat, and nothing runs while you are idle.
 
-![LeanPad's command icons](https://raw.githubusercontent.com/Taimoorkasi/LeanPad/main/tools/preview/Icons.png)
+![LeanPad's command icons](https://raw.githubusercontent.com/tamuir/LeanPad/main/tools/preview/Icons.png)
 
 ## Getting started
 
@@ -82,6 +82,6 @@ Your settings and profiles on Forever are separate from retail's.
 
 ## Reporting a problem
 
-Found a bug? Report it at https://github.com/Taimoorkasi/LeanPad/issues. The form asks for your LeanPad version, controller, bar addon and any Lua error, so it can be tracked down quickly. Reports left in the comments here are easy to miss.
+Found a bug? Report it at https://github.com/tamuir/LeanPad/issues. The form asks for your LeanPad version, controller, bar addon and any Lua error, so it can be tracked down quickly. Reports left in the comments here are easy to miss.
 
-Source and changelog: https://github.com/Taimoorkasi/LeanPad
+Source and changelog: https://github.com/tamuir/LeanPad

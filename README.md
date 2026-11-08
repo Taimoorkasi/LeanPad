@@ -236,7 +236,7 @@ The reasoning behind the design is in [docs/WoW controller addon design.md](docs
 
 ## Reporting a problem
 
-Open an issue at [github.com/Taimoorkasi/LeanPad/issues](https://github.com/Taimoorkasi/LeanPad/issues). The form asks for your LeanPad version, controller, bar addon and any Lua error, which is usually what it takes to find the cause.
+Open an issue at [github.com/tamuir/LeanPad/issues](https://github.com/tamuir/LeanPad/issues). The form asks for your LeanPad version, controller, bar addon and any Lua error, which is usually what it takes to find the cause.
 
 ## Changelog
 
