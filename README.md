@@ -10,6 +10,12 @@ WoW already has a full gamepad layer built in: controller buttons are ordinary k
 
 Your actions stay on Blizzard's own action bars, so Blizzard draws the cooldowns, glows and range, and the layout keeps working if you disable the addon.
 
+### New in 0.7.1
+
+- **Spells find a slot when a bar is full.** Pick a spell for a button and LeanPad puts it on a free slot of the layer's own bar, or of Action Bars 5-8 when that bar is full.
+- **The editor says why a change didn't happen**, in red in its footer, such as a bar with no free slot or a change tried in combat. With the editor closed, Blizzard's red error text says it.
+- *Auto-run* and *Toggle gamepad cursor* show their icons again. See the [changelog](CHANGELOG.md).
+
 ### New in 0.7.0
 
 - **Talk to NPCs and do quests from the pad**, in LeanPad's own dialogue window, made for reading: the NPC in 3D beside their words, rewards as tiles, and A, B and the D-pad to answer. Put it in any of nine places, at the size and text size you like.
