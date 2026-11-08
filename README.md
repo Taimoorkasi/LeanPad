@@ -118,7 +118,7 @@ LeanPad also adds a **Toggle gamepad cursor** binding under *Key Bindings > AddO
 
 1. Open the editor with `/lp`. Hold a layer button first to work on that layer.
 2. Press the button you want to change. The strip under the drawing shows what it does now and on the other layers.
-3. Choose **Change action**. *Spells* and *Macros* list your spellbook and macros; pick one and LeanPad puts it on the button, finding a free slot on that layer's action bar if the button has none. A free slot is empty and no pad button fires it; LeanPad never overwrites a spell there. If the bar has none, the editor says so: empty a slot on that bar, or give the button a slot on another bar through *Bar slots*, and its spells go there from then on. *Bar slots* and *Commands* list everything else Blizzard can bind. You can also drag a spell from the spellbook onto the strip.
+3. Choose **Change action**. *Spells* and *Macros* list your spellbook and macros; pick one and LeanPad puts it on the button, finding a free slot on that layer's action bar if the button has none. A free slot is empty and no pad button fires it; LeanPad never overwrites a spell there. If the bar has none, LeanPad takes the first free slot on Action Bars 5-8, skipping any turned off in *Options > Gameplay > Action Bars*. If those are full too, the editor says so: empty a slot, or give the button a slot of your choice through *Bar slots*, and its spells go there from then on. *Bar slots* and *Commands* list everything else Blizzard can bind. You can also drag a spell from the spellbook onto the strip.
 
 Each change is saved straight away to your account's or character's key bindings, whichever WoW is using, and the footer says *Saved*.
 

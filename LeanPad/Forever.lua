@@ -215,8 +215,7 @@ wrap("Assign", function(_, binding, action)
 			return ns.Saved()
 		end
 		local slot = ns.SlotForCommand(ns.BindingAction(binding))
-		if not slot and prefix == "" and barIndex(key) then return ns.Warn("Blizzard's Gamepad UI keeps this button for its own action.") end
-		if not slot then return ns.Warn("on a layer, only the D-pad and face buttons hold actions.") end
+		if not slot then return ns.Warn(prefix == "" and barIndex(key) and "Blizzard's Gamepad UI keeps this button for its own action." or "on a layer, only the D-pad and face buttons hold actions.") end
 		if C_ActionBar.HasAction(slot) then
 			PickupAction(slot)
 			ClearCursor()

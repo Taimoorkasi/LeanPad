@@ -268,7 +268,7 @@ describe("Controller", function()
 			ns.PlaceOnButton("PAD1")
 			assert.same({}, w.placed)
 			assert.equal("JUMP", w.bindings.PAD1)
-			assert.matches("Action Bar 1 has no free slot left", w.printed[1])
+			assert.matches("Action Bar 1 and Action Bars 5%-8 have no free slot left", w.printed[1])
 		end)
 
 		it("refuses drops in combat", function()
@@ -361,10 +361,26 @@ describe("Controller", function()
 			ns.PutSpell("PAD2", 1)
 			assert.same({}, w.placed)
 			assert.equal("INTERACTTARGET", w.bindings.PAD2)
-			assert.equal("LeanPad: Action Bar 1 has no free slot left; clear one or bind the button to a slot by hand.", w.printed[#w.printed])
+			assert.equal("LeanPad: Action Bar 1 and Action Bars 5-8 have no free slot left; clear one, turn on a bar in Options, or bind the button to a slot by hand.", w.printed[#w.printed])
 			assert.equal(w.printed[#w.printed], w.uiErrors[1]) -- with the window closed, Blizzard's red text says it too
 			ns.PutSpell("ALT-PAD1", 1)
 			assert.matches("no bar of its own", w.printed[#w.printed])
+		end)
+
+		it("falls back to the first free slot of Action Bars 5-8 that are on when the layer's bar is full", function()
+			local names = _G.ActionButtonUtil.ActionBarButtonNames
+			table.insert(names, "MultiBarLeftButton")
+			table.insert(names, "MultiBar5Button")
+			_G.MultiBarLeftButton1 = { bindingAction = "MULTIACTIONBAR4BUTTON1", action = 25 }
+			_G.MultiBar5Button1 = { bindingAction = "MULTIACTIONBAR5BUTTON1", action = 145 }
+			w.bindings.PAD3 = "ACTIONBUTTON1"
+			for slot = 2, 12 do w.actions[slot] = { texture = slot } end
+			w.barsShown[4] = false -- Action Bar 5 is off, and a binding to it would fire nothing
+			w.bindings.PAD2 = "INTERACTTARGET"
+			ns.PutSpell("PAD2", 1)
+			assert.equal("MULTIACTIONBAR5BUTTON1", w.bindings.PAD2)
+			assert.same({ 145 }, w.placed)
+			_G.MultiBarLeftButton1, _G.MultiBar5Button1 = nil, nil
 		end)
 
 		it("says so when the client refuses the spell or the slot, rather than flashing Saved", function()

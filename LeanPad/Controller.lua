@@ -323,23 +323,24 @@ function ns.CursorReachable()
 	return GetCVar("GamePadCursorAutoEnable") == "1" or padBound("LEANPAD_TOGGLE_CURSOR")
 end
 
--- The bar slot a binding fires, binding the button to the first free slot of its layer's own bar when it has none.
+-- The bar slot a binding fires, binding the button to the first free slot of its layer's bar, then of Bars 5-8 if on.
 function ns.EnsureSlot(binding)
 	local slot = ns.SlotForCommand(ns.BindingAction(binding))
 	if slot then return slot end
-	local prefix = binding:match("^(.-)PAD[%u%d]+$")
-	local bar = prefix and ns.LAYER_BARS[prefix]
-	if not bar then return ns.Warn("this layer has no bar of its own; bind the button to a bar slot first.") end
-	for i = 1, NUM_ACTIONBAR_BUTTONS do
-		local command = bar .. i
-		slot = ns.SlotForCommand(command)
-		if slot and not C_ActionBar.HasAction(slot) and not padBound(command) then
-			SetBinding(binding, command)
-			SaveBindings(GetCurrentBindingSet())
-			return slot
+	local own = ns.LAYER_BARS[binding:match("^(.-)PAD[%u%d]+$")]
+	if not own then return ns.Warn("this layer has no bar of its own; bind the button to a bar slot first.") end
+	for _, bar in ipairs({ own, "MULTIACTIONBAR4BUTTON", "MULTIACTIONBAR5BUTTON", "MULTIACTIONBAR6BUTTON", "MULTIACTIONBAR7BUTTON" }) do
+		for i = 1, NUM_ACTIONBAR_BUTTONS do
+			local command = bar .. i
+			slot = ns.SlotForCommand(command)
+			if slot and not C_ActionBar.HasAction(slot) and not padBound(command) and not ns.BarOff(command) then
+				SetBinding(binding, command)
+				SaveBindings(GetCurrentBindingSet())
+				return slot
+			end
 		end
 	end
-	ns.Warn(("%s has no free slot left; clear one or bind the button to a slot by hand."):format(ns.ActionPlace(bar .. "1"):match("^Action Bar %d+")))
+	ns.Warn(("%s and Action Bars 5-8 have no free slot left; clear one, turn on a bar in Options, or bind the button to a slot by hand."):format(ns.ActionPlace(own .. "1"):match("^Action Bar %d+")))
 end
 
 -- Puts what pickup leaves on the cursor into the button's slot, out of combat, dropping whatever was there. A cursor

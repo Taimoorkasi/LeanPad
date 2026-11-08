@@ -4,6 +4,10 @@ All notable changes to LeanPad are documented here. The format is based on [Keep
 
 ## [Unreleased]
 
+### Changed
+
+- A spell picked for a button with no slot goes on Action Bars 5-8 when its layer's own bar is full, on the first free slot of a bar that's turned on, instead of not going anywhere.
+
 ### Fixed
 
 - *Auto-run* and *Toggle gamepad cursor* show their icons in the editor again, instead of a blank button.
