@@ -7,6 +7,7 @@ All notable changes to LeanPad are documented here. The format is based on [Keep
 ### Fixed
 
 - *Auto-run* and *Toggle gamepad cursor* show their icons in the editor again, instead of a blank button.
+- When a spell can't go on a button, such as when its layer's bar has no free slot, the editor's footer says why in red, instead of only a chat line that trade chat could bury. With the editor closed, Blizzard's red error text says it. A spell the game refuses to place now says so too, instead of nothing.
 
 ## [0.7.0] - 2026-11-08
 

@@ -215,8 +215,8 @@ wrap("Assign", function(_, binding, action)
 			return ns.Saved()
 		end
 		local slot = ns.SlotForCommand(ns.BindingAction(binding))
-		if not slot and prefix == "" and barIndex(key) then return print("LeanPad: Blizzard's Gamepad UI keeps this button for its own action.") end
-		if not slot then return print("LeanPad: on a layer, only the D-pad and face buttons hold actions.") end
+		if not slot and prefix == "" and barIndex(key) then return ns.Warn("Blizzard's Gamepad UI keeps this button for its own action.") end
+		if not slot then return ns.Warn("on a layer, only the D-pad and face buttons hold actions.") end
 		if C_ActionBar.HasAction(slot) then
 			PickupAction(slot)
 			ClearCursor()
@@ -228,7 +228,7 @@ end)
 wrap("EnsureSlot", function(_, binding)
 	local slot = ns.SlotForCommand(ns.BindingAction(binding))
 	if slot then return slot end
-	print("LeanPad: this button holds no spell in Blizzard's Gamepad UI; use the D-pad or a face button on a layer.")
+	ns.Warn("this button holds no spell in Blizzard's Gamepad UI; use the D-pad or a face button on a layer.")
 end)
 
 -- The Gamepad UI's defaults already work, so there is nothing to set up; a reset undoes only LeanPad's own changes.

@@ -253,11 +253,8 @@ end
 
 -- Puts a command's face on a texture, from LeanPad's art or Blizzard's atlas.
 function ns.ShowIcon(texture, icon)
-	if icon.atlas then
-		texture:SetAtlas(icon.atlas)
-	else
-		texture:SetTexture(icon.texture)
-	end
+	if icon.atlas then return texture:SetAtlas(icon.atlas) end
+	texture:SetTexture(icon.texture)
 end
 
 function ns.Assign(binding, action)
@@ -292,7 +289,7 @@ end
 -- Drops what is on the cursor into the Blizzard bar slot this button fires, finding it one when it has none,
 -- so the action stays in WoW's slots.
 function ns.PlaceOnButton(binding)
-	if InCombatLockdown() then return print("LeanPad: action bars can't change in combat.") end
+	if InCombatLockdown() then return ns.Warn("action bars can't change in combat.") end
 	local slot = ns.EnsureSlot(binding)
 	if slot then PlaceAction(slot) end
 end
@@ -300,7 +297,7 @@ end
 -- Lifts what this button's bar slot holds onto the cursor, emptying the slot, as dragging a Blizzard bar button
 -- does; dropped anywhere but a slot, it is gone.
 function ns.PickupFromButton(binding)
-	if InCombatLockdown() then return print("LeanPad: action bars can't change in combat.") end
+	if InCombatLockdown() then return ns.Warn("action bars can't change in combat.") end
 	local slot = ns.SlotForCommand(ns.BindingAction(binding))
 	if slot and C_ActionBar.HasAction(slot) then PickupAction(slot) end
 end
@@ -332,7 +329,7 @@ function ns.EnsureSlot(binding)
 	if slot then return slot end
 	local prefix = binding:match("^(.-)PAD[%u%d]+$")
 	local bar = prefix and ns.LAYER_BARS[prefix]
-	if not bar then return print("LeanPad: this layer has no bar of its own; bind the button to a bar slot first.") end
+	if not bar then return ns.Warn("this layer has no bar of its own; bind the button to a bar slot first.") end
 	for i = 1, NUM_ACTIONBAR_BUTTONS do
 		local command = bar .. i
 		slot = ns.SlotForCommand(command)
@@ -342,18 +339,22 @@ function ns.EnsureSlot(binding)
 			return slot
 		end
 	end
-	print(("LeanPad: %s has no free slot left; clear one or bind the button to a slot by hand."):format(ns.ActionPlace(bar .. "1"):match("^Action Bar %d+")))
+	ns.Warn(("%s has no free slot left; clear one or bind the button to a slot by hand."):format(ns.ActionPlace(bar .. "1"):match("^Action Bar %d+")))
 end
 
--- Puts what pickup leaves on the cursor into the button's slot, out of combat, dropping whatever was there.
+-- Puts what pickup leaves on the cursor into the button's slot, out of combat, dropping whatever was there. A cursor
+-- left as it was means the client refused the pickup or the placement, the check Blizzard's Gamepad UI makes.
 local function put(binding, pickup)
 	ns.OutOfCombat(function()
 		local slot = ns.EnsureSlot(binding)
 		if not slot then return end
 		ClearCursor()
 		pickup()
+		local kind, id = GetCursorInfo()
 		PlaceAction(slot)
+		local after, afterID = GetCursorInfo()
 		ClearCursor()
+		if not kind or (after == kind and afterID == id) then return ns.Warn("that couldn't go on this button.") end
 		ns.Saved()
 	end)
 end
@@ -606,7 +607,7 @@ local function note(key, action)
 	return ""
 end
 
-local frame, editor, art, ring, strip, prompt, toolbar, status, layers, tabIndex, selected
+local frame, editor, art, ring, strip, prompt, toolbar, status, layers, tabIndex, selected, options
 local hits, tabs, callouts = {}, {}, {}
 
 local function currentPrefix() return layers[tabIndex].prefix end
@@ -819,7 +820,7 @@ end
 local function placeHere()
 	if not selected then return end
 	if ns.ModifierKeys()[selected] then
-		return print(("LeanPad: %s is a layer button and holds no action."):format(ns.KeyName(selected)))
+		return ns.Warn(("%s is a layer button and holds no action."):format(ns.KeyName(selected)))
 	end
 	ns.PlaceOnButton(currentPrefix() .. selected)
 end
@@ -975,6 +976,7 @@ local function buildEditor()
 	status:SetPoint("TOP", editor, "TOP", 0, -(FOOTER_Y + 17))
 	editor.Saved = ns.Text(editor, 12, C.accent, "CENTER")
 	editor.Saved:SetPoint("TOP", editor, "TOP", 0, -(FOOTER_Y + 17))
+	editor.Saved:SetWidth(440) -- between the footer's buttons; a long warning wraps onto a second line
 	editor.Saved:Hide()
 	local bindings = ns.Button(editor, KEY_BINDINGS, 120, function() Settings.OpenToCategory(Settings.KEYBINDINGS_CATEGORY_ID) end)
 	bindings:SetPoint("TOPRIGHT", -MARGIN, -(FOOTER_Y + 8))
@@ -1038,20 +1040,30 @@ local function build()
 	tabIndex = 1
 end
 
--- Two seconds of Saved in the open page's footer, once a binding, CVar or setting has really been written.
-local SAVED_FOR = 2
-local options
-function ns.Saved()
-	if not (frame and frame:IsShown()) then return end
-	local page = editor:IsShown() and editor or options
-	local idle, saved = page.Status, page.Saved
-	saved:SetText("|A:common-icon-checkmark:12:12|a " .. (page == editor and idle:GetText():gsub("^Changes save", "Saved") or "Saved"))
+-- A few seconds of a note in the open page's footer: Saved once a change is really written, or why one wasn't made.
+local timers = {}
+local function note(text, color, seconds)
+	local page = frame and frame:IsShown() and (editor:IsShown() and editor or options)
+	if not page then return false end
+	local idle, shown = page.Status, page.Saved
+	shown:SetText(text or "|A:common-icon-checkmark:12:12|a " .. (page == editor and idle:GetText():gsub("^Changes save", "Saved") or "Saved"))
+	shown:SetTextColor(unpack(color))
 	idle:Hide()
-	saved:Show()
-	C_Timer.After(SAVED_FOR, function()
-		saved:Hide()
+	shown:Show()
+	if timers[page] then timers[page]:Cancel() end
+	timers[page] = C_Timer.NewTimer(seconds, function()
+		shown:Hide()
 		idle:Show()
 	end)
+	return true
+end
+
+function ns.Saved() note(nil, C.accent, 2) end
+
+-- Why something the player tried didn't happen: in chat, and in the footer or else Blizzard's red text, which chat spam can't bury.
+function ns.Warn(text)
+	print("LeanPad: " .. text)
+	if not note((text:gsub("^%l", string.upper)), C.warning, 6) then UIErrorsFrame:AddMessage("LeanPad: " .. text, RED_FONT_COLOR:GetRGB()) end
 end
 
 -- Pages share the title bar; Options.lua builds the other one on first use.

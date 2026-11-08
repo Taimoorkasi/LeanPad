@@ -197,7 +197,7 @@ end
 
 function M.reset()
 	local w = {
-		cvars = {}, bindings = {}, saved = {}, printed = {}, popups = {}, opened = {},
+		cvars = {}, bindings = {}, saved = {}, printed = {}, uiErrors = {}, popups = {}, opened = {},
 		onLoaded = {}, onceEvents = {}, metricCalls = {}, controls = {}, layout = {},
 		combat = false, widgets = {}, held = {}, placed = {}, actions = {}, nextFrame = {},
 		glyphs = {}, devices = {}, deviceIDs = {}, power = 5, timers = {}, callbacks = {}, pickups = {}, cleared = 0,
@@ -325,7 +325,14 @@ function M.reset()
 	}
 	GetCVarBool = function(name) return w.cvars[name] == "1" end
 	RunNextFrame = function(callback) table.insert(w.nextFrame, callback) end
-	C_Timer = { After = function(seconds, callback) table.insert(w.timers, { seconds = seconds, callback = callback }) end }
+	C_Timer = {
+		After = function(seconds, callback) table.insert(w.timers, { seconds = seconds, callback = callback }) end,
+		NewTimer = function(seconds, callback)
+			local timer = { seconds = seconds, callback = callback, Cancel = function(self) self.cancelled = true end }
+			table.insert(w.timers, timer)
+			return timer
+		end,
+	}
 	-- A Beast Mastery hunter until a spec says otherwise.
 	w.spec, w.specID, w.role = 1, 253, "DAMAGER"
 	-- The class's specs in w.specList; the current one, w.spec, reads as w.specID. The bare GetSpecialization names are
@@ -392,7 +399,11 @@ function M.reset()
 		Hide = function() w.tooltip = nil end,
 	}
 	GameTooltip_ShowCompareItem = function(tooltip) w.tooltip.compared = tooltip == GameTooltip end
-	PlaceAction = function(slot) table.insert(w.placed, slot) end
+	-- A placement takes what the cursor holds, unless w.refusePlace has the client refuse it and leave the cursor be.
+	PlaceAction = function(slot)
+		table.insert(w.placed, slot)
+		if not w.refusePlace then w.cursor = nil end
+	end
 	PickupAction = function(slot) table.insert(w.pickups, { "action", slot }) end
 	IsAltKeyDown = function() return w.held.alt end
 	IsControlKeyDown = function() return w.held.ctrl end
@@ -537,6 +548,8 @@ function M.reset()
 	w.bindingSet = Enum.BindingSet.Account
 
 	print = function(...) table.insert(w.printed, table.concat({ ... }, " ")) end
+	UIErrorsFrame = { AddMessage = function(_, text) table.insert(w.uiErrors, text) end }
+	RED_FONT_COLOR = { GetRGB = function() return 1, 0.1, 0.1 end }
 	InCombatLockdown = function() return w.combat end
 	GetCVar = function(name) return w.cvars[name] end
 	SetCVar = function(name, value) w.cvars[name] = value end
@@ -637,11 +650,13 @@ function M.nextFrame()
 	for _, callback in ipairs(queued) do callback() end
 end
 
--- Fires every timer queued with C_Timer.After, as if their time had passed.
+-- Fires every timer queued with C_Timer.After or NewTimer and not cancelled, as if their time had passed.
 function M.tick()
 	local due = M.state.timers
 	M.state.timers = {}
-	for _, timer in ipairs(due) do timer.callback() end
+	for _, timer in ipairs(due) do
+		if not timer.cancelled then timer.callback() end
+	end
 end
 
 -- Fires an EventRegistry callback, as Blizzard's UI would.

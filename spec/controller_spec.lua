@@ -362,8 +362,18 @@ describe("Controller", function()
 			assert.same({}, w.placed)
 			assert.equal("INTERACTTARGET", w.bindings.PAD2)
 			assert.equal("LeanPad: Action Bar 1 has no free slot left; clear one or bind the button to a slot by hand.", w.printed[#w.printed])
+			assert.equal(w.printed[#w.printed], w.uiErrors[1]) -- with the window closed, Blizzard's red text says it too
 			ns.PutSpell("ALT-PAD1", 1)
 			assert.matches("no bar of its own", w.printed[#w.printed])
+		end)
+
+		it("says so when the client refuses the spell or the slot, rather than flashing Saved", function()
+			w.bindings["SHIFT-PAD1"] = "MULTIACTIONBAR1BUTTON1"
+			w.refusePlace = true
+			ns.PutSpell("SHIFT-PAD1", 1)
+			assert.same({ 61 }, w.placed)
+			assert.equal("LeanPad: that couldn't go on this button.", w.printed[#w.printed])
+			assert.is_nil(w.cursor)
 		end)
 
 		it("waits for combat to end before placing", function()
@@ -708,10 +718,10 @@ describe("Controller", function()
 			assert.equal("text:SHIFT-PAD1", w.menu.root.title)
 			w.cursor = "spell"
 			strip:Fire("OnReceiveDrag")
+			w.cursor = "spell"
 			strip:Fire("OnMouseUp")
 			assert.same({ 61, 61 }, w.placed)
-			w.cursor = nil
-			strip:Fire("OnMouseUp")
+			strip:Fire("OnMouseUp") -- the drop emptied the cursor, so a plain click places nothing
 			assert.same({ 61, 61 }, w.placed)
 			button("Clear"):Fire("OnClick")
 			assert.is_nil(w.bindings["SHIFT-PAD1"])
@@ -781,6 +791,22 @@ describe("Controller", function()
 			ns.Saved()
 			assert.equal("|A:common-icon-checkmark:12:12|a Saved", frame.Options.Saved:GetText())
 			assert.is_false(frame.Options.Status:IsShown())
+		end)
+
+		it("shows why a change wasn't made in the footer, for longer, restarting the footer's timer", function()
+			open()
+			press("PAD1")
+			ns.Saved()
+			w.combat = true
+			ns.PlaceOnButton("PAD1")
+			assert.equal("Action bars can't change in combat.", editor.Saved:GetText())
+			assert.equal("LeanPad: action bars can't change in combat.", w.printed[#w.printed])
+			assert.same({}, w.uiErrors) -- the window shows it, so no red text over the game
+			assert.equal(6, w.timers[2].seconds)
+			assert.is_true(w.timers[1].cancelled) -- Saved's two seconds can't cut the warning short
+			wow.tick()
+			assert.is_false(editor.Saved:IsShown())
+			assert.is_true(editor.Status:IsShown())
 		end)
 
 		it("refreshes the strip when bindings change", function()
